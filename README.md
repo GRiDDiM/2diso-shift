@@ -1,19 +1,19 @@
 # 2DISO -SHIFT-
 
-A shoot-'em-up where **you** shift reality: press **Shift** to flip between a flat 2D side-scroller and a Zaxxon-style isometric world. Each view plays by different rules: walls in one are open sky in the other, and enemies in one view can't touch you in the other.
+A shoot-'em-up where **you** shift reality: barrel-roll between four views of the same fight. Each view plays by different rules: a wall in one is open sky in another.
 
 Made for **GitHub Game Off 2026** (theme: **SHIFT**).
 
 ## Status
-Playable start to finish: four planets, four bosses, a themed wave arena after each boss and four hidden bonus stages. Also: Perfect Shifts, medals and ranks, a Daily Run, best-run ghosts, two-player co-op and an AI wingman (RIVET-9) who shifts views before you do. Built during November 2026 for the jam. See `DEVLOG.md` for how it was made.
+Playable start to finish: four planets, four bosses, a themed wave arena after each boss and four hidden bonus stages. Also: Perfect Shifts, medals and ranks, a Daily Run, best-run ghosts, two-player co-op and an AI wingman (RIVET-9). Built during November 2026 for the jam. See `DEVLOG.md` for how it was made.
 
 ## The four views
-| View | Plays like | What it flattens |
+| View | What it is | What it flattens |
 |---|---|---|
-| SIDE | Gradius | left/right. Anything in your lane hits you, whatever side it is on |
-| ISO | Zaxxon | nothing. True depth, with shadows |
-| CHASE | Star Fox | nothing. Best for threading holes |
-| TOP | Raiden | altitude. Ground targets and high decks are all on your level |
+| SIDE | flat side-scroller | left/right. Anything in your lane hits you, whatever side it is on |
+| ISO | isometric | nothing. True depth, with shadows |
+| CHASE | over the shoulder | nothing. Best for threading holes |
+| TOP | bird's-eye vertical rail | altitude. Ground targets and high decks are all on your level |
 
 What a view flattens does not exist for collisions, so a wall in one view is open sky in another.
 
@@ -26,7 +26,7 @@ What a view flattens does not exist for collisions, so a wall in one view is ope
 | 4 | Planet X, The Bloom | tentacles, membranes, spores | THE SHIFTER | Pluto |
 
 ## Controls
-| Action | Keyboard | Controller (SNES layout) | Touch |
+| Action | Keyboard | Controller | Touch |
 |---|---|---|---|
 | Move | Arrows / WASD | D-pad | drag the left side |
 | Fire | Space / Z / J | A | auto |
@@ -37,7 +37,7 @@ What a view flattens does not exist for collisions, so a wall in one view is ope
 | Buy the lit upgrade | Enter / R | Select | UPGRADE |
 | Pause | Esc / P | Start | II |
 
-Upgrades work like Gradius: each pod moves the highlight one step along the bar (DRONE, SPREAD, LASER, WAVE, BOLT, MISSILE, SHIELD, ???); buy what is lit and the bar starts over. ??? is a wildcard: nuke, overdrive or god mode.
+Upgrades: each pod moves the highlight one step along the bar (DRONE, SPREAD, LASER, WAVE, BOLT, MISSILE, SHIELD, ???); buy what is lit and the bar starts over. ??? is a wildcard: nuke, overdrive or god mode.
 
 ## Run it
 It is plain ES modules, so it needs a web server: `npx serve .` then open the address it prints.
