@@ -45,6 +45,27 @@ function flush(ctx, glow, trip) {
   }
   ctx.globalAlpha = 1;
 }
+// ---------- optional solid look: shaded faces and ground shadows under the wireframe (painter-sorted, drawn before the lines) ----------
+let FILL = false; const quads = [], rgbaCache = new Map();
+function rgba(hex, a) { const k = hex + (a * 50 | 0); let r = rgbaCache.get(k); if (r) return r; let c = hex.slice(1); if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2]; r = `rgba(${parseInt(c.slice(0, 2), 16)},${parseInt(c.slice(2, 4), 16)},${parseInt(c.slice(4, 6), 16)},${(a * 50 | 0) / 50})`; rgbaCache.set(k, r); return r; }
+function quad(p, col, a0, a1, key, dark = 0.6) { const q = []; for (let i = 0; i < 12; i += 3) { P(p[i], p[i + 1], p[i + 2]); if (!OK) return; q.push(X, Y); } if (Math.min(q[0], q[2], q[4], q[6]) > W + 100 || Math.max(q[0], q[2], q[4], q[6]) < -100) return; quads.push({ q, col, a0, a1, key, dark }); }
+function drawQuads(ctx) { if (!quads.length) return; quads.sort((a, b) => b.key - a.key); ctx.globalCompositeOperation = 'source-over';
+  for (const f of quads) { const q = f.q; ctx.beginPath(); ctx.moveTo(q[0], q[1]); ctx.lineTo(q[2], q[3]); ctx.lineTo(q[4], q[5]); ctx.lineTo(q[6], q[7]); ctx.closePath(); if (f.dark) { ctx.fillStyle = '#02010a'; ctx.globalAlpha = f.dark; ctx.fill(); ctx.globalAlpha = 1; }
+    if (f.col) { const gr = ctx.createLinearGradient((q[0] + q[2]) / 2, (q[1] + q[3]) / 2, (q[4] + q[6]) / 2, (q[5] + q[7]) / 2); gr.addColorStop(0, rgba(f.col, f.a0)); gr.addColorStop(1, rgba(f.col, f.a1)); ctx.fillStyle = gr; ctx.fill(); } }
+  quads.length = 0; ctx.globalCompositeOperation = 'lighter'; }
+// shaded faces for a box: the faces the current view can see, lit from above, plus a shadow on the ground
+function fillBox(o, col, k = 1, shadow = true) {
+  if (!FILL) return; const v = mix < 0.5 ? vA : vB, x0 = Math.max(-10.5, o.x - o.hx), x1 = Math.min(10.5, o.x + o.hx), y0 = Math.max(0, o.y - o.hy), y1 = Math.min(9.6, o.y + o.hy), z0 = o.z - o.hz, z1 = o.z + o.hz; if (x1 <= x0 || y1 <= y0 || z1 < -4 || z0 > 32) return;
+  const far = z0 > 27 ? 0.55 : 1, key = v === 3 ? -y1 * 100 + z0 : z0; k *= far;
+  if (shadow && v !== 0 && y1 < 9.5) { const sx = y0 > 0.3 ? 0.5 : 0, len = y0 > 0.3 ? 0 : Math.min(2.2, (y1 - y0) * 0.3); if (y0 > 0.3 || len > 0.2) quad([x0 + sx, 0.02, z0, x1 + sx + len, 0.02, z0, x1 + sx + len, 0.02, z1, x0 + sx, 0.02, z1], null, 0, 0, 1e6, 0.5 * far); }
+  if (v === 0) { quad([o.x, y1, z0, o.x, y1, z1, o.x, y0, z1, o.x, y0, z0], col, 0.46 * k, 0.16 * k, key); return; }
+  if (v === 3) { quad([x0, y1, z1, x1, y1, z1, x1, y1, z0, x0, y1, z0], col, 0.42 * k, 0.2 * k, key); return; }
+  if (v === 1) { quad([x1, y1, z0, x1, y1, z1, x1, y0, z1, x1, y0, z0], col, 0.24 * k, 0.07 * k, key + 0.2); quad([x0, y1, z0, x1, y1, z0, x1, y0, z0, x0, y0, z0], col, 0.42 * k, 0.12 * k, key + 0.1); quad([x0, y1, z1, x1, y1, z1, x1, y1, z0, x0, y1, z0], col, 0.6 * k, 0.42 * k, key); return; }
+  if (z0 < cam.z + 0.6) return;
+  if (cam.x < x0) quad([x0, y1, z0, x0, y1, z1, x0, y0, z1, x0, y0, z0], col, 0.24 * k, 0.07 * k, key + 0.2); else if (cam.x > x1) quad([x1, y1, z0, x1, y1, z1, x1, y0, z1, x1, y0, z0], col, 0.24 * k, 0.07 * k, key + 0.2);
+  if (cam.y > y1) quad([x0, y1, z1, x1, y1, z1, x1, y1, z0, x0, y1, z0], col, 0.6 * k, 0.42 * k, key + 0.15); else if (cam.y < y0) quad([x0, y0, z1, x1, y0, z1, x1, y0, z0, x0, y0, z0], col, 0.12 * k, 0.06 * k, key + 0.15);
+  quad([x0, y1, z0, x1, y1, z0, x1, y0, z0, x0, y0, z0], col, 0.44 * k, 0.12 * k, key);
+}
 function box(o, col, a = 1, bands = 0) {
   const x0 = o.x - o.hx, x1 = o.x + o.hx, y0 = Math.max(0, o.y - o.hy), y1 = Math.min(9.6, o.y + o.hy), z0 = o.z - o.hz, z1 = o.z + o.hz;
   seg(x0, y0, z0, x1, y0, z0, col, a); seg(x1, y0, z0, x1, y0, z1, col, a); seg(x1, y0, z1, x0, y0, z1, col, a); seg(x0, y0, z1, x0, y0, z0, col, a);
@@ -135,6 +156,7 @@ function drawObs(g, b, t) {
   if (k === 'sheet') { // a solid slab of grid: every face is cross-hatched so the gap beside it reads as empty space in any view
     const warm = b.warm > 0; a = warm ? 0.5 + 0.3 * ((t >> 2) % 2) : 1; if (!warm) col = (t >> 1) % 2 ? '#ffffff' : b.col;
     const x0 = Math.max(-9, b.x - b.hx), x1 = Math.min(9, b.x + b.hx), y0 = Math.max(0, b.y - b.hy), y1 = Math.min(9.6, b.y + b.hy), z0 = b.z - b.hz, z1 = b.z + b.hz; if (x1 - x0 < 0.2 || y1 - y0 < 0.2) return;
+    fillBox(b, b.col, warm ? 0.5 : 1.5, false);
     const g2 = a * 0.7, sx = Math.max(1.5, (x1 - x0) / 6), sy = Math.max(0.8, (y1 - y0) / 5), sz = 2;
     for (const x of [x0, x1]) { for (let y = y0; y <= y1 + 0.01; y += sy) seg(x, y, z0, x, y, z1, col, y === y0 || y + sy > y1 ? a : g2); for (let z = z0; z <= z1 + 0.01; z += sz) seg(x, y0, z, x, y1, z, col, g2); seg(x, y1, z0, x, y1, z1, col, a); }
     for (const y of [y0, y1]) { for (let x = x0 + sx; x < x1 - 0.01; x += sx) seg(x, y, z0, x, y, z1, col, g2); for (let z = z0; z <= z1 + 0.01; z += sz) seg(x0, y, z, x1, y, z, col, g2); }
@@ -142,11 +164,12 @@ function drawObs(g, b, t) {
     return; }
   if (k === 'geyser') { circle(b.x, 0.05, b.z, b.hx, col, 0.9, 10, 1); if (b.warm > 0) { circle(b.x, 0.05, b.z, b.hx * (0.3 + 0.7 * (b.warm % 20) / 20), '#ffe14a', 0.9, 10, 1); seg(b.x - b.hx, 0.05, b.z - b.hz, b.x + b.hx, 0.05, b.z + b.hz, '#ffe14a', 0.8); seg(b.x + b.hx, 0.05, b.z - b.hz, b.x - b.hx, 0.05, b.z + b.hz, '#ffe14a', 0.8); }
     if (b.idle || b.warm > 0) { if ((b.soon || b.warm > 0 && b.warm < 50) && (t >> 2) % 2) box(b, col, 0.3); for (let i = 0; i < 2; i++) seg(b.x + (hash(i + (t >> 3)) - 0.5), 0, b.z, b.x + (hash(i + (t >> 3)) - 0.5), 0.5 + hash(i * 3 + (t >> 3)), b.z, '#ffe14a', 0.7); return; }
-    box(b, col, 0.7); for (let i = 0; i < 4; i++) { const ox = (i % 2 ? 1 : -1) * b.hx * 0.5, oz = (i < 2 ? 1 : -1) * b.hz * 0.5; zig(b.x + ox, 0, b.z + oz, b.x + ox, 9.5, b.z + oz, i % 2 ? '#ffe14a' : '#ffffff', 1, 7, 0.7, i + (t >> 1)); } return; }
+    fillBox(b, col, 1.3, false); box(b, col, 0.7); for (let i = 0; i < 4; i++) { const ox = (i % 2 ? 1 : -1) * b.hx * 0.5, oz = (i < 2 ? 1 : -1) * b.hz * 0.5; zig(b.x + ox, 0, b.z + oz, b.x + ox, 9.5, b.z + oz, i % 2 ? '#ffe14a' : '#ffffff', 1, 7, 0.7, i + (t >> 1)); } return; }
   if (k === 'bolt') { const hz = b.hx > b.hy, x0 = b.x - (hz ? b.hx : 0), x1 = b.x + (hz ? b.hx : 0), y0 = b.y - (hz ? 0 : b.hy), y1 = b.y + (hz ? 0 : b.hy); mesh(OCT, x0, Math.max(0.3, y0), b.z, 0.35, t * 0.1, 0, 0, col); mesh(OCT, x1, Math.min(9.3, y1), b.z, 0.35, -t * 0.1, 0, 0, col);
     if (b.idle) { if (b.soon) { if ((t >> 2) % 2) seg(x0, y0, b.z, x1, y1, b.z, col, 0.5); } else seg(x0, y0, b.z, x1, y1, b.z, col, 0.12); return; } zig(x0, y0, b.z, x1, y1, b.z, '#ffffff', 1, 12, 1, t >> 1); zig(x0, y0, b.z, x1, y1, b.z, col, 1, 9, 1.4, (t >> 1) + 50); return; }
   if (k === 'tide') { // a rising sea of lava, or a falling roof of ash: the wavy edge is the part that kills
     const up = !b.ash, edge = up ? b.y + b.hy : b.y - b.hy, c2 = up ? '#ffe14a' : '#8a5a3a', a2 = b.warm > 0 ? 0.5 : 1; if (edge < -0.3 || edge > 10) return;
+    fillBox(up ? { x: 0, y: edge / 2, z: b.z, hx: 9, hy: edge / 2, hz: b.hz } : { x: 0, y: (edge + 9.6) / 2, z: b.z, hx: 9, hy: (9.6 - edge) / 2, hz: b.hz }, col, 1.3, false);
     for (const z of [b.z - b.hz, b.z - b.hz / 2, b.z, b.z + b.hz / 2, b.z + b.hz]) { let lx = -9, ly = edge + Math.sin(z + t * 0.12) * 0.25; for (let x = -7.5; x <= 9; x += 1.5) { const py = edge + Math.sin(x * 0.9 + z + t * 0.12) * 0.25; seg(lx, ly, z, x, py, z, (x / 1.5 | 0) % 2 ? col : c2, a2); lx = x; ly = py; } }
     for (let x = -9; x <= 9; x += 3) { seg(x, edge, b.z - b.hz, x, edge, b.z + b.hz, col, a2 * 0.7); for (const z of [b.z - b.hz, b.z + b.hz]) seg(x, edge, z, x, up ? 0 : 9.6, z, col, a2 * 0.5); }
     for (let i = 1; up ? edge - i * 0.9 > 0 : edge + i * 0.9 < 9.6; i++) { const y = up ? edge - i * 0.9 : edge + i * 0.9; seg(-9, y, b.z - b.hz, 9, y, b.z - b.hz, col, a2 * 0.5); seg(-9, y, b.z - b.hz, -9, y, b.z + b.hz, col, a2 * 0.6); seg(-9, y, b.z + b.hz, 9, y, b.z + b.hz, col, a2 * 0.3); }
@@ -162,9 +185,10 @@ function drawObs(g, b, t) {
       for (let z = z0; z <= z1 + 0.01; z += 4) { seg(x0, 0.05, z, x0, 9.5, z, c, 0.35); seg(x1, 0.05, z, x1, 9.5, z, c, 0.35); } }
     else { for (const x of [-9, 0, 9]) { const al = x === 0 ? 1 : 0.5; for (const y of [y0, y1]) { seg(x, y, z0, x, y, z1, c, al); seg(x, y + (y === y0 ? 0.15 : -0.15), z0, x, y + (y === y0 ? 0.15 : -0.15), z1, c, al * 0.6); } for (let z = z0; z < z1 - 0.01; z += 0.8) seg(x, y0, z, x, y1, z, c2, al * 0.75); for (let y = y0 + 0.6; y < y1 - 0.1; y += 0.6) seg(x, y, z0, x, y, z1, c2, al * 0.5); } }
     return; }
-  if (k === 'statue') { const hs = b.hx / 0.62, top = Math.min(9.6, b.y + b.hy), neck = top - hs * 2; box({ x: b.x, y: neck / 2, z: b.z, hx: b.hx * 0.7, hy: neck / 2, hz: b.hz * 0.7 }, col, a, 3); mesh(HEAD, b.x, neck + hs, b.z, hs, 0, 0, 0, col, a); mesh(EYES, b.x, neck + hs, b.z, hs, 0, 0, 0, '#ff3df0', a); circle(b.x, 0.04, b.z, b.hx * 1.3, col, 0.7, 8, 1); if (vB === 3) { seg(b.x - b.hx, 9.5, b.z - b.hz, b.x + b.hx, 9.5, b.z + b.hz, col, 0.6); seg(b.x + b.hx, 9.5, b.z - b.hz, b.x - b.hx, 9.5, b.z + b.hz, col, 0.6); } return; }
+  if (k === 'statue') { const hs = b.hx / 0.62, top = Math.min(9.6, b.y + b.hy), neck = top - hs * 2; fillBox({ x: b.x, y: neck / 2, z: b.z, hx: b.hx * 0.7, hy: neck / 2, hz: b.hz * 0.7 }, col); fillBox({ x: b.x, y: neck + hs, z: b.z, hx: hs * 0.5, hy: hs, hz: hs * 0.45 }, col, 0.8, false); box({ x: b.x, y: neck / 2, z: b.z, hx: b.hx * 0.7, hy: neck / 2, hz: b.hz * 0.7 }, col, a, 3); mesh(HEAD, b.x, neck + hs, b.z, hs, 0, 0, 0, col, a); mesh(EYES, b.x, neck + hs, b.z, hs, 0, 0, 0, '#ff3df0', a); circle(b.x, 0.04, b.z, b.hx * 1.3, col, 0.7, 8, 1); if (vB === 3) { seg(b.x - b.hx, 9.5, b.z - b.hz, b.x + b.hx, 9.5, b.z + b.hz, col, 0.6); seg(b.x + b.hx, 9.5, b.z - b.hz, b.x - b.hx, 9.5, b.z + b.hz, col, 0.6); } return; }
   if (k === 'tentacle') { for (let s = -1; s <= 1; s++) { let lx = b.x + s * 0.4, ly = 0; for (let i = 1; i <= 7; i++) { const py = i * 1.37, px = b.x + s * 0.4 + Math.sin(i * 0.9 + t * 0.05 + s) * 0.35; seg(lx, ly, b.z, px, py, b.z, s ? col : '#ff3df0', a); lx = px; ly = py; } } circle(b.x, 0.05, b.z, b.hx * 1.2, col, 0.6, 8, 1); return; }
-  if (k === 'ice') { box(b, col, a); const x0 = Math.max(-9, b.x - b.hx), x1 = Math.min(9, b.x + b.hx), y0 = Math.max(0, b.y - b.hy), y1 = Math.min(9.6, b.y + b.hy), z = b.z - b.hz, n = Math.max(1, (x1 - x0) / 3 | 0); for (let i = 0; i < n; i++) { const xa = x0 + (x1 - x0) * i / n, xb = x0 + (x1 - x0) * (i + 1) / n; seg(xa, y0, z, xb, y1, z, '#ffffff', a * 0.6); seg(xb, y0, z, xa, y1, z, col, a * 0.5); } return; }
+  if (k === 'ice') { fillBox(b, col, 1.2); box(b, col, a); const x0 = Math.max(-9, b.x - b.hx), x1 = Math.min(9, b.x + b.hx), y0 = Math.max(0, b.y - b.hy), y1 = Math.min(9.6, b.y + b.hy), z = b.z - b.hz, n = Math.max(1, (x1 - x0) / 3 | 0); for (let i = 0; i < n; i++) { const xa = x0 + (x1 - x0) * i / n, xb = x0 + (x1 - x0) * (i + 1) / n; seg(xa, y0, z, xb, y1, z, '#ffffff', a * 0.6); seg(xb, y0, z, xa, y1, z, col, a * 0.5); } return; }
+  if (!ghost) fillBox(b, b.col, k === 'car' ? 1.3 : 1);
   box(b, col, a, k === 'tower' || k === 'thunderhead' || k === 'rockwall' ? Math.min(5, b.hy | 0) : 0);
   if (k === 'gate') hatch(b, col, a * 0.4, 6); else if (k === 'slab' || k === 'arch' || k === 'clouddeck' || k === 'membrane') hatch(b, col, a * 0.35, 10);
   else if (k === 'tower' || k === 'spire' || k === 'pylon' || k === 'thunderhead') { seg(b.x, 0, b.z - b.hz, b.x, Math.min(9.6, b.y + b.hy), b.z - b.hz, col, a * 0.5); if (vB === 3) { seg(b.x - b.hx, 9.5, b.z - b.hz, b.x + b.hx, 9.5, b.z + b.hz, col, a * 0.5); seg(b.x + b.hx, 9.5, b.z - b.hz, b.x - b.hx, 9.5, b.z + b.hz, col, a * 0.5); } }
@@ -181,8 +205,10 @@ export function drawWorld(ctx, g, o = {}) {
   ctx.globalCompositeOperation = 'lighter';
   const warp = Math.max(0, g.speedMul - 1.75) * 30; ctx.strokeStyle = '#8fa8ff'; ctx.fillStyle = '#8fa8ff'; ctx.lineWidth = 1;
   for (let i = 0; i < 70; i++) { const sp = 0.3 + hash(i) * 1.5, x = ((hash(i + 50) * W - g.camZ * sp * (vB === 0 ? 6 : 2)) % W + W) % W, y = ((hash(i + 99) * H + (vB === 3 ? g.camZ * sp * 6 : 0)) % H + H) % H; ctx.globalAlpha = 0.25 + hash(i + 7) * 0.5; if (warp > 1) { const dx = x - 480, dy = y - 270, d = Math.hypot(dx, dy) || 1; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx / d * warp * sp, y + dy / d * warp * sp); ctx.stroke(); } else ctx.fillRect(x, y, sp > 1.2 ? 2 : 1, sp > 1.2 ? 2 : 1); } ctx.globalAlpha = 1;
-  backdrop(g, th, t);
+  FILL = !!o.fill; backdrop(g, th, t);
+  if (FILL) flush(ctx, o.glow !== false, th.trippy ? ((t * 0.8) % 360 / 30 | 0) * 30 : 0); // floor first, so solid things cover it
   for (const b of g.obs) drawObs(g, b, t);
+  if (FILL) { for (const e of g.enemies) if (e.type === 'boss' && e.z < 30) { const hs = e.look === 'colossus' ? 3.3 : 0; if (hs) fillBox({ x: e.x, y: Math.max(hs, e.y - 0.2), z: e.z, hx: hs * 0.52, hy: hs, hz: hs * 0.45 }, e.col, 0.9); } drawQuads(ctx); }
   for (const r of g.rings) { if (r.got) continue;
     if (r.kind === 'warp') { if (g.view === r.phase && r.z < 17) { const y = MASK[g.view][1] ? r.y : 4.7, x = MASK[g.view][0] ? r.x : 0, f = Math.min(1, (17 - r.z) / 5); for (let i = 0; i < 4; i++) circle(x, y, r.z, r.r * (1 - i * 0.2), i % 2 ? '#ffffff' : '#b06bff', f, 20, vB === 3 ? 1 : 0, t * 0.05 * (i % 2 ? 1 : -1)); for (let i = 0; i < 6; i++) { const a = t * 0.04 + i / 6 * TAU; if (vB === 3) seg(x, y, r.z, x + Math.cos(a) * r.r, y, r.z + Math.sin(a) * r.r, '#b06bff', 0.6 * f); else seg(x, y, r.z, x + Math.cos(a) * r.r, y + Math.sin(a) * r.r, r.z, '#b06bff', 0.6 * f); } }
       else if (r.z < 14 && (t + (r.z | 0) * 7) % 41 < 2) { const a = hash(t) * TAU, x = Math.max(-8.5, Math.min(8.5, r.x)), y = Math.max(0.3, r.y); seg(x, y, r.z, x + Math.cos(a) * 0.4, y + Math.sin(a) * 0.4, r.z, '#b06bff', 0.35); } }

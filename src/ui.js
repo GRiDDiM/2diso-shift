@@ -35,7 +35,7 @@ export function mountShift(root, host = {}) {
 <div class="ds-rotate" hidden><div>TURN YOUR SCREEN SIDEWAYS</div><button type="button">PLAY ANYWAY</button></div></section>`;
   const shell = root.querySelector('.ds-shell'), stage = root.querySelector('.ds-stage'), canvas = root.querySelector('canvas'), ctx = canvas.getContext('2d'), touchEl = root.querySelector('.ds-touch'), stickEl = root.querySelector('.ds-stick'), nubEl = root.querySelector('.ds-nub'), rotEl = root.querySelector('.ds-rotate');
   const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
-  const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: coarse ? 'low' : 'high', shake: true, idle: false, autofire: coarse, gear: 0, voice: true }, LS.get('opt', {})); const saveOpt = () => LS.set('opt', opt);
+  const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: coarse ? 'low' : 'high', shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true }, LS.get('opt', {})); const saveOpt = () => LS.set('opt', opt);
   const audio = createAudio(opt);
   let destroyed = false, raf = 0, last = performance.now(), acc = 0, scale = 1, res = 1, rotOk = false;
   let scene = 'intro', sceneT = 0, g = null, attract = null, assisted = false, testRun = false, submitted = false, focusPaused = false, lastDev = coarse ? 'touch' : 'kb', titleT = 0, endInfo = null, levelId = 'earth', returnTo = null, warpT = 0;
@@ -90,11 +90,12 @@ export function mountShift(root, host = {}) {
   function popMenu() { const m = menus.pop(); audio.sfx('back'); prevM = { ...HELD }; return m; }
   const onoff = v => v ? 'ON' : 'OFF';
   const scrollMenu = (title, lines) => push({ title, kind: 'scroll', lines, off: 0, items: [{ label: 'BACK', act: popMenu }] });
-  function optionsMenu() { push({ title: 'OPTIONS', gap: 30, items: [
+  function optionsMenu() { push({ title: 'OPTIONS', gap: 28, items: [
     { label: () => 'MUSIC  ' + Math.round(opt.music * 10), adj: d => { opt.music = Math.max(0, Math.min(1, opt.music + d * 0.1)); audio.vol(); saveOpt(); } },
     { label: () => 'SOUND  ' + Math.round(opt.sfx * 10), adj: d => { opt.sfx = Math.max(0, Math.min(1, opt.sfx + d * 0.1)); audio.vol(); saveOpt(); audio.sfx('blip'); } },
     { label: () => 'ANNOUNCER  ' + onoff(opt.voice), adj: () => { opt.voice = !opt.voice; saveOpt(); if (opt.voice) audio.say('announcer on', true); else audio.hush(); } },
     { label: () => 'GLOW  ' + opt.glow.toUpperCase(), adj: () => { opt.glow = opt.glow === 'high' ? 'low' : 'high'; saveOpt(); fit(); } },
+    { label: () => 'SOLID OBSTACLES  ' + onoff(opt.fill), adj: () => { opt.fill = !opt.fill; saveOpt(); } },
     { label: () => 'SCREEN SHAKE  ' + onoff(opt.shake), adj: () => { opt.shake = !opt.shake; saveOpt(); } },
     { label: () => 'AUTO SHOOT  ' + onoff(opt.autofire), adj: () => { opt.autofire = !opt.autofire; saveOpt(); } },
     { label: () => 'START SPEED  ' + GEARS[opt.gear], adj: d => { opt.gear = (opt.gear + (d < 0 ? 2 : 1)) % 3; saveOpt(); } },
@@ -247,7 +248,7 @@ export function mountShift(root, host = {}) {
   }
   function render() {
     ctx.setTransform(res, 0, 0, res, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-    const ro2 = { glow: opt.glow === 'high', shake: opt.shake };
+    const ro2 = { glow: opt.glow === 'high', shake: opt.shake, fill: opt.fill };
     if (scene === 'intro') drawIntro();
     else if (scene === 'story') drawStory();
     else { ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H); const gg = scene === 'title' ? attract : g;
