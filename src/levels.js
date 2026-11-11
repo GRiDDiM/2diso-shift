@@ -296,6 +296,46 @@ function pluto() { // ice field: shatter a path, thread the spires
   return K.done({ name: 'PLUTO', title: 'THE COLD EDGE', bonus: true, endZ: 345, endBonus: 12000, theme: { sky: 'ice', grid: '#2a5a9a' } });
 }
 
+// =====================================================================================
+// ARENAS — after each boss, before the jump: a walled arena in that planet's colours. Free flight, guns track
+// the nearest target, clear five waves. L / R flips between TOP and ISO: white "phase" enemies only exist in ISO.
+// =====================================================================================
+const ARENAS = {
+  earth: { name: 'GRID ZERO', title: 'NEO TERRA ARENA', theme: { sky: 'city', grid: '#2443c8' }, col: '#2ee6ff',
+    grunt: { col: '#ff3df0', sp: 4.2, hp: 2 }, fast: { col: '#ff4d6d', sp: 6.2, hp: 1, shape: 'kami' }, gun: { col: '#3dffb0', hp: 6, shape: 'saucer', fire: 120, fan: 3 }, champ: { col: '#ffe14a', shape: 'carrier', name: 'GRID WARDEN' },
+    hazard(g) { for (let i = 0; i < 4; i++) addObs(g, { rel: true, kind: 'car', x: -9 + i * 5, y: 4.5, z: 4 + i * 5.5, hx: 1.3, hy: 0.45, hz: 0.7, vx: i % 2 ? 3.2 : -3.2, wrap: 10, col: '#ff8a2b' }); } },
+  mars: { name: 'THE CRUCIBLE', title: 'FORGE ARENA', theme: { sky: 'volcano', grid: '#8a2a12' }, col: '#ff5a1f',
+    grunt: { col: '#ff8a2b', sp: 4, hp: 2, shape: 'ember' }, fast: { col: '#ffe14a', sp: 6, hp: 1, shape: 'ember' }, gun: { col: '#d98a5a', hp: 8, shape: 'head', fire: 130, fan: 2, r: 0.95 }, champ: { col: '#d98a5a', shape: 'head', name: 'STONE ELDER' },
+    hazard(g) { [[-5, 5], [5, 9], [-4, 15], [4.5, 19]].forEach(([x, z], i) => addObs(g, { rel: true, kind: 'geyser', x, y: 4.75, z, hx: 1.05, hy: 4.75, hz: 1.05, col: '#ff5a1f', pulse: [70, 110, i * 45] })); } },
+  jupiter: { name: 'EYE OF THE STORM', title: 'STORM ARENA', theme: { sky: 'cloud', grid: '#7a4a1e' }, col: '#7df9ff',
+    grunt: { col: '#7df9ff', sp: 4.6, hp: 2, shape: 'spark', wob: 5 }, fast: { col: '#ffffff', sp: 6.8, hp: 1, shape: 'spark', wob: 8 }, gun: { col: '#b06bff', hp: 6, shape: 'jelly', burst: 8, fire: 150 }, champ: { col: '#b06bff', shape: 'jelly', name: 'THUNDER BLOOM' },
+    hazard(g) { [6, 12, 18].forEach((z, i) => addObs(g, { rel: true, kind: 'bolt', x: 0, y: 4.5, z, hx: 8.8, hy: 0.4, hz: 0.45, col: '#7df9ff', pulse: [55, 125, i * 60] })); } },
+  x: { name: 'THE HEART', title: 'BLOOM ARENA', theme: { sky: 'bio', grid: '#6a1e8a', trippy: true, splat: true }, col: '#3dffb0',
+    grunt: { col: '#b6ff3d', sp: 3.6, hp: 1, shape: 'spore', r: 0.42, wob: 4 }, fast: { col: '#ff3df0', sp: 5.8, hp: 1, shape: 'spore', r: 0.42, wob: 7 }, gun: { col: '#ff3df0', hp: 8, shape: 'spitter', fire: 125, fan: 4, bcol: '#b6ff3d', bs: 7 }, champ: { col: '#ff3df0', shape: 'spitter', name: 'BROOD MOTHER' },
+    hazard(g) { [[-5, 6], [5, 11], [-3, 17]].forEach(([x, z], i) => addObs(g, { rel: true, kind: 'tentacle', x, y: 4.75, z, hx: 0.75, hy: 4.75, hz: 0.75, col: '#3dffb0', osc: { ax: 1.6, ay: 0, w: 1.2, ph: i * 2 } })); } } };
+// each wave: [grunts, fast, gunners, phase grunts]; wave 5 adds the champion
+const WAVES = [[10, 0, 0, 0], [10, 6, 1, 0], [8, 6, 2, 6], [12, 8, 3, 8], [10, 10, 2, 8]];
+function arena(of) {
+  const T = ARENAS[of], K = kit('arena-' + of); K.zone(-99, 1e9, TOP, 'BONUS ARENA // ' + T.name);
+  const edge = g => { const a = g.rand() * 6.283, x = Math.cos(a) * 12, z = 11.5 + Math.sin(a) * 15; return [Math.max(-9, Math.min(9, x)), Math.max(-1.5, Math.min(25, z))]; };
+  const spawn = (g, spec, extra) => { const [x, z] = edge(g); return addEnemy(g, { type: 'seek', x, y: 4.5, z, r: 0.6, score: 100, ph: g.rand() * 6, ...spec, ...extra }); };
+  const tick = g => {
+    const A = g.ar || (g.ar = { wave: 0, total: WAVES.length, t: 40, left: 0, name: T.name, q: [] }), alive = g.enemies.filter(e => e.hp > 0);
+    A.left = alive.length + A.q.length; const ph = alive.filter(e => e.phase === 1).length; g.recView = ph > alive.length - ph ? 1 : 3;
+    if (A.q.length) { if (g.tick % 30 === 0) for (let i = 0; i < 2 && A.q.length; i++) { const [spec, extra] = A.q.shift(); spawn(g, spec, extra); } return; } // enemies pour in from the edges a few at a time
+    if (alive.length) { A.t = 0; return; }
+    if (++A.t < 75) return; A.t = 0;
+    if (A.wave >= WAVES.length) { g.state = 'clear'; g.endT = 0; g.score += 8000; g.fx.push('clear', 'say:arena clear', 'toast:ARENA CLEAR|+8000'); return; }
+    const w = WAVES[A.wave++], hpx = 1 + A.wave * 0.25; hint(g, 'WAVE ' + A.wave + ' / ' + WAVES.length + (A.wave === 3 ? '   WHITE ONES: SHIFT TO ISO' : ''), 150); g.fx.push('charge'); if (A.wave === 1) T.hazard(g);
+    const add = (n, spec, extra) => { for (let i = 0; i < n; i++) A.q.push([spec, { ...extra, hp: Math.round((extra.hp || spec.hp) * hpx) }]); };
+    add(w[0], T.grunt, { hp: T.grunt.hp * 4, score: 15 }); add(w[1], T.fast, { hp: T.fast.hp * 5, score: 25 }); add(w[3], T.grunt, { col: '#ffffff', phase: 1, hp: T.grunt.hp * 4, score: 30 });
+    for (let i = 0; i < w[2]; i++) A.q.push([T.gun, { sp: 2, keep: 7, hp: Math.round(T.gun.hp * 4 * hpx), score: 80, r: T.gun.r || 0.9, pod: i === 0 && A.wave % 2 === 0 }]);
+    for (let i = A.q.length - 1; i > 0; i--) { const j = g.rand() * (i + 1) | 0; [A.q[i], A.q[j]] = [A.q[j], A.q[i]]; }
+    if (A.wave === WAVES.length) { A.q.push([T.champ, { sp: 1.6, keep: 6, hp: 650, r: 1.7, score: 1500, fire: 70, fan: 5, big: true, pod: true }]); hint(g, 'FINAL WAVE // ' + T.champ.name, 170); }
+  };
+  return K.done({ name: T.name, title: T.title, bonus: true, arena: true, tick, rules: { arena: true }, theme: { ...T.theme, arena: T.col } });
+}
+
 export const LEVELS = {
   earth: { build: earth, n: 1, name: 'EARTH', sub: 'NEO TERRA', next: 'mars', bonus: 'moon', boss: 'OVERSEER', info: 'CYBER CITY. SKYSCRAPERS, SKYWAYS, FIREWALL GATES.' },
   mars: { build: mars, n: 2, name: 'MARS', sub: 'THE FORGE', next: 'jupiter', bonus: 'sun', boss: 'THE COLOSSUS', info: 'LAVA GEYSERS, FIRE ARCS, ALIEN STONE HEADS.', kit: [1, 1, 1, 0, 0, 1, 0, 0] },
@@ -305,5 +345,6 @@ export const LEVELS = {
   sun: { build: sun, name: 'THE SUN', sub: 'CORONA', isBonus: true, of: 'mars', info: 'SURF THE FLARES. STAY IN THE SHADOW LANE.', kit: [1, 1, 1, 0, 0, 1, 0, 0] },
   belt: { build: asteroids, name: 'ASTEROID BELT', sub: 'THE RUBBLE', isBonus: true, of: 'jupiter', info: 'ROCKS SPLIT. SOME CARRY UPGRADE PODS.', kit: [2, 2, 1, 1, 1, 1, 0, 0] },
   pluto: { build: pluto, name: 'PLUTO', sub: 'THE COLD EDGE', isBonus: true, of: 'x', info: 'SHATTER THE ICE SHELF, THREAD THE SPIRES.', kit: [3, 2, 2, 2, 2, 2, 0, 0] } };
+for (const id of ['earth', 'mars', 'jupiter', 'x']) LEVELS['arena-' + id] = { build: () => arena(id), name: ARENAS[id].name, sub: ARENAS[id].title, isBonus: true, isArena: true, of: id, info: 'FIVE WAVES. GUNS AIM THEMSELVES. L / R FLIPS TOP AND ISO.', kit: LEVELS[id].kit ? LEVELS[id].kit.map(v => Math.min(5, v + 1)) : [1, 1, 1, 0, 0, 1, 0, 0] };
 export const ORDER = ['earth', 'mars', 'jupiter', 'x'];
 export const buildLevel = id => LEVELS[id].build();

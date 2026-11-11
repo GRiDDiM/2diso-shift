@@ -125,6 +125,17 @@ True. The new boss walls only drew their top and bottom faces, and in the 2D sid
 - Sun bonus: the shadow lane is a dense blue hatch with bright rails, the screen glows hotter as you cook, and the flares are fans of wavy tendrils.
 - BOLT has a much longer lightning tail.
 
+### 8. Solid shapes and the arenas
+> "add textures/gradient fills / shading / shadows to obstacles so we can see if it looks better or worse"
+
+- Obstacles can be drawn solid: dark shaded faces, a ground shadow, and the lines behind them hidden so the scene reads cleanly. It is an option (SOLID OBSTACLES) so both looks can be compared.
+
+> "can we weave in an arena between levels that you have to clear a few waves in ... that would match the theme of the level you just cleared"
+
+- After every boss there is now a bonus arena: GRID ZERO, THE CRUCIBLE, EYE OF THE STORM and THE HEART. Free movement inside a walled grid, auto-aim at the nearest target, five waves and a champion.
+- SHIFT still matters: L/R flips the arena between TOP and ISO, and the white enemies can only be hit in ISO.
+- Each arena carries its planet's hazard (geysers on Mars, lightning on Jupiter, and so on). Losing your shield ends the bonus without costing a life.
+
 ## Still to do
 - Hardware testing: SNES pad in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
