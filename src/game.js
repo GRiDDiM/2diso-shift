@@ -188,7 +188,7 @@ export function step(g, inputs) {
     const Bo = lv(p, U.BOLT);
     if (Bo && firing && --p.boltT <= 0) { p.boltT = (96 - 11 * Bo) * (od ? 0.6 : 1) | 0; const n = Bo >= 5 ? 3 : Bo >= 3 ? 2 : 1; for (let k = 0; k < n; k++) g.shots.push({ kind: 4, x: p.x, y: p.y, z: p.z + 1, vx: 0, vy: 0, vz: 0, t: 0, ph: g.rand() * 6.283 + k * 2.1, own: p.i, dmg: 5 + 3 * Bo, chain: Bo >= 4 ? Bo - 1 : Bo >= 2 ? 1 : 0, r: 0.5, life: 190, trail: [] }); g.fx.push('bolt'); }
     const M = lv(p, U.MISSILE);
-    if (M && firing && --p.missT <= 0) { p.missT = (od ? 0.6 : 1) * (80 - 9 * M) | 0; for (let k = 0; k < M + 1 && g.shots.length < 420; k++) { const a = (k - M / 2) * 0.5; g.shots.push({ x: p.x, y: p.y, z: p.z, vx: p.az * Math.sin(a) * 9 + p.ax * 6, vy: rules.arena ? 0 : Math.cos(a * 2) * 5, vz: -p.ax * Math.sin(a) * 9 + p.az * 6, dmg: 4 + M, r: 0.4, kind: 2, life: 150, aoe: M >= 3 ? 2 : 0, split: M >= 5 }); } g.fx.push('missile'); }
+    if (M && firing && --p.missT <= 0) { p.missT = (od ? 0.6 : 1) * (62 - 8 * M) | 0; for (let k = 0; k < M + 1 && g.shots.length < 420; k++) { const a = (k - M / 2) * 0.5; g.shots.push({ x: p.x, y: p.y, z: p.z, vx: p.az * Math.sin(a) * 9 + p.ax * 6, vy: rules.arena ? 0 : Math.cos(a * 2) * 5, vz: -p.ax * Math.sin(a) * 9 + p.az * 6, dmg: 6 + 2 * M, r: 0.45, kind: 2, life: 150, aoe: 1.4 + 0.4 * M, split: M >= 5 }); } g.fx.push('missile'); }
     // drones
     const n = p.drones.length, vw = g.view;
     for (let k = 0; k < n; k++) {
@@ -249,10 +249,10 @@ export function step(g, inputs) {
       if (--s.life <= 0) s.life = 0; continue; }
     if (s.kind === 2) { let best = null, bd = 1e9; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e.z > 30) continue; const d = Math.hypot((e.x - s.x) * m[0], (e.y - s.y) * m[1], e.z - s.z); if (d < bd) { bd = d; best = e; } }
       if (best) { const d = bd || 1, a = 2.2; s.vx += (best.x - s.x) / d * a * m[0]; s.vy += (best.y - s.y) / d * a * m[1]; s.vz += (best.z - s.z) / d * a; } else s.vz += 1.2; const sp = Math.hypot(s.vx, s.vy, s.vz), mx = 30; if (sp > mx) { s.vx *= mx / sp; s.vy *= mx / sp; s.vz *= mx / sp; }
-      if (g.tick % 2 === 0 && g.parts.length < 800) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: 0, vy: 0, vz: -4, life: 10, max: 10, col: '#ff8a2b' }); }
+      if (g.parts.length < 800) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: (g.rand() - 0.5) * 1.5, vy: (g.rand() - 0.5) * 1.5, vz: -4, life: 20, max: 20, col: g.tick % 2 ? '#ff8a2b' : '#ffe14a' }); }
     s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt; if (--s.life <= 0 || s.z > 36 || s.z < -3 || Math.abs(s.x) > 13 || s.y < -1 || s.y > 12) { s.life = 0; continue; }
     for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e === s.last) continue; if (ov(s, e, m)) { damage(g, e, s.dmg); if (s.pierce > 0) { s.pierce--; s.last = e; } else s.life = 0;
-      if (s.aoe) { explode(g, s.x, s.y, s.z, '#ff8a2b', 12, 8); for (const q of g.enemies) if (q !== e && q.hp > 0 && Math.hypot(q.x - s.x, q.y - s.y, q.z - s.z) < s.aoe + q.r) damage(g, q, s.dmg * 0.5); if (s.split) for (let i = 0; i < 3; i++) g.shots.push({ x: s.x, y: s.y, z: s.z, vx: Math.cos(i * 2.1) * 12, vy: Math.sin(i * 2.1) * 12, vz: 4, dmg: 3, r: 0.35, kind: 2, life: 60, aoe: 1.2 }); }
+      if (s.aoe) { explode(g, s.x, s.y, s.z, '#ff8a2b', 16, 9); explode(g, s.x, s.y, s.z, '#ffe14a', 8, 5); g.fx.push('boom'); g.shake = Math.max(g.shake, 2); for (const q of g.enemies) if (q !== e && q.hp > 0 && Math.hypot(q.x - s.x, q.y - s.y, q.z - s.z) < s.aoe + q.r) damage(g, q, s.dmg * 0.5); if (s.split) for (let i = 0; i < 3; i++) g.shots.push({ x: s.x, y: s.y, z: s.z, vx: Math.cos(i * 2.1) * 12, vy: Math.sin(i * 2.1) * 12, vz: 4, dmg: 3, r: 0.35, kind: 2, life: 60, aoe: 1.2 }); }
       else if (g.parts.length < 800) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: 0, vy: 3, vz: -6, life: 8, max: 8, col: '#ffffff' }); break; } }
     if (s.life > 0) for (const o of g.obs) { if (!solid(o, vw)) continue; if (ov(s, o, m)) { s.life = 0; if (o.hp != null) { o.hp -= s.dmg; o.hit = 3; } if (g.parts.length < 800) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: 0, vy: 2, vz: -8, life: 7, max: 7, col: o.col }); break; } }
   }
