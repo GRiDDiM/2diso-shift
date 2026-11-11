@@ -163,7 +163,7 @@ Nine ideas went on the list and all nine went in, plus one more from Benjamin.
 - **A further horizon.** Buildings, walls and other scenery are placed much further out and fade in, so nothing pops up in your face.
 
 ## Still to do
-- Hardware testing: SNES pad in the ag app, phones, tablets.
+- Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
 - Recorded announcer lines instead of the browser voice (it now has a radio chirp and a better voice pick, but it is still the browser).
 - A shared online board for the Daily Run (today it keeps your own best).
