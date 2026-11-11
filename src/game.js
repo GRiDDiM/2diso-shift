@@ -30,7 +30,7 @@ export function createGame({ seed = 1, level, start = null, players = 1, wing = 
     flags: { warp: !!start?.warp, warpNow: false }, stats: Object.assign({ kills: 0, shifts: 0, deaths: 0, hits: 0, perfect: 0 }, start?.stats), coop: players > 1, mut: mut || {}, perfT: 0,
     wing: wing && players === 1 ? makeWing() : null, shake: 0, flash: 0, endT: 0, speedMul: 3, checkpoint: z0, cpSnap: null };
   for (let i = 0; i < players; i++) { const p = newPlayer(i, start, players > 1); if (i) p.up = g.players[0].up; for (let k = 0; k < p.up[U.DRONE]; k++) p.drones.push({ x: p.x, y: p.y, z: p.z }); g.players.push(p); }
-  while (g.evi < level.events.length && level.events[g.evi].z < z0 - 0.01) g.evi++;
+  g.z0 = z0; while (g.evi < level.events.length && level.events[g.evi].z < z0 - 20) g.evi++;
   if (level.rules?.arena) { g.intro = 70; g.camZ = 0; for (const p of g.players) { p.y = 4.5; p.z = 11; p.shield = Math.max(p.shield, 2); } }
   g.cpSnap = snapshot(g);
   return g;
@@ -211,7 +211,7 @@ export function step(g, inputs) {
   const dz = rules.arena ? 0 : playing ? SCROLL * g.speedMul * dt : SCROLL * 0.4 * dt;
   if (playing) {
     g.camZ += dz;
-    if (!g.boss) while (g.evi < lvd.events.length && lvd.events[g.evi].z <= g.camZ) lvd.events[g.evi++].fn(g);
+    if (!g.boss) while (g.evi < lvd.events.length && lvd.events[g.evi].z <= g.camZ) { const e = lvd.events[g.evi++]; if ((e.lim ?? e.z) >= g.z0 - 0.01) e.fn(g); }
     const zn = lvd.zones.find(z => g.camZ + 24 >= z.z0 && g.camZ + 24 < z.z1);
     if (zn && zn !== g.zone) { g.zone = zn; if (zn.msg) hint(g, zn.msg, 260); }
     if (!g.boss && g.zone) g.recView = g.zone.view;
@@ -293,13 +293,10 @@ export function step(g, inputs) {
   if (g.state !== 'play') g.endT++;
   return g;
 }
-// RIVET-9, the assist wingman. He reads the level ahead and rolls into the view it calls for before you do,
-// so you can see where he ends up. He holds formation, fires a light gun, and reboots a few seconds after a hit.
+// RIVET-9, the assist wingman. He holds formation, rolls when you roll, fires a light gun, and reboots a few seconds after a hit.
 function wingStep(g, dt, playing) {
   const w = g.wing, p = g.players[0], v = g.view, m = MASK[v], arena = g.level.rules?.arena; w.t++;
-  if (w.st > 0) w.st = Math.max(0, w.st - 1 / 18);
-  if (w.view !== g.recView && w.st <= 0 && g.intro <= 0 && !g.boss?.dying) { w.from = w.view; w.view = g.recView; w.st = 1; w.dir = (w.view - w.from + 4) % 4 === 3 ? -1 : 1; if (w.dead <= 0) g.fx.push('wshift'); }
-  if (g.intro > 0) { w.view = w.from = g.view; w.st = 0; }
+  w.view = g.view;
   if (w.dead > 0) { if (--w.dead === 0) { w.x = p.x; w.y = p.y; w.z = Math.max(0.6, p.z - 2); w.inv = 150; g.fx.push('blip'); } return; }
   if (w.inv > 0) w.inv--;
   let tx = p.x - 1.7, ty = p.y + 0.8, tz = p.z - 1.3; if (arena) { tx = p.x - p.az * 1.7 - p.ax * 1.2; ty = 4.5; tz = p.z + p.ax * 1.7 - p.az * 1.2; } else if (v === 0) { tx = p.x; ty = p.y + 1.3; tz = p.z - 1.5; }

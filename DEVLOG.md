@@ -153,7 +153,14 @@ Nine ideas went on the list and all nine went in, plus one more from Benjamin.
 
 > "we can also do rivet-9 assist toggle too" ... "it will be cool to see what rivet 9 looks like when he shift perspectives before we do"
 
-- **RIVET-9 assist.** RIVET-9 is the ArcadeGridz house AI. Switch him on and he flies as your wingman. He reads the level ahead and rolls into the view it calls for before you do, and he is drawn in the view he is in, so you see exactly where that view will put you. Runs with him are tagged ASSISTED.
+- **RIVET-9 assist.** RIVET-9 is the ArcadeGridz house AI. Switch him on and he flies as your wingman with a light gun. Runs with him are tagged ASSISTED. The first version had him roll into the next view before you did, drawn in that view.
+
+> "forget having rivet 9 switch perspectives before us it looks funky and illogical lol. just have him do it when we do."
+
+- He now rolls when you roll.
+- **Weak spots.** Every boss core carries a hatched, pulsing gold target when it can be hurt and a dim red cross when it is shielded.
+- **Easier to read shots.** The main gun fires thicker bolts, the laser has a wide glow, and enemy bullets are bigger spinning rings with a white core and a tail.
+- **A further horizon.** Buildings, walls and other scenery are placed much further out and fade in, so nothing pops up in your face.
 
 ## Still to do
 - Hardware testing: SNES pad in the ag app, phones, tablets.

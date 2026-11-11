@@ -31,10 +31,11 @@ const NL = 26, layers = Array.from({ length: NL }, () => new Map()), qlay = Arra
 function depth(x, z) { if (!OCC) return; const d = vOcc === 1 ? z - 0.5 * x : z; LAY = Math.max(2, Math.min(NL - 1, ((40 - d) / 1.8) | 0)); buckets = layers[LAY]; }
 function depth0() { LAY = 0; buckets = layers[0]; }
 let vOcc = 0;
+let LW = 1; // tube thickness for what is drawn next (1 = normal)
 function seg(x1, y1, z1, x2, y2, z2, col, a = 1) {
   P(x1, y1, z1); if (!OK) return; const ax = X, ay = Y; P(x2, y2, z2); if (!OK) return;
   if ((ax < -200 && X < -200) || (ax > W + 200 && X > W + 200) || (ay < -200 && Y < -200) || (ay > H + 200 && Y > H + 200)) return;
-  const k = a >= 1 ? col : col + '|' + (a * 10 | 0); let b = buckets.get(k); if (!b) { b = { col, a: a >= 1 ? 1 : Math.max(0.05, (a * 10 | 0) / 10), d: [] }; buckets.set(k, b); } b.d.push(ax, ay, X, Y);
+  const k = (a >= 1 ? col : col + '|' + (a * 10 | 0)) + (LW !== 1 ? '~' + LW : ''); let b = buckets.get(k); if (!b) { b = { col, a: a >= 1 ? 1 : Math.max(0.05, (a * 10 | 0) / 10), w: LW, d: [] }; buckets.set(k, b); } b.d.push(ax, ay, X, Y);
 }
 const rotCache = new Map();
 function hueRot(hex, deg) { const k = hex + deg; let r = rotCache.get(k); if (r) return r;
@@ -44,8 +45,8 @@ function flush(ctx, glow, trip, L = 0) {
   ctx.lineCap = 'round';
   for (const b of layers[L].values()) {
     const d = b.d; if (!d.length) continue; ctx.beginPath(); for (let i = 0; i < d.length; i += 4) { ctx.moveTo(d[i], d[i + 1]); ctx.lineTo(d[i + 2], d[i + 3]); }
-    ctx.strokeStyle = trip ? hueRot(b.col, trip) : b.col; if (glow) { ctx.globalAlpha = 0.07 * b.a; ctx.lineWidth = 13; ctx.stroke(); ctx.globalAlpha = 0.2 * b.a; ctx.lineWidth = 6; ctx.stroke(); }
-    ctx.globalAlpha = b.a; ctx.lineWidth = 1.6; ctx.stroke(); d.length = 0;
+    ctx.strokeStyle = trip ? hueRot(b.col, trip) : b.col; const w = b.w || 1; if (glow) { ctx.globalAlpha = 0.07 * b.a; ctx.lineWidth = 13 * Math.min(w, 2.2); ctx.stroke(); ctx.globalAlpha = 0.2 * b.a; ctx.lineWidth = 6 * w; ctx.stroke(); }
+    ctx.globalAlpha = b.a; ctx.lineWidth = 1.6 * w; ctx.stroke(); d.length = 0;
   }
   ctx.globalAlpha = 1;
 }
@@ -158,7 +159,7 @@ function backdrop(g, th, t) {
 function drawObs(g, b, t) {
   depth(b.x + Math.min(b.hx, 3), b.z - b.hz);
   const ghost = b.phase != null && b.phase !== g.view; let a = ghost ? 0.18 : 1, col = b.hit > 0 ? '#ffffff' : b.col; const k = b.kind;
-  if (b.z > 31) a *= 0.4;
+  if (b.z > 34) a *= Math.max(0.12, (48 - b.z) / 14); // far scenery fades in
   if (k === 'safe') { if (b.z - b.hz > 26) return; const x0 = Math.max(-9, b.x - b.hx), x1 = Math.min(9, b.x + b.hx), y0 = Math.max(0.1, b.y - b.hy), y1 = Math.min(9.5, b.y + b.hy), c = '#3dffb0', al = 0.65 + 0.35 * Math.sin(t * 0.2), zs = b.hz > 3 ? [b.z - b.hz, b.z, b.z + b.hz] : [b.z - b.hz];
     for (const z of zs) { seg(x0, y0, z, x1, y0, z, c, al); seg(x1, y0, z, x1, y1, z, c, al); seg(x1, y1, z, x0, y1, z, c, al); seg(x0, y1, z, x0, y0, z, c, al); }
     if (b.hz > 3) { const z0 = b.z - b.hz, z1 = b.z + b.hz; seg(x0, y0, z0, x0, y0, z1, c, al); seg(x1, y0, z0, x1, y0, z1, c, al); seg(x0, y1, z0, x0, y1, z1, c, al); seg(x1, y1, z0, x1, y1, z1, c, al); const mx = (x0 + x1) / 2, my = (y0 + y1) / 2; for (let z = z0 + 2 + (t * 0.08 % 3); z < z1 - 1; z += 3) { if (b.hx > 5) { seg(-1, my, z, 0, my, z + 1, c, al * 0.8); seg(1, my, z, 0, my, z + 1, c, al * 0.8); seg(-9, my - 0.5, z, -9, my, z + 1, c, al * 0.8); seg(-9, my + 0.5, z, -9, my, z + 1, c, al * 0.8); } else { seg(mx - 0.6, 0.05, z, mx, 0.05, z + 1, c, al * 0.8); seg(mx + 0.6, 0.05, z, mx, 0.05, z + 1, c, al * 0.8); seg(mx - 0.6, 4.7, z, mx, 4.7, z + 1, c, al * 0.5); seg(mx + 0.6, 4.7, z, mx, 4.7, z + 1, c, al * 0.5); } } }
@@ -233,19 +234,17 @@ export function drawWorld(ctx, g, o = {}) {
     else mesh(DART, e.x, e.y, e.z, e.r * 1.05, 0, 0, Math.sin(e.t * 0.05) * 0.6, col, a);
   }
   for (const q of g.pods) { depth(q.x, q.z); const col = q.kind === 'god' ? RAINBOW[(t >> 2) % 7] : q.kind === 'bomb' ? '#ff8a2b' : q.kind === 'gem' ? '#7df9ff' : '#ffe14a'; mesh(OCT, q.x, q.y, q.z, (q.kind === 'gem' ? 0.35 : 0.5) + Math.sin(q.t * 0.15) * 0.08, q.t * 0.08, q.t * 0.05, 0, col); if (q.kind === 'god' || q.kind === 'bomb') circle(q.x, q.y, q.z, 0.8, col, 0.6, 10, 0, -q.t * 0.1); }
-  for (const b of g.ebul) { depth(b.x, b.z); const r = 0.3; seg(b.x - r, b.y, b.z, b.x + r, b.y, b.z, b.col); seg(b.x, b.y - r, b.z, b.x, b.y + r, b.z, b.col); seg(b.x, b.y, b.z - r, b.x, b.y, b.z + r, '#ffffff'); }
+  { const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0; for (const b of g.ebul) { depth(b.x, b.z); const r = 0.36 + 0.07 * Math.sin(t * 0.4 + b.x * 3), k = 0.03; LW = 2; circle(b.x, b.y, b.z, r, b.col, 1, 6, pl, t * 0.15); LW = 1.6; seg(b.x - r * 0.6, b.y, b.z, b.x + r * 0.6, b.y, b.z, '#ffffff'); seg(b.x, b.y - r * 0.6, b.z, b.x, b.y + r * 0.6, b.z, '#ffffff'); seg(b.x, b.y, b.z - r * 0.6, b.x, b.y, b.z + r * 0.6, '#ffffff'); LW = 1; circle(b.x, b.y, b.z, r * 1.7, b.col, 0.35, 6, pl, -t * 0.1); seg(b.x, b.y, b.z, b.x - b.vx * k * 2, b.y - b.vy * k * 2, b.z - b.vz * k * 2, b.col, 0.5); } }
   for (const s of g.shots) { depth(s.x, s.z);
     if (s.kind === 3) { const n = 6, R = s.r * 1.3; let lx, ly, lz; for (let i = 0; i <= n; i++) { const f = i / n * 2 - 1, d = f * R, zz = s.z - Math.abs(f) * 0.9, px = s.axis === 'x' ? s.x + d : s.x, py = s.axis === 'y' ? s.y + d : s.y; if (i) seg(lx, ly, lz, px, py, zz, i % 2 ? '#ff3df0' : '#7df9ff'); lx = px; ly = py; lz = zz; } continue; }
     if (s.kind === 4) { const tr = s.trail; let lx = s.x, ly = s.y, lz = s.z; for (let i = tr.length - 3; i >= 0; i -= 3) { const j = 0.25 + 0.5 * (1 - i / tr.length), px = tr[i] + (hash(i + t) - 0.5) * j, py = tr[i + 1] + (hash(i * 3 + t) - 0.5) * j, pz = tr[i + 2]; seg(lx, ly, lz, px, py, pz, i % 6 ? '#7df9ff' : '#ffffff', 0.15 + 0.85 * i / tr.length); if (i % 18 === 0 && i > 9) seg(px, py, pz, px + (hash(i * 5 + (t >> 1)) - 0.5) * 1.6, py + (hash(i * 7 + (t >> 1)) - 0.5) * 1.6, pz - 0.4, '#b06bff', 0.5 * i / tr.length); lx = px; ly = py; lz = pz; } mesh(SPARK, s.x, s.y, s.z, 0.35, 0, 0, t * 0.5, '#ffffff'); continue; }
-    const k = s.kind === 2 ? 0.03 : 0.022; seg(s.x, s.y, s.z, s.x - s.vx * k, s.y - s.vy * k, s.z - s.vz * k, s.kind === 2 ? '#ff8a2b' : s.kind === 1 ? '#b06bff' : '#7df9ff'); }
-  for (const b of g.beams) { depth(b.x, b.z0); const a = b.life / b.max; if (b.w) { for (let i = 0; i < 7; i++) { const an = i / 7 * TAU + t * 0.3, ox = Math.cos(an) * b.w * 0.8, oy = Math.sin(an) * b.w * 0.8; const qx = b.ex != null ? ox * 0.6 : vB === 0 ? 0 : ox, qy = b.ex != null ? 0 : vB === 3 ? 0 : vB === 0 ? ox : oy, qz = b.ex != null ? oy * 0.6 : 0; seg(b.x + qx, b.y + qy, b.z0 + qz, (b.ex ?? b.x) + qx, b.y + qy, b.z1 + qz, RAINBOW[(i + (t >> 1)) % 7], a); } seg(b.x, b.y, b.z0, b.ex ?? b.x, b.y, b.z1, '#ffffff', a); } else { seg(b.x, b.y, b.z0, b.ex ?? b.x, b.y, b.z1, b.col, a); seg(b.x, b.y, b.z0, b.ex ?? b.x, b.y, b.z1, '#ffffff', a * 0.5); } }
+    const k = s.kind === 2 ? 0.03 : s.kind === 0 ? 0.034 : 0.022; LW = s.kind === 0 ? 2.4 : s.kind === 2 ? 1.6 : 1.3; seg(s.x, s.y, s.z, s.x - s.vx * k, s.y - s.vy * k, s.z - s.vz * k, s.kind === 2 ? '#ff8a2b' : s.kind === 1 ? '#b06bff' : '#7df9ff'); if (s.kind === 0) { LW = 1; seg(s.x, s.y, s.z, s.x - s.vx * k * 0.5, s.y - s.vy * k * 0.5, s.z - s.vz * k * 0.5, '#ffffff'); } LW = 1; }
+  for (const b of g.beams) { depth(b.x, b.z0); const a = b.life / b.max; if (b.w) { for (let i = 0; i < 7; i++) { const an = i / 7 * TAU + t * 0.3, ox = Math.cos(an) * b.w * 0.8, oy = Math.sin(an) * b.w * 0.8; const qx = b.ex != null ? ox * 0.6 : vB === 0 ? 0 : ox, qy = b.ex != null ? 0 : vB === 3 ? 0 : vB === 0 ? ox : oy, qz = b.ex != null ? oy * 0.6 : 0; seg(b.x + qx, b.y + qy, b.z0 + qz, (b.ex ?? b.x) + qx, b.y + qy, b.z1 + qz, RAINBOW[(i + (t >> 1)) % 7], a); } seg(b.x, b.y, b.z0, b.ex ?? b.x, b.y, b.z1, '#ffffff', a); } else { LW = 4; seg(b.x, b.y, b.z0, b.ex ?? b.x, b.y, b.z1, b.col, a * 0.6); LW = 2; seg(b.x, b.y, b.z0, b.ex ?? b.x, b.y, b.z1, b.col, a); LW = 1; seg(b.x, b.y, b.z0, b.ex ?? b.x, b.y, b.z1, '#ffffff', a); } }
   for (const p of g.players) { if (p.dead > 0) continue; depth(p.x, p.z - 1); drawShip(g, p, t); for (let k = 0; k < p.drones.length; k++) { const d = p.drones[k]; depth(d.x, d.z); mesh(DRONE, d.x, d.y, d.z, 0.7, 0, 0, t * 0.1 + k, p.god > 0 ? RAINBOW[(k + (t >> 2)) % 7] : d.tmp ? '#ffffff' : '#b06bff'); } }
-  { const w = g.wing; if (w && w.dead <= 0 && !(w.inv > 0 && (t >> 2) % 2)) { // RIVET-9 is drawn in the view HE is in: when he rolls ahead of you, you see where that view puts him
-      const ahead = (w.view !== g.view || w.st > 0) && g.shiftT <= 0, sv = [vA, vB, mix, rollA]; if (ahead) { vA = w.from; vB = w.view; mix = w.st > 0 ? ease(1 - w.st) : 1; rollA = 0; }
-      depth(w.x, w.z); const roll = w.st > 0 ? w.dir * ease(1 - w.st) * TAU : Math.sin(w.t * 0.05) * 0.15, yaw = Math.atan2(p0.ax || 0, p0.az ?? 1), vc = VCOL[w.view];
+  { const w = g.wing; if (w && w.dead <= 0 && !(w.inv > 0 && (t >> 2) % 2)) { // RIVET-9, the assist wingman
+      depth(w.x, w.z); const roll = g.shiftT > 0 ? g.shiftDir * ease(1 - g.shiftT) * TAU : Math.sin(w.t * 0.05) * 0.15, yaw = Math.atan2(p0.ax || 0, p0.az ?? 1), vc = VCOL[g.view];
       mesh(SHIP_HULL, w.x, w.y, w.z, 0.78, yaw, 0, roll, '#ffb070'); mesh(SHIP_WING, w.x, w.y, w.z, 0.78, yaw, 0, roll, vc); mesh(SHIP_FIN, w.x, w.y, w.z, 0.78, yaw, 0, roll, '#ffe14a');
-      if (ahead) circle(w.x, w.y, w.z, 1 + Math.sin(t * 0.2) * 0.15, vc, 0.6, 12, vB === 3 ? 1 : vB === 0 ? 2 : 0, t * 0.05);
-      P(w.x, w.y + 1.1, w.z); if (OK) tags.push([X, Y - (vB === 3 ? 34 : 8), ahead ? 'R9 > ' + VIEWS[w.view] : 'R9', ahead ? vc : '#ffb070']); [vA, vB, mix, rollA] = sv; }
+      P(w.x, w.y + 1.1, w.z); if (OK && g.shiftT <= 0) tags.push([X, Y - (vB === 3 ? 30 : 8), 'R9', '#ffb070']); }
     const gh = o.ghost; if (gh && gh.z > -2 && gh.z < 30) { depth(gh.x, gh.z); mesh(SHIP_HULL, gh.x, gh.y, gh.z, 1, 0, 0, 0, '#3dffb0', 0.32); mesh(SHIP_WING, gh.x, gh.y, gh.z, 1, 0, 0, 0, '#3dffb0', 0.2); P(gh.x, gh.y + 0.9, gh.z); if (OK) tags.push([X, Y - 4, 'BEST', '#2a9a70']); } }
   for (const q of g.parts) { depth(q.x, q.z); if (q.splat) { seg(q.x, q.y, q.z, q.x - q.vx * 0.05, q.y - q.vy * 0.05 + 0.15, q.z - q.vz * 0.05, q.col, Math.min(1, q.life / q.max * 1.6)); seg(q.x - 0.12, q.y, q.z, q.x + 0.12, q.y, q.z, q.col, Math.min(1, q.life / q.max * 1.6)); } else seg(q.x, q.y, q.z, q.x - q.vx * 0.035, q.y - q.vy * 0.035, q.z - q.vz * 0.035, q.col, Math.min(1, q.life / q.max * 1.6)); }
   for (const s of g.shocks) { depth(s.x, s.z); circle(s.x, s.y, s.z, s.r, s.col, s.life / s.max, 16, vB === 3 ? 1 : vB === 0 ? 2 : 0); }
@@ -258,6 +257,15 @@ export function drawWorld(ctx, g, o = {}) {
   if (g.shiftT > 0) { ctx.fillStyle = '#5ee7ff'; ctx.globalAlpha = 0.1 * g.shiftT; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
 }
 const STAGE_COLS = ['#ff3df0', '#2ee6ff', '#ffe14a'];
+// the weak spot: a hatched, pulsing target disc facing the camera. Bright gold when it can be hurt, a dim red cross when it is shielded.
+function weak(x, y, z, r, open, t) {
+  const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0, U = pl === 2 ? [0, 0, 1] : [1, 0, 0], V = pl === 1 ? [0, 0, 1] : [0, 1, 0], pt = (u, v) => [x + U[0] * u + V[0] * v, y + U[1] * u + V[1] * v, z + U[2] * u + V[2] * v], ln = (a, b2, c, d, col, al) => { const p = pt(a, b2), q = pt(c, d); seg(p[0], p[1], p[2], q[0], q[1], q[2], col, al); };
+  if (!open) { LW = 2; circle(x, y, z, r, '#ff4d6d', 0.7, 14, pl); ln(-r * 0.6, -r * 0.6, r * 0.6, r * 0.6, '#ff4d6d', 0.7); ln(-r * 0.6, r * 0.6, r * 0.6, -r * 0.6, '#ff4d6d', 0.7); LW = 1; return; }
+  const pu = 1 + 0.12 * Math.sin(t * 0.25), R = r * pu; LW = 2.4; circle(x, y, z, R, '#ffe14a', 1, 18, pl); LW = 1.4;
+  for (let i = -4; i <= 4; i++) { const v = i / 5 * R, h = Math.sqrt(R * R - v * v); ln(-h, v, h, v, i % 2 ? '#ffffff' : '#ffe14a', 0.85); } // the texture: a hatched disc
+  LW = 1; circle(x, y, z, R * (1.5 + 0.25 * Math.sin(t * 0.25)), '#ffffff', 0.6, 18, pl, t * 0.04);
+  for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + t * 0.03, c = Math.cos(a), s = Math.sin(a); LW = 2; ln(c * R * 1.9, s * R * 1.9, c * R * 2.5, s * R * 2.5, '#ffe14a', 1); } LW = 1;
+}
 function drawBoss(g, b, t) {
   const open = (b.vuln || []).includes(g.view), col = b.hit > 0 ? '#ffffff' : b.col, s = b.dying ? 1 + Math.sin(t) * 0.1 : 1, core = open ? '#ffffff' : '#ff4d6d', L = b.look;
   if (L === 'colossus') { // a colossal alien stone head rising out of the ground, eyes burning, rune stones circling it
@@ -272,6 +280,7 @@ function drawBoss(g, b, t) {
   else if (L === 'bloom') { for (let i = 0; i < 3; i++) mesh(ROCK, b.x, b.y, b.z, (2.5 - i * 0.6) * s * (1 + Math.sin(t * 0.08 + i) * 0.08), t * 0.02 * (i + 1), t * 0.013 * (i % 2 ? 1 : -1), 0, i === 1 ? '#3dffb0' : col); mesh(OCT, b.x, b.y, b.z, 0.9 * s, -t * 0.07, t * 0.04, 0, core); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + Math.sin(t * 0.02) * 0.3; let lx = b.x + Math.cos(a) * 2, ly = b.y + Math.sin(a) * 2; for (let j = 1; j <= 5; j++) { const r = 2 + j * 0.8, w = Math.sin(t * 0.06 + i + j * 0.7) * 0.35, px = b.x + Math.cos(a + w) * r, py = b.y + Math.sin(a + w) * r; seg(lx, ly, b.z, px, py, b.z - j * 0.2, j % 2 ? '#ff3df0' : '#b6ff3d'); lx = px; ly = py; } } }
   else { mesh(OCT, b.x, b.y, b.z, 1.3 * s, t * 0.04, t * 0.03, 0, core); mesh(CUBE, b.x, b.y, b.z, 1.9 * s, t * 0.012, t * 0.008, 0, col); mesh(CUBE, b.x, b.y, b.z, 2.5 * s, -t * 0.009, 0, t * 0.011, col, 0.6);
     for (let i = 0; i < 4; i++) { const a = t * 0.02 + i / 4 * TAU, r = 3.6, px = b.x + Math.cos(a) * r, py = b.y + Math.sin(a) * r; mesh(OCT, px, py, b.z, 0.5, a, 0, 0, STAGE_COLS[i % 3]); seg(b.x, b.y, b.z, px, py, b.z, col, 0.3); } seg(b.x - 1.2, 0, b.z, b.x - 0.6, b.y - 2.6, b.z, col, 0.5); seg(b.x + 1.2, 0, b.z, b.x + 0.6, b.y - 2.6, b.z, col, 0.5); }
+  if (!b.dying && b.z <= 19.5) { if (L === 'colossus') { const hs = 3.3 * s, cy = Math.max(hs, b.y - 0.2); weak(b.x, cy + 0.31 * hs, b.z - 0.6 * hs, 0.75, open, t); } else if (L === 'eye') weak(b.x, b.y, b.z - 1.3, 1, open, t); else weak(b.x, b.y, b.z - (L === 'bloom' ? 0.4 : 0.2), 1.05, open, t); }
   if (!open || b.deflect > 0) { const n = 6; for (let i = 0; i < n; i++) { const a0 = i / n * TAU + t * 0.01, a1 = (i + 1) / n * TAU + t * 0.01, r = 3.4; seg(b.x + Math.cos(a0) * r, b.y + Math.sin(a0) * r, b.z - 2, b.x + Math.cos(a1) * r, b.y + Math.sin(a1) * r, b.z - 2, '#5ee7ff', b.deflect > 0 ? 1 : 0.4); } }
 }
 
@@ -287,7 +296,7 @@ export function drawHUD(ctx, g, o = {}) {
   if (!g.level.bonus) for (let i = 0; i < Math.min(p.lives, 6); i++) { const x = W - 26 - i * 24, y = 22; ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 6, y + 7); ctx.lineTo(x, y + 3); ctx.lineTo(x - 6, y + 7); ctx.closePath(); ctx.strokeStyle = '#2ee6ff'; ctx.lineWidth = 1.5; ctx.stroke(); }
   if (g.level.bonus) text(ctx, 'BONUS STAGE', W - 18, 16, 10, '#b06bff', { align: 'right' });
   if (g.coop) { const q = g.players[1]; text(ctx, q.out ? 'P2 OUT' : 'P2 SHIPS ' + Math.max(0, q.lives), W - 18, 98, 8, '#ffe14a', { align: 'right', glow: false }); }
-  if (g.wing) text(ctx, g.wing.dead > 0 ? 'RIVET-9 REBOOTING ' + Math.ceil(g.wing.dead / 60) : g.wing.view !== vw ? 'RIVET-9 SAYS ' + VIEWS[g.wing.view] : 'RIVET-9 WINGMAN', W - 18, 98, 8, g.wing.dead > 0 ? '#7d8bd6' : g.wing.view !== vw && (t >> 3) % 2 ? '#ffffff' : '#ffb070', { align: 'right', glow: false });
+  if (g.wing) text(ctx, g.wing.dead > 0 ? 'RIVET-9 REBOOTING ' + Math.ceil(g.wing.dead / 60) : 'RIVET-9 WINGMAN', W - 18, 98, 8, g.wing.dead > 0 ? '#7d8bd6' : '#ffb070', { align: 'right', glow: false });
   text(ctx, 'BOMB ' + p.bombs, W - 18, 40, 9, '#ff8a2b', { align: 'right' }); text(ctx, 'DRONES ' + DRONE_MODES[p.dmode], W - 18, 56, 7, '#b06bff', { align: 'right', glow: false });
   // speed gear
   text(ctx, 'SPEED', W - 18, 72, 7, '#7d8bd6', { align: 'right', glow: false }); for (let i = 0; i < 3; i++) { ctx.fillStyle = i <= g.gear ? '#ffe14a' : '#26306e'; ctx.fillRect(W - 100 + i * 14, 72, 11, 6); } text(ctx, GEARS[g.gear], W - 18, 84, 7, '#ffe14a', { align: 'right', glow: false });

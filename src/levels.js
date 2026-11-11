@@ -3,14 +3,16 @@
 import { addEnemy, addObs, addRing, addPod, bullet, aimed, explode, hint, doShift, pop, SPAWN_Z, DT, VIEWS } from './game.js';
 const SIDE = 0, ISO = 1, CHASE = 2, TOP = 3;
 
+const FAR = 48;
 // ---------- builder kit ----------
 function kit(id) {
   const ev = [], zones = [], checkpoints = []; let gid = 0;
   const at = (z, fn) => ev.push({ z: z - SPAWN_Z, fn });
-  const obs = (z, o) => at(z, g => addObs(g, { ...o, z: z - g.camZ }));
-  const ring = (z, r) => at(z, g => addRing(g, { ...r, z: z - g.camZ }));
+  const far = (z, fn) => ev.push({ z: z - FAR, lim: z - SPAWN_Z, fn }); // scenery is placed well beyond the old horizon and fades in, so nothing pops up in your face
+  const obs = (z, o) => far(z, g => addObs(g, { ...o, z: z - g.camZ }));
+  const ring = (z, r) => far(z, g => addRing(g, { ...r, z: z - g.camZ }));
   const en = (z, o) => at(z, g => addEnemy(g, o));
-  const ground = (z, o) => at(z, g => addEnemy(g, { rel: false, z: z - g.camZ, y: 0.5, y0: 0.5, type: 'turret', ...o }));
+  const ground = (z, o) => far(z, g => addEnemy(g, { rel: false, z: z - g.camZ, y: 0.5, y0: 0.5, type: 'turret', ...o }));
   const wing = (z, n, o, gap = 2.2) => { const gr = id + (++gid); for (let i = 0; i < n; i++) at(z + i * gap, g => addEnemy(g, { type: 'pop', group: gr, hp: 2, ph: i * 0.5, ...o })); };
   const zone = (z0, z1, view, msg) => zones.push({ z0, z1, view, msg });
   const gate = (z, hx, hy, o = {}) => { const w = o.w || 2.2, h = o.h || 1.9, k = { hz: 0.5, kind: 'gate', col: '#ffe14a', ...o }, X = 11, T = 12.5, Bm = -3;
