@@ -15,9 +15,9 @@ The original 2DISO flipped between a 2D and an isometric view on a timer. The ja
 - Created the public repo and pushed a README and MIT license.
 
 ### 2. The design prompt
-> "i also want it to shift between an over the shoulder view like starfox and a birds eye vertical rail view like raiden. so thats 4 different views to shift between."
+> "i also want it to shift between an over the shoulder view ... and a birds eye vertical rail view ... so thats 4 different views to shift between."
 
-This one message set most of the game: four views, a Griddim / ArcadeGridz splash and a ship swoop into the title, Geometry Wars style wireframe art ("that way you dont have to generate sprites"), forced reasons to change view, hidden warps to bonus levels, the planet order (Earth, Mars, Jupiter, Planet X), a Gradius-style upgrade bar, drones that survive death, and a random god mode drop.
+This one message set most of the game: four views, a Griddim / ArcadeGridz splash and a ship swoop into the title, neon wireframe arcade art ("that way you dont have to generate sprites"), forced reasons to change view, hidden warps to bonus levels, the planet order (Earth, Mars, Jupiter, Planet X), an upgrade bar where each pickup moves a highlight and you choose when to spend it, drones that survive death, and a random god mode drop.
 
 Follow-ups locked the controls:
 > "shift should be controlled by L and R buttons. you kind of barrel roll into the views."
@@ -60,7 +60,7 @@ The Earth demo went live on ArcadeGridz the same morning.
 > "very cool ... in many ways its better than our original 2diso. it could use some tweaks"
 
 The feedback list, and what changed:
-- **"weapon upgrades are a little boring ... add wave weapon and a snaking lightning thing"**: SPEED left the bar. New bar: DRONE, SPREAD, LASER, WAVE, BOLT, MISSILE, SHIELD, ???. Each weapon has named tiers. BOLT snakes round the screen and then homes in, Raiden style.
+- **"weapon upgrades are a little boring ... add wave weapon and a snaking lightning thing"**: SPEED left the bar. New bar: DRONE, SPREAD, LASER, WAVE, BOLT, MISSILE, SHIELD, ???. Each weapon has named tiers. BOLT snakes round the screen and then homes in.
 - **"the starting weapon should shoot a bit slower"**: every weapon starts slow and speeds up with its own level.
 - **"god mode should do that super hyper beam thing"**: god mode fires a rainbow hyper beam, maxes every weapon and fills out five drones; the borrowed drones leave when it ends.
 - **"tap it and it cycles between slow speed, default speed, and thrusted speed"**: B is now a three-speed gear, and SLOW is the default.
