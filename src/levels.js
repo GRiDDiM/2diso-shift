@@ -148,10 +148,17 @@ function mars() {
 
   zone(740, 1e9, TOP, 'WARNING // CALDERA AWAKENS');
   spawnBoss(K, 790, { name: 'CALDERA', look: 'caldera', hp: 900, col: FIRE });
+  // CALDERA: a living volcano. It erupts under you, floods the lane with lava and ash, then spits rings of fire.
   const B = boss({ name: 'CALDERA', toast: 'MARS COOLED', stages: [
-    { name: 'ERUPTION', vuln: [TOP], rec: TOP, col: FIRE, sway: 3, attack(g, b, t) { if (t % 220 === 30) { const gx = -5 + g.rand() * 10; sheetV(g, gx, 1.5, { kind: 'sheet', col: FIRE }); } if (t % 150 === 100) for (let i = 0; i < 3; i++) addEnemy(g, { type: 'bomb', x: b.x, y: b.y + 1, z: b.z - 1, vx: -4 + i * 4, vy: 7, vz: -9, hp: 1, r: 0.5, col: '#ff8a2b', score: 50, shape: 'bomb' }); } },
-    { name: 'FIRESTORM', vuln: [SIDE], rec: SIDE, col: '#ffe14a', bob: 2, attack(g, b, t) { if (t % 230 === 30) { const up = g.rand() < 0.5; sheetH(g, up ? 2.2 : 7.2, 1.35, { vy: up ? 0.9 : -0.9, life: 150, col: FIRE }); } if (t % 100 === 80) fan(g, b, 3, 7.5); } },
-    { name: 'CORE MELT', vuln: [CHASE, ISO], rec: CHASE, col: '#ffffff', attack(g, b, t) { if (t % 180 === 20) throwGate(g, b, { col: FIRE }); if (t % 250 === 130) for (let i = 0; i < 5; i++) addEnemy(g, { type: 'pop', x: -6 + i * 3, y: 0, y0: 0.2, ay: 5, w: 1.6, ph: -i * 0.4, z: b.z - 2, vz: -5, hp: 2, r: 0.6, col: FIRE, shape: 'worm', score: 80 }); } }] });
+    { name: 'ERUPTION', vuln: [TOP], rec: TOP, col: FIRE, sway: 2.5, bob: 0.4, attack(g, b, t) {
+      if (t % 200 === 30) { const lanes = [-6, -3, 0, 3, 6], skip = g.rand() * 5 | 0; lanes.forEach((x, i) => { if (i !== skip) addObs(g, { rel: true, kind: 'geyser', x: x + (g.rand() - 0.5), y: 4.75, hx: 1.15, hy: 4.75, hz: 1.15, z: 1.5 + g.rand() * 9.5, warm: 95, life: 70, col: FIRE }); }); g.fx.push('charge'); }
+      if (t % 200 === 130) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'bomb', x: b.x, y: b.y + 2, z: b.z - 1, vx: -5 + i * 3.3, vy: 6 + g.rand() * 2, vz: -8 - g.rand() * 3, hp: 1, r: 0.5, col: '#ff8a2b', score: 50, shape: 'bomb' }); } },
+    { name: 'LAVA TIDE', vuln: [SIDE], rec: SIDE, col: '#ffe14a', sway: 1, bob: 1.6, attack(g, b, t) {
+      const c = t % 520; if (c === 30) { addObs(g, { rel: true, kind: 'tide', x: 0, y: -4.2, hx: 9, hy: 4, hz: 11, z: 9, vy: 1.45, warm: 40, life: 190, col: FIRE }); hint(g, 'LAVA RISING - CLIMB!', 110); g.fx.push('charge'); }
+      if (c === 290) { addObs(g, { rel: true, kind: 'tide', ash: true, x: 0, y: 13.8, hx: 9, hy: 4, hz: 11, z: 9, vy: -1.45, warm: 40, life: 190, col: '#c0532a' }); hint(g, 'ASH FALLING - DIVE!', 110); g.fx.push('charge'); }
+      if (c === 150 || c === 410) { const lowArc = c === 150; for (let i = 0; i < 7; i++) addEnemy(g, { type: 'pop', x: 0, y: 0, y0: lowArc ? 6.6 : 2.6, ay: 2, w: 2.2, ph: -i * 0.45, z: b.z - 2 + i * 0.9, vz: -6, hp: 2, r: 0.6, col: i ? FIRE : '#ffe14a', shape: 'worm', score: 80 }); }
+      if (t % 120 === 100) fan(g, b, 2, 7); } },
+    { name: 'CORE MELT', vuln: [CHASE, ISO], rec: CHASE, col: '#ffffff', attack(g, b, t) { if (t % 180 === 20) throwGate(g, b, { col: FIRE }); if (t % 180 === 110) for (let i = 0; i < 3; i++) addEnemy(g, { type: 'bomb', x: b.x, y: b.y + 2, z: b.z - 1, vx: -4 + i * 4, vy: 7, vz: -9, hp: 1, r: 0.5, col: '#ff8a2b', score: 50, shape: 'bomb' }); } }] });
   return K.done({ name: 'MARS', title: 'THE FORGE', boss: B, warpName: 'THE SUN', theme: { sky: 'volcano', grid: '#8a2a12' } });
 }
 
