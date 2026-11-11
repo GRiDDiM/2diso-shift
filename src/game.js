@@ -30,7 +30,7 @@ export function createGame({ seed = 1, level, start = null, players = 1 } = {}) 
 }
 
 // what "save & quit" stores: where you are and everything you carry
-export function snapshot(g) { const p = g.players[0]; return { z: g.checkpoint, score: g.score, lives: Math.max(p.lives, 0), bombs: p.bombs, up: [...p.up], shield: p.shield, dmode: p.dmode, view: g.view, warp: g.flags.warp }; }
+export function snapshot(g) { const p = g.players[0]; return { z: g.checkpoint, score: g.score, lives: Math.max(p.lives, 0), bombs: p.bombs, up: [...p.up], shield: p.shield, dmode: p.dmode, view: g.recView, warp: g.flags.warp }; }
 
 // ---------- helpers the level script uses ----------
 export function addEnemy(g, e) {
