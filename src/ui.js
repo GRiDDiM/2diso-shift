@@ -128,7 +128,7 @@ export function mountShift(root, host = {}) {
 
   // ---------- story ----------
   const STORY = ['THE COSMIC SHIFT HAS BEGUN.', 'A RIFT FROM PLANET X IS FOLDING REALITY,', 'ONE WORLD AT A TIME.', "EARTH'S OWN DEFENCE GRID HAS TURNED ON ITS CITIES.", 'ONE SHIP CAN SEE ALL FOUR FACES OF THE FOLD.', 'YOURS.', 'SHIFT WITH IT. OR BE FLATTENED.'];
-  const BRIEF = { mars: ['EARTH HOLDS.', 'BUT THE SHIFT ROLLS ON.', 'MARS IS FOLDING. ITS FORGES ARE AWAKE,', 'AND SOMETHING UNDER THE CALDERA IS FEEDING THEM.'], jupiter: ['MARS IS COOLING.', 'THE RIFT HAS REACHED JUPITER.', 'THE STORM HAS AN EYE NOW.', 'AND IT IS LOOKING AT YOU.'], x: ['THE STORM IS QUIET.', 'ONE WORLD LEFT. THE ONE THAT STARTED IT.', 'PLANET X IS NOT A PLACE. IT IS ALIVE.', 'END THE SHIFT.'] };
+  const BRIEF = { mars: ['EARTH HOLDS.', 'BUT THE SHIFT ROLLS ON.', 'MARS IS FOLDING. ITS FORGES ARE AWAKE,', 'AND THE STONE HEADS HAVE OPENED THEIR EYES.'], jupiter: ['MARS IS COOLING.', 'THE RIFT HAS REACHED JUPITER.', 'THE STORM HAS AN EYE NOW.', 'AND IT IS LOOKING AT YOU.'], x: ['THE STORM IS QUIET.', 'ONE WORLD LEFT. THE ONE THAT STARTED IT.', 'PLANET X IS NOT A PLACE. IT IS ALIVE.', 'END THE SHIFT.'] };
   const ENDING = ['THE SHIFTER IS GONE.', 'REALITY UNFOLDS. FOUR FACES BECOME ONE AGAIN.', 'EARTH, MARS AND JUPITER HOLD THEIR SHAPE.', 'YOU SAW EVERY SIDE OF IT.', 'THANK YOU FOR PLAYING.', COPY];
   function startStory(lines, after) { menus.length = 0; story = { lines, after, t: 0, said: -1 }; scene = 'story'; sceneT = 0; prevM = { ok: true, pause: true, back: true }; audio.music('title'); }
   function drawStory() { const st = story, t = performance.now() / 1000; ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'lighter';

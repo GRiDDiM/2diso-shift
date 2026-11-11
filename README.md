@@ -21,7 +21,7 @@ What a view flattens does not exist for collisions, so a wall in one view is ope
 | # | Planet | Hazards | Boss | Hidden warp |
 |---|---|---|---|---|
 | 1 | Earth, Neo Terra | skyscrapers, skyways, firewall gates | OVERSEER | The Moon |
-| 2 | Mars, The Forge | lava geysers, fire arcs, magma worms | CALDERA | The Sun |
+| 2 | Mars, The Forge | lava geysers, fire arcs, alien stone heads | THE COLOSSUS | The Sun |
 | 3 | Jupiter, Storm Deck | lightning chains, storm walls, wraiths | THE EYE | Asteroid Belt |
 | 4 | Planet X, The Bloom | tentacles, membranes, spores | THE SHIFTER | Pluto |
 

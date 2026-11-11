@@ -68,10 +68,22 @@ The feedback list, and what changed:
 - **"walls that spawn during the first boss fight need more gridlines"**: boss sheets are dense grids, the safe gap is framed in green, and they charge for longer.
 - **"add a altitude bar"**: left edge of the HUD, with the blocked heights ahead in red and the way through in green.
 - **"the warp needs to be more hidden"**: each warp can only be reached from one view, and now leads somewhere.
-- **"do all the levels including bonus levels ... unique enemies/obstacles/bosses"**: Mars (geysers, fire arcs, magma worms, CALDERA), Jupiter (lightning chains, storm walls, wraiths, THE EYE), Planet X (tentacles, membranes, spores, THE SHIFTER), and bonus stages on the Moon, the Sun, the Asteroid Belt and Pluto.
+- **"do all the levels including bonus levels ... unique enemies/obstacles/bosses"**: Mars (geysers, fire arcs, magma worms, alien stone heads, THE COLOSSUS), Jupiter (lightning chains, storm walls, wraiths, THE EYE), Planet X (tentacles, membranes, spores, THE SHIFTER), and bonus stages on the Moon, the Sun, the Asteroid Belt and Pluto.
 - **"the hyperspace segway ... should swap through all the views"**: every level opens by rolling through TOP, CHASE and ISO before handing over in SIDE.
 - **"more neon tube light glows"**: every line is drawn as a tube: wide halo, glow, bright core.
 - Level select from the solar map, for testing.
+
+### 7. Second playtest, quick fixes
+> "you made the walls that spawn during first boss actually harder to see not easier"
+
+True. The new boss walls only drew their top and bottom faces, and in the 2D side view those are edge-on, so each wall collapsed into one line. Every face is now cross-hatched and the gap is boxed in green with chevrons.
+
+> "mars boss should be more like an alien easter island type statue thing ... with smaller heads scattered throughout the level as enemies"
+
+- The Mars boss is now THE COLOSSUS, a giant alien stone head rising out of the ground. Its attacks: eruptions under you, a rising lava tide and falling ash, then rings of fire.
+- Smaller stone heads run through the level: sentinels planted in the ground that lob fire, floating heads that stare you down, and statue pillars to weave between.
+- Sun bonus: the shadow lane is a dense blue hatch with bright rails, the screen glows hotter as you cook, and the flares are fans of wavy tendrils.
+- BOLT has a much longer lightning tail.
 
 ## Still to do
 - Hardware testing: SNES pad in the ag app, phones, tablets.

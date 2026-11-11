@@ -117,14 +117,17 @@ function mars() {
   const K = kit('mars'), { at, obs, ring, en, ground, wing, zone, gate } = K;
   const ember = { col: '#ff8a2b', shape: 'ember' }, FIRE = '#ff5a1f', ROCK = '#c0532a';
   const cone = (z, x, h = 2.2) => obs(z, { x, y: h / 2, hx: 1.4, hy: h / 2, hz: 1.4, col: ROCK, kind: 'cone' });
-  const volcano = (z, x) => { cone(z, x, 2.4); ground(z, { x, x0: x, y: 2.6, y0: 2.6, col: '#ffe14a', hp: 5, r: 0.8, score: 250, fire: 150, lob: true, shape: 'vent', ph: (x + 9) * 0.3, pod: true }); };
+  const STONE = '#d98a5a';
+  // stone heads: sentinels planted in the ground that lob fire, and smaller ones that float and stare you down
+  const volcano = (z, x) => ground(z, { x, x0: x, y: 1.1, y0: 1.1, col: STONE, hp: 6, r: 1.1, score: 250, fire: 150, lob: true, shape: 'head', ph: (x + 9) * 0.3, pod: true });
   const geyser = (z, x, ph) => obs(z, { x, y: 4.75, hx: 1.05, hy: 4.75, hz: 1.05, col: FIRE, kind: 'geyser', pulse: [80, 70, ph] });
-  const spire = (z, x) => obs(z, { x, y: 4.75, hx: 0.9, hy: 4.75, hz: 0.9, col: ROCK, kind: 'spire' });
+  const spire = (z, x) => obs(z, { x, y: 4.75, hx: 0.9, hy: 4.75, hz: 0.9, col: STONE, kind: 'statue' });
   const arc = (z, y, o) => obs(z, { x: 0, y, hx: 8.6, hy: 0.55, hz: 0.9, col: FIRE, kind: 'firearc', ...o });
   const worm = (z, x, n = 6) => { const gr = 'worm' + z; for (let i = 0; i < n; i++) at(z + i * 0.9, g => addEnemy(g, { type: 'pop', rel: false, z: 30 + i * 0.9, vz: 0, group: gr, x, y: 0, y0: 0.2, ay: 5.2, w: 1.6, ph: -i * 0.33, hp: 2, r: 0.6, col: i ? '#ff5a1f' : '#ffe14a', score: 80, shape: 'worm' })); };
-  const forge = (z, o) => en(z, { type: 'saucer', col: '#ffe14a', hp: 8, r: 0.9, score: 400, hold: 15, dur: 420, ax: 3, ay: 1.5, fire: 120, fan: 2, shape: 'forge', pod: true, ...o });
+  const forge = (z, o) => en(z, { type: 'saucer', col: STONE, hp: 8, r: 0.95, score: 400, hold: 15, dur: 420, ax: 3, ay: 1.5, fire: 120, fan: 2, shape: 'head', pod: true, ...o });
 
   zone(-99, 95, SIDE, 'SECTOR 2 // MARS - THE FORGE');
+  for (let z = 44; z < 92; z += 24) obs(z, { x: ((z * 3) % 11) - 5, y: 1.3, hx: 0.8, hy: 1.3, hz: 0.8, col: STONE, kind: 'statue' });
   for (let z = 30; z < 92; z += 13) cone(z, ((z * 5) % 13) - 6, 1.6 + (z % 3) * 0.5);
   wing(36, 5, { ...ember, y: 6.5, ay: 1.8 }); volcano(54, -3); wing(62, 5, { ...ember, y: 5, ay: 2 }); volcano(80, 4); worm(72, 0, 5);
 
@@ -146,19 +149,19 @@ function mars() {
   at(700, g => addPod(g, 0, 5, SPAWN_Z, 'god'));
   K.checkpoints.push(744);
 
-  zone(740, 1e9, TOP, 'WARNING // CALDERA AWAKENS');
-  spawnBoss(K, 790, { name: 'CALDERA', look: 'caldera', hp: 900, col: FIRE });
-  // CALDERA: a living volcano. It erupts under you, floods the lane with lava and ash, then spits rings of fire.
-  const B = boss({ name: 'CALDERA', toast: 'MARS COOLED', stages: [
-    { name: 'ERUPTION', vuln: [TOP], rec: TOP, col: FIRE, sway: 2.5, bob: 0.4, attack(g, b, t) {
+  zone(740, 1e9, TOP, 'WARNING // THE COLOSSUS WAKES');
+  spawnBoss(K, 790, { name: 'THE COLOSSUS', look: 'colossus', hp: 900, col: STONE });
+  // THE COLOSSUS: a giant alien stone head. It makes the ground erupt, floods the lane with lava and ash, then spits rings of fire and its own small heads.
+  const B = boss({ name: 'THE COLOSSUS', toast: 'MARS COOLED', stages: [
+    { name: 'ERUPTION', vuln: [TOP], rec: TOP, col: STONE, sway: 2.5, bob: 0.3, attack(g, b, t) {
       if (t % 200 === 30) { const lanes = [-6, -3, 0, 3, 6], skip = g.rand() * 5 | 0; lanes.forEach((x, i) => { if (i !== skip) addObs(g, { rel: true, kind: 'geyser', x: x + (g.rand() - 0.5), y: 4.75, hx: 1.15, hy: 4.75, hz: 1.15, z: 1.5 + g.rand() * 9.5, warm: 95, life: 70, col: FIRE }); }); g.fx.push('charge'); }
       if (t % 200 === 130) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'bomb', x: b.x, y: b.y + 2, z: b.z - 1, vx: -5 + i * 3.3, vy: 6 + g.rand() * 2, vz: -8 - g.rand() * 3, hp: 1, r: 0.5, col: '#ff8a2b', score: 50, shape: 'bomb' }); } },
-    { name: 'LAVA TIDE', vuln: [SIDE], rec: SIDE, col: '#ffe14a', sway: 1, bob: 1.6, attack(g, b, t) {
+    { name: 'LAVA TIDE', vuln: [SIDE], rec: SIDE, col: '#ffe14a', sway: 1, bob: 0.5, attack(g, b, t) {
       const c = t % 520; if (c === 30) { addObs(g, { rel: true, kind: 'tide', x: 0, y: -4.2, hx: 9, hy: 4, hz: 11, z: 9, vy: 1.45, warm: 40, life: 190, col: FIRE }); hint(g, 'LAVA RISING - CLIMB!', 110); g.fx.push('charge'); }
       if (c === 290) { addObs(g, { rel: true, kind: 'tide', ash: true, x: 0, y: 13.8, hx: 9, hy: 4, hz: 11, z: 9, vy: -1.45, warm: 40, life: 190, col: '#c0532a' }); hint(g, 'ASH FALLING - DIVE!', 110); g.fx.push('charge'); }
       if (c === 150 || c === 410) { const lowArc = c === 150; for (let i = 0; i < 7; i++) addEnemy(g, { type: 'pop', x: 0, y: 0, y0: lowArc ? 6.6 : 2.6, ay: 2, w: 2.2, ph: -i * 0.45, z: b.z - 2 + i * 0.9, vz: -6, hp: 2, r: 0.6, col: i ? FIRE : '#ffe14a', shape: 'worm', score: 80 }); }
       if (t % 120 === 100) fan(g, b, 2, 7); } },
-    { name: 'CORE MELT', vuln: [CHASE, ISO], rec: CHASE, col: '#ffffff', attack(g, b, t) { if (t % 180 === 20) throwGate(g, b, { col: FIRE }); if (t % 180 === 110) for (let i = 0; i < 3; i++) addEnemy(g, { type: 'bomb', x: b.x, y: b.y + 2, z: b.z - 1, vx: -4 + i * 4, vy: 7, vz: -9, hp: 1, r: 0.5, col: '#ff8a2b', score: 50, shape: 'bomb' }); } }] });
+    { name: 'THE GAZE', vuln: [CHASE, ISO], rec: CHASE, col: '#ff8a2b', attack(g, b, t) { if (t % 180 === 20) throwGate(g, b, { col: FIRE }); if (t % 180 === 110) for (let i = 0; i < 2; i++) addEnemy(g, { type: 'kami', x: b.x + (i ? 3 : -3), y: b.y + (i ? 1.5 : -1.5), z: b.z - 2, vz: -8, hp: 3, r: 0.7, col: STONE, score: 150, shape: 'head' }); } }] });
   return K.done({ name: 'MARS', title: 'THE FORGE', boss: B, warpName: 'THE SUN', theme: { sky: 'volcano', grid: '#8a2a12' } });
 }
 
@@ -295,7 +298,7 @@ function pluto() { // ice field: shatter a path, thread the spires
 
 export const LEVELS = {
   earth: { build: earth, n: 1, name: 'EARTH', sub: 'NEO TERRA', next: 'mars', bonus: 'moon', boss: 'OVERSEER', info: 'CYBER CITY. SKYSCRAPERS, SKYWAYS, FIREWALL GATES.' },
-  mars: { build: mars, n: 2, name: 'MARS', sub: 'THE FORGE', next: 'jupiter', bonus: 'sun', boss: 'CALDERA', info: 'LAVA GEYSERS, FIRE ARCS, MAGMA WORMS.', kit: [1, 1, 1, 0, 0, 1, 0, 0] },
+  mars: { build: mars, n: 2, name: 'MARS', sub: 'THE FORGE', next: 'jupiter', bonus: 'sun', boss: 'THE COLOSSUS', info: 'LAVA GEYSERS, FIRE ARCS, ALIEN STONE HEADS.', kit: [1, 1, 1, 0, 0, 1, 0, 0] },
   jupiter: { build: jupiter, n: 3, name: 'JUPITER', sub: 'STORM DECK', next: 'x', bonus: 'belt', boss: 'THE EYE', info: 'LIGHTNING CHAINS, STORM WALLS, HIDDEN WRAITHS.', kit: [2, 2, 1, 1, 1, 1, 0, 0] },
   x: { build: planetx, n: 4, name: 'PLANET X', sub: 'THE BLOOM', next: null, bonus: 'pluto', boss: 'THE SHIFTER', info: 'THE SOURCE OF THE SHIFT. EVERYTHING IS ALIVE.', kit: [3, 2, 2, 2, 2, 2, 0, 0] },
   moon: { build: moon, name: 'THE MOON', sub: 'SEA OF QUIET', isBonus: true, of: 'earth', info: 'LOW GRAVITY TRENCH RUN. NOTHING SHOOTS BACK.', kit: [1, 1, 0, 0, 0, 0, 0, 0] },
