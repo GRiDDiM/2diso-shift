@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>2DISO SHIFT</title>
+<style>html,body{margin:0;height:100%;background:#02010a;overflow:hidden;overscroll-behavior:none}#game{position:fixed;inset:0}</style>
+</head>
+<body>
+<div id="game"></div>
+<script type="module">
+import { mountShift } from './src/ui.js';
+window.shift = mountShift(document.getElementById('game'));
+</script>
+</body>
+</html>
