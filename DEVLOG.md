@@ -162,6 +162,18 @@ Nine ideas went on the list and all nine went in, plus one more from Benjamin.
 - **Easier to read shots.** The main gun fires thicker bolts, the laser has a wide glow, and enemy bullets are bigger spinning rings with a white core and a tail.
 - **A further horizon.** Buildings, walls and other scenery are placed much further out and fade in, so nothing pops up in your face.
 
+### 10. Third playtest
+> "tone down the speed on the obstacles spawning on the first boss again ... if a upgrade is maxed out it should skip it ... i still cant seem to get the warp to work"
+
+- **First boss, slower again.** OVERSEER's walls come about a third less often, charge for longer and leave wider gaps. Its bullets and thrown gates are slower too.
+- **Three ranks per weapon.** SPREAD, LASER, WAVE, BOLT and MISSILE now max at 3 instead of 5. The weak early ranks are skipped, so rank 3 is still the full effect. Drones go up to 6. Boss health went up to match.
+- **The bar skips what is maxed.** A pod never lands the highlight on a full slot.
+- **Pods are gold and blue.**
+- **God mode is one beam.** A single thick hyper beam that fires on its own in explosive pulses.
+- **Warps you can actually take.** Each warp now fades in during the calm opening stretch of a level and hangs in front of you for about fifteen seconds before it fades out. In the flat views it is only a flickering sliver. Roll into CHASE view and it opens into a ring you can fly through.
+- **Missiles you can see.** Finned rockets with smoke trails, a blast on every hit.
+- **Menus.** Holding a button no longer presses a menu item over and over. SAVE AND QUIT now saves the exact spot instead of the last checkpoint.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

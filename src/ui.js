@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r10';
+const VER = 'r13';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3]];
@@ -101,8 +101,9 @@ export function mountShift(root, host = {}) {
 
   // ---------- menus ----------
   const top = () => menus[menus.length - 1], HELD = { ok: true, back: true, up: true, down: true, left: true, right: true, pause: true, start: true };
-  function push(m) { m.i = m.i || 0; menus.push(m); prevM = { ...HELD }; return m; }
-  function popMenu() { const m = menus.pop(); audio.sfx('back'); prevM = { ...HELD }; return m; }
+  const upF = { ok: 0, back: 0, pause: 0, start: 0 }, lock = () => { upF.ok = upF.back = upF.pause = upF.start = 0; }; // a button must be let go for a moment before it can press a menu item again
+  function push(m) { m.i = m.i || 0; menus.push(m); prevM = { ...HELD }; lock(); return m; }
+  function popMenu() { const m = menus.pop(); audio.sfx('back'); prevM = { ...HELD }; lock(); return m; }
   const onoff = v => v ? 'ON' : 'OFF';
   const scrollMenu = (title, lines) => push({ title, kind: 'scroll', lines, off: 0, items: [{ label: 'BACK', act: popMenu }] });
   function optionsMenu() { push({ title: 'OPTIONS', gap: 25, items: [
@@ -135,11 +136,12 @@ export function mountShift(root, host = {}) {
     if (host.onExit) items.push({ label: 'EXIT GAME', act: () => host.onExit() }); push({ kind: 'title', root: true, items }); }
   function pauseMenu() { if (scene !== 'play' || menus.length || !g || g.state !== 'play') return; audio.sfx('blip'); audio.hush(); audio.music('title'); push({ title: 'PAUSED', pause: true, items: [
     { label: 'RESUME', act: resume }, { label: 'MAP', act: () => mapMenu() }, { label: 'OPTIONS', act: optionsMenu }, { label: () => 'IDLE MODE  ' + onoff(opt.idle), act: () => setIdle(!opt.idle), adj: () => setIdle(!opt.idle) }, ...(coop ? [] : [{ label: () => 'RIVET-9 ASSIST  ' + onoff(opt.assist), act: () => setAssist(!opt.assist), adj: () => setAssist(!opt.assist) }]),
-    { label: daily ? 'QUIT RUN' : 'SAVE AND QUIT', act: () => { if (!testRun && !daily) LS.set('save', returnTo ? { ...returnTo } : snapshot(g)); showTitle(); } }] }); }
+    { label: daily ? 'QUIT RUN' : 'SAVE AND QUIT', act: () => { if (!testRun && !daily) LS.set('save', returnTo ? { ...returnTo } : { ...snapshot(g), z: g.boss ? g.checkpoint : Math.max(g.checkpoint, Math.floor(g.camZ - 4)) }); showTitle(); } }] }); } // saves the exact spot (or the pre-boss checkpoint during a boss)
   const track = () => { const L = LEVELS[levelId]; return g?.boss ? 'boss' : L.isArena ? 'arena' : L.isBonus ? 'bonus' : MUSIC[levelId] || 'play'; };
   function resume() { menus.length = 0; audio.music(track()); prevIn = { pause: true, fire: true, upgrade: true, bomb: true, drone: true, shiftL: true, shiftR: true, gear: true }; last = performance.now(); acc = 0; }
   function menuInput(i) {
-    const m = top(), e = k => i[k] && !prevM[k]; if (!m) return;
+    const m = top(), was = { ...upF }; for (const k in upF) upF[k] = i[k] ? 0 : Math.min(99, upF[k] + 1);
+    const e = k => i[k] && !prevM[k] && (was[k] == null || was[k] >= 5); if (!m) return;
     if (tap) { for (const h of hits) if (tap.x >= h.x && tap.x <= h.x + h.w && tap.y >= h.y && tap.y <= h.y + h.h) { if (h.fn) h.fn(tap); else { m.i = h.i; const it = m.items[h.i]; audio.sfx('ok'); if (it.act) it.act(); else it.adj?.(1); } break; } tap = null; prevM = i; return; }
     if (m.kind === 'map') { const n = NODES.length; if (e('left')) { m.sel = (m.sel + n - 1) % n; audio.sfx('move'); } if (e('right')) { m.sel = (m.sel + 1) % n; audio.sfx('move'); } }
     if (m.kind === 'scroll') { if (i.up) m.off = Math.max(0, m.off - 6); if (i.down) m.off += 6; }

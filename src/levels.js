@@ -14,13 +14,14 @@ function kit(id) {
   const en = (z, o) => at(z, g => addEnemy(g, o));
   const ground = (z, o) => far(z, g => addEnemy(g, { rel: false, z: z - g.camZ, y: 0.5, y0: 0.5, type: 'turret', ...o }));
   const wing = (z, n, o, gap = 2.2) => { const gr = id + (++gid); for (let i = 0; i < n; i++) at(z + i * gap, g => addEnemy(g, { type: 'pop', group: gr, hp: 2, ph: i * 0.5, ...o })); };
+  const warp = (z, x, y) => ev.push({ z, fn: g => { if (g.flags.warp) return; addRing(g, { x, y, z: 10, r: 2, kind: 'warp', stay: true, t: 0, life: 900 }); hint(g, 'ANOMALY - SHIFT TO CHASE VIEW AND FLY INTO IT', 320); g.fx.push('ring'); } });
   const zone = (z0, z1, view, msg) => zones.push({ z0, z1, view, msg });
   const gate = (z, hx, hy, o = {}) => { const w = o.w || 2.2, h = o.h || 1.9, k = { hz: 0.5, kind: 'gate', col: '#ffe14a', ...o }, X = 11, T = 12.5, Bm = -3;
     obs(z, { x: (-X + hx - w) / 2, y: 4.75, hx: (hx - w + X) / 2, hy: 7.75, ...k }); obs(z, { x: (X + hx + w) / 2, y: 4.75, hx: (X - hx - w) / 2, hy: 7.75, ...k });
     obs(z, { x: hx, y: (T + hy + h) / 2, hx: w, hy: (T - hy - h) / 2, ...k }); obs(z, { x: hx, y: (hy - h + Bm) / 2, hx: w, hy: (hy - h - Bm) / 2, ...k });
     obs(z, { x: hx, y: hy, hx: w, hy: h, hz: 0.5, ghost: true, kind: 'safe', osc: k.osc }); if (!o.noRing && !k.osc) ring(z, { x: hx, y: hy, r: 1.5 }); };
   const done = extra => { ev.sort((a, b) => a.z - b.z); return { id, events: ev, zones, checkpoints, ...extra }; };
-  return { at, obs, ring, en, ground, wing, zone, gate, checkpoints, done };
+  return { at, obs, ring, en, ground, wing, zone, gate, warp, checkpoints, done };
 }
 
 // ---------- boss engine: stages that are only open from one view, attacks that fill the screen in the wrong one ----------
@@ -94,7 +95,7 @@ function earth() {
   // the Moon warp hides up in the corner here, and only exists in ISO
   zone(800, 1010, ISO, 'HOVER TRAFFIC - SHIFT TO ISO VIEW');
   for (let i = 0, z = 838; z < 1000; z += 10, i++) { const y = [2.4, 5, 7.4][i % 3], d = i % 2 ? 4 : -4; car(z, -8 + (i * 5) % 16, y, d); car(z, 2 - (i * 3) % 10, y, d); if (i % 4 === 1) obs(z + 5, { x: ((i * 5) % 11) - 5, y: 4.75, hx: 0.7, hy: 4.75, hz: 0.7, col: C.pylon, kind: 'pylon' }); if (i % 6 === 3 && z < 900) slab(z + 5, false, { hz: 0.8 }); }
-  ring(934, { x: 6.6, y: 8.2, r: 2, kind: 'warp', phase: ISO });
+  K.warp(58, 3, 6.4);
   wing(852, 5, { ...dart, x: 0, y: 6, ax: 3, ay: 1 }); saucer(884, { x: -2, y: 6.5 }); carrier(916, { x: -4, y: 4 }); wing(952, 6, { ...dart, x: 2, y: 3.5, ax: 4, ay: 1.5 }); carrier(980, { x: 2, y: 6 });
   K.checkpoints.push(1014);
 
@@ -106,11 +107,11 @@ function earth() {
   K.checkpoints.push(1228);
 
   zone(1225, 1e9, SIDE, 'WARNING // OVERSEER CORE ONLINE');
-  spawnBoss(K, 1276, { name: 'OVERSEER', look: 'overseer', hp: 560 });
+  spawnBoss(K, 1276, { name: 'OVERSEER', look: 'overseer', hp: 1100 });
   const B = boss({ name: 'OVERSEER', toast: 'EARTH DEFENDED', stages: [
-    { name: 'FIREWALL', vuln: [SIDE], rec: SIDE, col: '#ff3df0', bob: 2, attack(g, b, t) { if (t % 210 === 30) sheetH(g, 1.8 + g.rand() * 5.6, 1.3); if (t % 95 === 70) fan(g, b, 3); } },
-    { name: 'GRIDLOCK', vuln: [TOP], rec: TOP, col: '#2ee6ff', sway: 4, attack(g, b, t) { if (t % 210 === 30) sheetV(g, -5.5 + g.rand() * 11, 1.5); if (t % 230 === 140) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'pop', x: -5 + i * 3.3, y: 4.6, z: b.z - 1, vz: -6, ax: 1.5, hp: 2, col: '#ff3df0', ph: i }); if (t % 110 === 90) for (let i = -2; i <= 2; i++) bullet(g, b.x, 4.6, b.z - 2, i * 2.2, 0, -7.5); } },
-    { name: 'CORE BREACH', vuln: [CHASE, ISO], rec: CHASE, col: '#ffe14a', attack(g, b, t) { if (t % 170 === 20) throwGate(g, b); if (t % 16 === 0 && t % 260 > 180) { const a = t * 0.09; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3.5, Math.sin(a) * 3.5, -7.5, '#ff3df0'); } } }] });
+    { name: 'FIREWALL', vuln: [SIDE], rec: SIDE, col: '#ff3df0', bob: 2, attack(g, b, t) { if (t % 330 === 40) sheetH(g, 2 + g.rand() * 5.2, 1.6, { warm: 150 }); if (t % 140 === 100) fan(g, b, 3, 6.5); } },
+    { name: 'GRIDLOCK', vuln: [TOP], rec: TOP, col: '#2ee6ff', sway: 4, attack(g, b, t) { if (t % 330 === 40) sheetV(g, -5 + g.rand() * 10, 1.9, { warm: 150 }); if (t % 330 === 220) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'pop', x: -5 + i * 3.3, y: 4.6, z: b.z - 1, vz: -5, ax: 1.5, hp: 2, col: '#ff3df0', ph: i }); if (t % 165 === 120) for (let i = -2; i <= 2; i++) bullet(g, b.x, 4.6, b.z - 2, i * 2.2, 0, -6); } },
+    { name: 'CORE BREACH', vuln: [CHASE, ISO], rec: CHASE, col: '#ffe14a', attack(g, b, t) { if (t % 270 === 30) throwGate(g, b, { vz: -5.5 }); if (t % 22 === 0 && t % 270 > 200) { const a = t * 0.09; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3, Math.sin(a) * 3, -6, '#ff3df0'); } } }] });
   return K.done({ name: 'EARTH', title: 'NEO TERRA', boss: B, warpName: 'THE MOON', theme: { sky: 'city', grid: '#2443c8' } });
 }
 
@@ -143,7 +144,7 @@ function mars() {
   // the Sun warp sits down inside a crater: nothing but TOP view can reach it
   zone(300, 520, SIDE, 'FIRE ARCS - SHIFT TO SIDE VIEW');
   for (let i = 0, z = 334; z < 420; z += 15, i++) arc(z, i % 2 ? 6.6 : 2.6, { osc: { ax: 0, ay: 1.5, w: 2, ph: i } });
-  obs(446, { x: 3, y: 1, hx: 2.4, hy: 1, hz: 2.4, col: '#b06bff', kind: 'crater', ghost: true }); ring(446, { x: 3, y: -1.4, r: 1.7, kind: 'warp', phase: TOP });
+  obs(446, { x: 3, y: 1, hx: 2.4, hy: 1, hz: 2.4, col: '#b06bff', kind: 'crater', ghost: true }); K.warp(42, -3, 6);
   for (let i = 0, z = 472; z < 512; z += 15, i++) arc(z, i % 2 ? 2.4 : 6.8, { osc: { ax: 0, ay: 1.6, w: 2.4, ph: i * 2 } });
   worm(350, 0); worm(388, 0, 7); wing(410, 5, { ...ember, y: 5, ay: 1.2 }); forge(436, { x: 0, y: 6.5, ax: 1 }); worm(486, 0, 7);
   K.checkpoints.push(523);
@@ -154,7 +155,7 @@ function mars() {
   K.checkpoints.push(744);
 
   zone(740, 1e9, TOP, 'WARNING // THE COLOSSUS WAKES');
-  spawnBoss(K, 790, { name: 'THE COLOSSUS', look: 'colossus', hp: 900, col: STONE });
+  spawnBoss(K, 790, { name: 'THE COLOSSUS', look: 'colossus', hp: 2400, col: STONE });
   // THE COLOSSUS: a giant alien stone head. It makes the ground erupt, floods the lane with lava and ash, then spits rings of fire and its own small heads.
   const B = boss({ name: 'THE COLOSSUS', toast: 'MARS COOLED', stages: [
     { name: 'ERUPTION', vuln: [TOP], rec: TOP, col: STONE, sway: 2.5, bob: 0.3, attack(g, b, t) {
@@ -194,7 +195,7 @@ function jupiter() {
   // the Asteroid warp hangs outside the lane: only SIDE view, which ignores left and right, can touch it
   zone(300, 520, TOP, 'STORM WALLS - SHIFT TO TOP VIEW');
   for (let i = 0, z = 334; z < 410; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7.5]; xs.forEach((x, k) => k === i % 3 ? head(z, x) : vbolt(z, x, i * 31 + k * 45)); }
-  ring(436, { x: 9.8, y: 7.4, r: 1.7, kind: 'warp', phase: SIDE });
+  K.warp(48, 3.5, 3.4);
   for (let i = 0, z = 462; z < 512; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7.5]; xs.forEach((x, k) => k === (i + 1) % 3 ? head(z, x) : vbolt(z, x, i * 29 + k * 45)); }
   wing(350, 5, { ...spark, x: 0, ax: 5, y: 5 }); jelly(392, { x: 0, y: 5 }); wing(474, 6, { ...spark, x: 0, ax: 5, y: 4 });
   K.checkpoints.push(523);
@@ -205,7 +206,7 @@ function jupiter() {
   K.checkpoints.push(764);
 
   zone(760, 1e9, SIDE, 'WARNING // THE EYE OPENS');
-  spawnBoss(K, 810, { name: 'THE EYE', look: 'eye', hp: 1400, col: ZAP });
+  spawnBoss(K, 810, { name: 'THE EYE', look: 'eye', hp: 3200, col: ZAP });
   const B = boss({ name: 'THE EYE', toast: 'JUPITER CALMED', stages: [
     { name: 'SQUALL', vuln: [SIDE], rec: SIDE, col: ZAP, bob: 2.2, attack(g, b, t) { if (t % 240 === 30) { const up = g.rand() < 0.5; sheetH(g, up ? 2 : 7.4, 1.35, { vy: up ? 1 : -1, life: 170, col: ZAP }); } if (t % 180 === 120) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'pop', x: 0, y: 2 + i * 1.8, z: b.z - 1, vz: -9, ay: 1, hp: 2, col: ZAP, shape: 'spark', ph: i }); } },
     { name: 'CYCLONE', vuln: [TOP], rec: TOP, col: '#b06bff', sway: 4, attack(g, b, t) { if (t % 240 === 30) { const l = g.rand() < 0.5; sheetV(g, l ? -5 : 5, 1.5, { vx: l ? 1.1 : -1.1, life: 170, col: ZAP }); } if (t % 110 === 90) for (let i = -2; i <= 2; i++) bullet(g, b.x, 4.6, b.z - 2, i * 2, 0, -7, ZAP); } },
@@ -237,7 +238,7 @@ function planetx() {
   // the Pluto warp is tucked into the roof here, and only exists in CHASE
   zone(285, 475, SIDE, 'MEMBRANES - SHIFT TO SIDE VIEW');
   for (let i = 0, z = 320; z < 466; z += 17, i++) { memb(z, i % 2 === 0, i); eye(z + 8, (i % 3 - 1) * 4, i % 2 === 1); }
-  ring(398, { x: -6.6, y: 8.3, r: 1.9, kind: 'warp', phase: CHASE });
+  K.warp(38, -3.5, 6.2);
   wing(336, 8, { ...spore, y: 5, ay: 1 }, 1.4); spitter(372, { x: 0, y: 5, ay: 0.5 }); wing(430, 8, { ...spore, y: 4.5, ay: 1.2 }, 1.4);
   K.checkpoints.push(478);
 
@@ -252,7 +253,7 @@ function planetx() {
   K.checkpoints.push(904);
 
   zone(900, 1e9, SIDE, 'WARNING // THE SHIFTER - SOURCE OF THE FOLD');
-  spawnBoss(K, 950, { name: 'THE SHIFTER', look: 'bloom', hp: 3200, col: FLESH, score: 50000 });
+  spawnBoss(K, 950, { name: 'THE SHIFTER', look: 'bloom', hp: 4200, col: FLESH, score: 50000 });
   // every stage wants a different view, and between attacks it folds reality and throws you into another one
   const fold = (g, b, t) => { const c = t % 400; if (c === 215) { hint(g, 'REALITY SHIFT!', 70); g.fx.push('charge'); } if (c === 270) { let to = (g.view + 1 + (g.rand() * 3 | 0)) % 4; doShift(g, to, 1, null); g.flash = 6; } };
   const B = boss({ name: 'THE SHIFTER', toast: 'THE SHIFT IS OVER', splat: true, stages: [
