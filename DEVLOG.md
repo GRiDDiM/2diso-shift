@@ -136,8 +136,28 @@ True. The new boss walls only drew their top and bottom faces, and in the 2D sid
 - SHIFT still matters: L/R flips the arena between TOP and ISO, and the white enemies can only be hit in ISO.
 - Each arena carries its planet's hazard (geysers on Mars, lightning on Jupiter, and so on). Losing your shield ends the bonus without costing a life.
 
+### 9. The "make it more impressive" pass
+> "do you have any other suggestions for improvements or features for the game to make it more impressive?" ... "ok do all that stuff."
+
+Nine ideas went on the list and all nine went in, plus one more from Benjamin.
+
+- **Perfect Shift.** Roll out of the way of something that was about to hit you and the fold bites back: a shockwave, a few seconds of overdrive and a score bonus. The theme is now the skill.
+- **Boss finishers.** A dying boss comes apart in slow motion while the camera rolls through all four views.
+- **Twin-stick arenas.** Right stick or mouse aims in the arenas. Auto-aim stays as the fallback, so a pad without sticks still works.
+- **A track per planet.** Earth keeps the liquid roller, Mars gets a heavy half-time stomp, Jupiter fast arpeggios, Planet X a detuned whole-tone crawl, plus arena and bonus tracks. All still synthesised.
+- **Medals and ranks.** Six medals per planet (clear, no ships lost, untouched, warp found, chain 50, three perfect shifts) and a rank from D to SS, shown on the solar map.
+- **Daily Run.** One seed for everybody each day, with one helpful and one hurtful twist picked from the date. No continues.
+- **Best-run ghost.** The simulation is deterministic, so a run is just a seed, a loadout and the inputs. Your best run of each planet flies next to you as a ghost.
+- **Screen effects.** Colour split on shifts, extra shock rings on big kills, an optional CRT filter.
+- **Two-player co-op.** Two ships, one shared upgrade bar. Player one on keyboard, player two on a controller (or two controllers).
+
+> "we can also do rivet-9 assist toggle too" ... "it will be cool to see what rivet 9 looks like when he shift perspectives before we do"
+
+- **RIVET-9 assist.** RIVET-9 is the ArcadeGridz house AI. Switch him on and he flies as your wingman. He reads the level ahead and rolls into the view it calls for before you do, and he is drawn in the view he is in, so you see exactly where that view will put you. Runs with him are tagged ASSISTED.
+
 ## Still to do
 - Hardware testing: SNES pad in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
-- Recorded announcer lines instead of the browser voice.
+- Recorded announcer lines instead of the browser voice (it now has a radio chirp and a better voice pick, but it is still the browser).
+- A shared online board for the Daily Run (today it keeps your own best).
 - The itch.io page and the HTML5 build for the jam.

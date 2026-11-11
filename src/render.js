@@ -124,12 +124,12 @@ const SHAPES = { saucer: [SAUCER, 1.1, 1], kami: [KAMI, 1.1, 2], shard: [KAMI, 1
 
 function drawShip(g, p, t) {
   const blink = p.inv > 0 && p.god <= 0 && (t >> 2) % 2; if (blink) return;
-  const god = p.god > 0, c1 = god ? RAINBOW[(t >> 2) % 7] : '#ffffff', c2 = god ? RAINBOW[((t >> 2) + 2) % 7] : '#2ee6ff', c3 = god ? RAINBOW[((t >> 2) + 4) % 7] : '#ff3df0';
+  const god = p.god > 0, c1 = god ? RAINBOW[(t >> 2) % 7] : p.i ? '#ffe14a' : '#ffffff', c2 = god ? RAINBOW[((t >> 2) + 2) % 7] : p.i ? '#3dffb0' : '#2ee6ff', c3 = god ? RAINBOW[((t >> 2) + 4) % 7] : p.i ? '#ff8a2b' : '#ff3df0';
   const roll = -p.mvx * 0.55 + (g.shiftT > 0 ? g.shiftDir * ease(1 - g.shiftT) * TAU : 0), pitch = -p.mvy * 0.3;
   const yaw = Math.atan2(p.ax || 0, p.az ?? 1), fx = p.ax || 0, fz = p.az ?? 1;
   mesh(SHIP_HULL, p.x, p.y, p.z, 1, yaw, pitch, roll, c1); mesh(SHIP_WING, p.x, p.y, p.z, 1, yaw, pitch, roll, c2); mesh(SHIP_FIN, p.x, p.y, p.z, 1, yaw, pitch, roll, c3);
   const fl = 0.35 + (g.speedMul - 0.7) * 1.1 + Math.random() * 0.3; for (const s of [-0.22, 0.22]) { const bx = p.x + fz * s - fx * 0.85, bz = p.z - fx * s - fz * 0.85; seg(bx, p.y, bz, bx - fx * fl, p.y, bz - fz * fl, '#ff8a2b'); seg(bx, p.y, bz, bx - fx * fl * 0.6 - fz * s * 0.6, p.y, bz - fz * fl * 0.6 + fx * s * 0.6, '#ffe14a', 0.7); }
-  if (g.level.rules?.arena) seg(p.x + fx * 1.6, p.y, p.z + fz * 1.6, p.x + fx * 3.2, p.y, p.z + fz * 3.2, '#ffffff', 0.35);
+  if (g.level.rules?.arena) seg(p.x + fx * 1.6, p.y, p.z + fz * 1.6, p.x + fx * (p.manual ? 5 : 3.2), p.y, p.z + fz * (p.manual ? 5 : 3.2), '#ffffff', p.manual ? 0.7 : 0.35);
   if (p.shield > 0) for (let i = 0; i < p.shield; i++) circle(p.x, p.y, p.z, 1.2 + i * 0.22, '#5ee7ff', 0.5, 12, vB === 3 ? 1 : vB === 0 ? 2 : 0, t * 0.05 + i);
   if (vB === 1 || vB === 2 || mix < 1) { seg(p.x - 0.5, 0, p.z, p.x + 0.5, 0, p.z, '#2ee6ff', 0.4); seg(p.x, 0, p.z - 0.6, p.x, 0, p.z + 0.6, '#2ee6ff', 0.4); if (vB === 1) seg(p.x, 0, p.z, p.x, p.y, p.z, '#2ee6ff', 0.2); }
 }
@@ -209,7 +209,7 @@ function drawObs(g, b, t) {
 export function drawWorld(ctx, g, o = {}) {
   const t = g.tick, p0 = g.players[0], th = g.level.theme || {};
   vA = g.viewFrom; vB = g.view; mix = g.shiftT > 0 ? ease(1 - g.shiftT) : 1; rollA = g.shiftT > 0 ? g.shiftDir * mix * TAU : 0; wob = th.trippy ? Math.sin(t * 0.013) * 0.05 : 0;
-  cam.x = p0.x * 0.55; cam.y = p0.y * 0.55 + 1.9; cam.z = p0.z - 7.5;
+  { const al = g.players.filter(q => q.dead <= 0), n = al.length || 1, cx = al.length ? al.reduce((a, q) => a + q.x, 0) / n : p0.x, cy = al.length ? al.reduce((a, q) => a + q.y, 0) / n : p0.y, cz = al.length ? Math.min(...al.map(q => q.z)) : p0.z; cam.x = cx * 0.55; cam.y = cy * 0.55 + 1.9; cam.z = cz - 7.5; } const tags = [];
   ctx.save();
   if (g.shake > 0.5 && o.shake !== false) ctx.translate((Math.random() - 0.5) * g.shake, (Math.random() - 0.5) * g.shake);
   ctx.globalCompositeOperation = 'lighter';
@@ -224,7 +224,7 @@ export function drawWorld(ctx, g, o = {}) {
     else { circle(r.x, r.y, r.z, r.r, '#3dffb0', 0.8, 14, 0, t * 0.03); circle(r.x, r.y, r.z, r.r * 0.7, '#3dffb0', 0.35, 14, 0, -t * 0.03); } }
   for (const e of g.enemies) {
     if (e.y <= 0 && e.type !== 'boss') continue; depth(e.x, e.z - (e.hz || 0)); const ghost = e.phase != null && e.phase !== g.view, a = ghost ? (e.haunt ? 0.06 : 0.2) : 1, col = e.hit > 0 ? '#ffffff' : e.col;
-    if (e.type === 'boss') { drawBoss(g, e, t); continue; }
+    if (e.type === 'boss') { if (e.dying) { const j = e.dying / 150 * 1.7, ox = e.x, oy = e.y; e.x = ox - j; e.y = oy + Math.sin(t * 0.9) * 0.15; drawBoss(g, e, t); e.x = ox + j; e.y = oy - Math.sin(t * 0.9) * 0.15; drawBoss(g, e, t); e.x = ox; e.y = oy; } else drawBoss(g, e, t); continue; }
     const sh = SHAPES[e.shape];
     if (e.shape === 'carrier') { mesh(CUBE, e.x, e.y, e.z, e.r * 0.8, t * 0.03, t * 0.02, 0, col, a); mesh(OCT, e.x, e.y, e.z, e.r * 0.45, -t * 0.06, 0, 0, '#ffe14a', a); }
     else if (sh) { const sp = sh[2], yaw = sp === 1 || sp === 4 ? t * 0.05 + e.ph : e.shape === 'head' ? Math.max(-0.7, Math.min(0.7, (e.x - p0.x) * 0.12)) : 0, pit = sp === 4 ? t * 0.03 : 0, rol = sp === 2 ? t * 0.2 : sp === 3 ? Math.sin(e.t * 0.08) * 0.5 : 0; mesh(sh[0], e.x, e.y, e.z, e.r * sh[1], yaw, pit, rol, col, a);
@@ -240,10 +240,18 @@ export function drawWorld(ctx, g, o = {}) {
     const k = s.kind === 2 ? 0.03 : 0.022; seg(s.x, s.y, s.z, s.x - s.vx * k, s.y - s.vy * k, s.z - s.vz * k, s.kind === 2 ? '#ff8a2b' : s.kind === 1 ? '#b06bff' : '#7df9ff'); }
   for (const b of g.beams) { depth(b.x, b.z0); const a = b.life / b.max; if (b.w) { for (let i = 0; i < 7; i++) { const an = i / 7 * TAU + t * 0.3, ox = Math.cos(an) * b.w * 0.8, oy = Math.sin(an) * b.w * 0.8; const qx = b.ex != null ? ox * 0.6 : vB === 0 ? 0 : ox, qy = b.ex != null ? 0 : vB === 3 ? 0 : vB === 0 ? ox : oy, qz = b.ex != null ? oy * 0.6 : 0; seg(b.x + qx, b.y + qy, b.z0 + qz, (b.ex ?? b.x) + qx, b.y + qy, b.z1 + qz, RAINBOW[(i + (t >> 1)) % 7], a); } seg(b.x, b.y, b.z0, b.ex ?? b.x, b.y, b.z1, '#ffffff', a); } else { seg(b.x, b.y, b.z0, b.ex ?? b.x, b.y, b.z1, b.col, a); seg(b.x, b.y, b.z0, b.ex ?? b.x, b.y, b.z1, '#ffffff', a * 0.5); } }
   for (const p of g.players) { if (p.dead > 0) continue; depth(p.x, p.z - 1); drawShip(g, p, t); for (let k = 0; k < p.drones.length; k++) { const d = p.drones[k]; depth(d.x, d.z); mesh(DRONE, d.x, d.y, d.z, 0.7, 0, 0, t * 0.1 + k, p.god > 0 ? RAINBOW[(k + (t >> 2)) % 7] : d.tmp ? '#ffffff' : '#b06bff'); } }
+  { const w = g.wing; if (w && w.dead <= 0 && !(w.inv > 0 && (t >> 2) % 2)) { // RIVET-9 is drawn in the view HE is in: when he rolls ahead of you, you see where that view puts him
+      const ahead = (w.view !== g.view || w.st > 0) && g.shiftT <= 0, sv = [vA, vB, mix, rollA]; if (ahead) { vA = w.from; vB = w.view; mix = w.st > 0 ? ease(1 - w.st) : 1; rollA = 0; }
+      depth(w.x, w.z); const roll = w.st > 0 ? w.dir * ease(1 - w.st) * TAU : Math.sin(w.t * 0.05) * 0.15, yaw = Math.atan2(p0.ax || 0, p0.az ?? 1), vc = VCOL[w.view];
+      mesh(SHIP_HULL, w.x, w.y, w.z, 0.78, yaw, 0, roll, '#ffb070'); mesh(SHIP_WING, w.x, w.y, w.z, 0.78, yaw, 0, roll, vc); mesh(SHIP_FIN, w.x, w.y, w.z, 0.78, yaw, 0, roll, '#ffe14a');
+      if (ahead) circle(w.x, w.y, w.z, 1 + Math.sin(t * 0.2) * 0.15, vc, 0.6, 12, vB === 3 ? 1 : vB === 0 ? 2 : 0, t * 0.05);
+      P(w.x, w.y + 1.1, w.z); if (OK) tags.push([X, Y - (vB === 3 ? 34 : 8), ahead ? 'R9 > ' + VIEWS[w.view] : 'R9', ahead ? vc : '#ffb070']); [vA, vB, mix, rollA] = sv; }
+    const gh = o.ghost; if (gh && gh.z > -2 && gh.z < 30) { depth(gh.x, gh.z); mesh(SHIP_HULL, gh.x, gh.y, gh.z, 1, 0, 0, 0, '#3dffb0', 0.32); mesh(SHIP_WING, gh.x, gh.y, gh.z, 1, 0, 0, 0, '#3dffb0', 0.2); P(gh.x, gh.y + 0.9, gh.z); if (OK) tags.push([X, Y - 4, 'BEST', '#2a9a70']); } }
   for (const q of g.parts) { depth(q.x, q.z); if (q.splat) { seg(q.x, q.y, q.z, q.x - q.vx * 0.05, q.y - q.vy * 0.05 + 0.15, q.z - q.vz * 0.05, q.col, Math.min(1, q.life / q.max * 1.6)); seg(q.x - 0.12, q.y, q.z, q.x + 0.12, q.y, q.z, q.col, Math.min(1, q.life / q.max * 1.6)); } else seg(q.x, q.y, q.z, q.x - q.vx * 0.035, q.y - q.vy * 0.035, q.z - q.vz * 0.035, q.col, Math.min(1, q.life / q.max * 1.6)); }
   for (const s of g.shocks) { depth(s.x, s.z); circle(s.x, s.y, s.z, s.r, s.col, s.life / s.max, 16, vB === 3 ? 1 : vB === 0 ? 2 : 0); }
   { const trip = th.trippy ? ((t * 0.8) % 360 / 30 | 0) * 30 : 0; for (let L = 0; L < NL; L++) { if (FILL) drawQuads(ctx, L); flush(ctx, o.glow !== false, trip, L); } depth0(); }
   for (const q of g.pops) { P(q.x, q.y, q.z); if (!OK) continue; text(ctx, q.txt, X, Y, q.big ? 15 : 9, q.col, { align: 'center', alpha: Math.min(1, q.life / 20), glow: q.big }); }
+  for (const q of tags) text(ctx, q[2], q[0], q[1], 7, q[3], { align: 'center', glow: false });
   ctx.restore();
   if (g.level.rules?.heat && g.heat > 5) { ctx.fillStyle = '#ff5a1f'; ctx.globalAlpha = Math.min(0.3, g.heat / 100 * 0.3); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   if (g.flash > 0) { ctx.fillStyle = '#fff'; ctx.globalAlpha = Math.min(0.6, g.flash / 20); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
@@ -278,6 +286,8 @@ export function drawHUD(ctx, g, o = {}) {
   text(ctx, '< L', px0 - 8, 15, 9, '#5a66b0', { align: 'right', glow: false }); text(ctx, 'R >', px0 + pw * 4 + 8, 15, 9, '#5a66b0', { glow: false });
   if (!g.level.bonus) for (let i = 0; i < Math.min(p.lives, 6); i++) { const x = W - 26 - i * 24, y = 22; ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 6, y + 7); ctx.lineTo(x, y + 3); ctx.lineTo(x - 6, y + 7); ctx.closePath(); ctx.strokeStyle = '#2ee6ff'; ctx.lineWidth = 1.5; ctx.stroke(); }
   if (g.level.bonus) text(ctx, 'BONUS STAGE', W - 18, 16, 10, '#b06bff', { align: 'right' });
+  if (g.coop) { const q = g.players[1]; text(ctx, q.out ? 'P2 OUT' : 'P2 SHIPS ' + Math.max(0, q.lives), W - 18, 98, 8, '#ffe14a', { align: 'right', glow: false }); }
+  if (g.wing) text(ctx, g.wing.dead > 0 ? 'RIVET-9 REBOOTING ' + Math.ceil(g.wing.dead / 60) : g.wing.view !== vw ? 'RIVET-9 SAYS ' + VIEWS[g.wing.view] : 'RIVET-9 WINGMAN', W - 18, 98, 8, g.wing.dead > 0 ? '#7d8bd6' : g.wing.view !== vw && (t >> 3) % 2 ? '#ffffff' : '#ffb070', { align: 'right', glow: false });
   text(ctx, 'BOMB ' + p.bombs, W - 18, 40, 9, '#ff8a2b', { align: 'right' }); text(ctx, 'DRONES ' + DRONE_MODES[p.dmode], W - 18, 56, 7, '#b06bff', { align: 'right', glow: false });
   // speed gear
   text(ctx, 'SPEED', W - 18, 72, 7, '#7d8bd6', { align: 'right', glow: false }); for (let i = 0; i < 3; i++) { ctx.fillStyle = i <= g.gear ? '#ffe14a' : '#26306e'; ctx.fillRect(W - 100 + i * 14, 72, 11, 6); } text(ctx, GEARS[g.gear], W - 18, 84, 7, '#ffe14a', { align: 'right', glow: false });

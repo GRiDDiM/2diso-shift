@@ -5,7 +5,7 @@ A shoot-'em-up where **you** shift reality: press **Shift** to flip between a fl
 Made for **GitHub Game Off 2026** (theme: **SHIFT**).
 
 ## Status
-Playable start to finish: four planets, four bosses, a themed wave arena after each boss and four hidden bonus stages. Built during November 2026 for the jam. See `DEVLOG.md` for how it was made.
+Playable start to finish: four planets, four bosses, a themed wave arena after each boss and four hidden bonus stages. Also: Perfect Shifts, medals and ranks, a Daily Run, best-run ghosts, two-player co-op and an AI wingman (RIVET-9) who shifts views before you do. Built during November 2026 for the jam. See `DEVLOG.md` for how it was made.
 
 ## The four views
 | View | Plays like | What it flattens |

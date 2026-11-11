@@ -1,7 +1,7 @@
 // 2DISO SHIFT — front end: input (keyboard, controller, touch), intro, menus, HUD, audio hooks, saves, level flow.
 // mountShift(root, host) works standalone (index.html) and inside a host site that passes { hosted, onExit, submitScore, leaderboard }.
 // (C) 2026 GRiDDiM / ArcadeGridz / BDC
-import { createGame, step, autopilot, snapshot, VIEWS, BAR, GEARS, INTRO } from './game.js';
+import { createGame, step, autopilot, snapshot, makeWing, VIEWS, BAR, GEARS, INTRO } from './game.js';
 import { LEVELS, ORDER, buildLevel } from './levels.js';
 import { W, H, drawWorld, drawHUD, drawLogo, drawSplash, meshScreen, text, textWidth, SHIP_HULL, SHIP_WING, SHIP_FIN, RAINBOW, VCOL } from './render.js';
 import { createAudio } from './audio.js';
@@ -19,6 +19,17 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 .ds-rotate button{justify-self:center;padding:10px 18px;border:2px solid #ff3df0;background:none;color:#ff3df0;font:inherit;font-size:13px;border-radius:8px}`;
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
+// best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
+const VER = 'r9';
+const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
+const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
+const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3]];
+const RANK = ['-', 'D', 'C', 'B', 'A', 'S', 'SS'], bits = m => { let n = 0; for (let k = 0; k < 6; k++) if (m >> k & 1) n++; return n; };
+const MUSIC = { earth: 'play', mars: 'mars', jupiter: 'jupiter', x: 'x' };
+// the daily run: one seed for everybody, plus one helpful and one hurtful twist picked from the date
+function dailyInfo() { const d = new Date(), key = d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); let a = key >>> 0; const r = () => { a = Math.imul(a ^ a >>> 15, 2246822507) + 0x9E3779B9 >>> 0; return a / 4294967296; }; r();
+  const HELP = [['ARSENAL', 'EVERY WEAPON STARTS AT LEVEL 1', { up: [0, 1, 1, 1, 1, 1, 0, 0] }], ['DRONE SQUAD', 'START WITH 3 DRONES', { up: [3, 0, 0, 0, 0, 0, 0, 0] }], ['BOMBER', 'START WITH 9 BOMBS', { bombs: 9 }]], HURT = [['TURBO', 'EVERYTHING SCROLLS 25 PERCENT FASTER', {}, { turbo: true }], ['GLASS HULL', 'NO STARTING SHIELD', { shield: 0 }], ['TWO SHIPS', 'ONE SPARE SHIP ONLY', { lives: 1 }]];
+  const h = HELP[r() * 3 | 0], x = HURT[r() * 3 | 0]; return { key, label: String(key).slice(4, 6) + '.' + String(key).slice(6), help: h, hurt: x, start: { ...h[2], ...x[2] }, mut: x[3] || {}, n: 0 }; }
 const TAU = Math.PI * 2, COPY = '(C) 2026 GRIDDIM / ARCADEGRIDZ / BDC';
 // solar map: four planets along the route, each with its hidden bonus stage above it
 const NODES = [{ id: 'earth', x: 300, r: 13, col: '#2ee6ff' }, { id: 'moon', x: 334, r: 5, col: '#c8d0e0', up: 1 }, { id: 'mars', x: 430, r: 10, col: '#ff4d6d' }, { id: 'sun', x: 90, r: 30, col: '#ffe14a', up: 2 }, { id: 'jupiter', x: 620, r: 24, col: '#ff8a2b' }, { id: 'belt', x: 520, r: 6, col: '#c8a070', up: 1 }, { id: 'x', x: 860, r: 15, col: '#3dffb0' }, { id: 'pluto', x: 780, r: 5, col: '#9fe9ff', up: 1 }];
@@ -35,10 +46,10 @@ export function mountShift(root, host = {}) {
 <div class="ds-rotate" hidden><div>TURN YOUR SCREEN SIDEWAYS</div><button type="button">PLAY ANYWAY</button></div></section>`;
   const shell = root.querySelector('.ds-shell'), stage = root.querySelector('.ds-stage'), canvas = root.querySelector('canvas'), ctx = canvas.getContext('2d'), touchEl = root.querySelector('.ds-touch'), stickEl = root.querySelector('.ds-stick'), nubEl = root.querySelector('.ds-nub'), rotEl = root.querySelector('.ds-rotate');
   const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
-  const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: coarse ? 'low' : 'high', shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true }, LS.get('opt', {})); const saveOpt = () => LS.set('opt', opt);
+  const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: coarse ? 'low' : 'high', shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true, assist: false, ghost: true, crt: false }, LS.get('opt', {})); const saveOpt = () => LS.set('opt', opt);
   const audio = createAudio(opt);
   let destroyed = false, raf = 0, last = performance.now(), acc = 0, scale = 1, res = 1, rotOk = false;
-  let scene = 'intro', sceneT = 0, g = null, attract = null, assisted = false, testRun = false, submitted = false, focusPaused = false, lastDev = coarse ? 'touch' : 'kb', titleT = 0, endInfo = null, levelId = 'earth', returnTo = null, warpT = 0;
+  let scene = 'intro', sceneT = 0, g = null, attract = null, assisted = false, testRun = false, submitted = false, focusPaused = false, lastDev = coarse ? 'touch' : 'kb', titleT = 0, endInfo = null, levelId = 'earth', returnTo = null, warpT = 0, coop = false, daily = null, rec = null, ghost = null, fxC = null, crtPat = null; const mouse = { x: 0, y: 0, t: -1e9, down: false };
   const menus = []; let hits = []; const toasts = []; let story = null, hiShown = false;
   const toast = (a, b) => { toasts.push({ a, b: b || '', t: 0 }); if (toasts.length > 3) toasts.shift(); };
 
@@ -57,21 +68,23 @@ export function mountShift(root, host = {}) {
   function onKey(e) { if (destroyed || typing(e) || e.ctrlKey || e.metaKey || e.altKey || window.ArcadeGridzSystemMenu?.isOpen?.()) return; if (!GAMEKEYS.has(e.code)) return;
     const set = e.isTrusted === false ? pad : keys; if (e.type === 'keydown') { set.add(e.code); (e.isTrusted === false ? latP : latK).add(e.code); lastDev = e.isTrusted === false ? 'pad' : 'kb'; audio.unlock(); } else set.delete(e.code); e.preventDefault(); if (e.type === 'keydown') e.stopPropagation(); }
   addEventListener('keydown', onKey, true); addEventListener('keyup', onKey, true);
-  function readInput() {
-    const k = c => keys.has(c) || latK.has(c), s = c => pad.has(c) || latP.has(c); const i = { mx: 0, my: 0 };
+  function readInput() { const all = readSrc(true, true, null);
+    if (coop) { let n = 0; for (const p of navigator.getGamepads?.() || []) if (p && p.connected) n++; const two = !window.ArcadeGridzPad && n >= 2; all.p1 = two ? readSrc(true, true, 0) : readSrc(true, false, null); all.p2 = two ? readSrc(false, true, 1) : readSrc(false, true, null); }
+    latK.clear(); latP.clear(); return all; }
+  function readSrc(K, Pd, which) { // K: keyboard + touch, Pd: controllers (which = only that controller)
+    const k = c => K && (keys.has(c) || latK.has(c)), s = c => Pd && (pad.has(c) || latP.has(c)); const i = { mx: 0, my: 0 };
     let L = k('ArrowLeft') || k('KeyA') || s('ArrowLeft'), R = k('ArrowRight') || k('KeyD') || s('ArrowRight'), U = k('ArrowUp') || k('KeyW') || s('ArrowUp'), D = k('ArrowDown') || k('KeyS') || s('ArrowDown');
     i.fire = k('Space') || k('KeyZ') || k('KeyJ') || s('Escape'); i.gear = k('KeyV') || k('KeyF') || k('KeyH') || s('Space'); i.bomb = k('KeyX') || k('KeyK') || s('KeyZ'); i.drone = k('KeyC') || k('KeyL') || s('KeyX');
     i.shiftL = k('ShiftLeft') || k('KeyQ') || s('ShiftLeft'); i.shiftR = k('ShiftRight') || k('KeyE') || s('KeyE'); i.upgrade = k('Enter') || k('KeyR') || s('KeyM'); i.pause = k('Escape') || k('KeyP') || s('KeyP');
     i.ok = k('Enter') || k('Space') || k('KeyZ') || s('Escape'); i.back = k('Escape') || k('Backspace') || s('Space'); i.start = s('KeyP');
-    let ax = 0, ay = 0;
-    if (!window.ArcadeGridzPad) for (const p of navigator.getGamepads?.() || []) { if (!p || !p.connected) continue; const b = n => !!p.buttons[n]?.pressed; if (p.buttons.some(x => x.pressed)) { lastDev = 'pad'; audio.unlock(); }
+    let ax = 0, ay = 0, gi = 0;
+    for (const p of navigator.getGamepads?.() || []) { if (!p || !p.connected) continue; const idx = gi++; if (!Pd || (which != null && which !== idx)) continue; if (Math.hypot(p.axes[2] || 0, p.axes[3] || 0) > 0.4) i.aim = [p.axes[2], -p.axes[3]]; if (window.ArcadeGridzPad) continue; const b = n => !!p.buttons[n]?.pressed; if (p.buttons.some(x => x.pressed)) { lastDev = 'pad'; audio.unlock(); }
       L ||= b(14); R ||= b(15); U ||= b(12); D ||= b(13); if (Math.abs(p.axes[0]) > 0.25) ax = p.axes[0]; if (Math.abs(p.axes[1]) > 0.25) ay = p.axes[1];
       i.fire ||= b(1); i.gear ||= b(0); i.bomb ||= b(2); i.drone ||= b(3); i.shiftL ||= b(4) || b(6); i.shiftR ||= b(5) || b(7); i.upgrade ||= b(8); i.pause ||= b(9); i.ok ||= b(1); i.back ||= b(0); i.start ||= b(9); }
     i.mx = (R ? 1 : 0) - (L ? 1 : 0) || ax; i.my = (D ? 1 : 0) - (U ? 1 : 0) || ay;
-    if (stick) { const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.hypot(dx, dy); if (d > 6) { const m = Math.min(1, d / 44); i.mx = dx / d * m; i.my = dy / d * m; } }
-    for (const b of tb) i[b] = true;
+    if (K && stick) { const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.hypot(dx, dy); if (d > 6) { const m = Math.min(1, d / 44); i.mx = dx / d * m; i.my = dy / d * m; } }
+    if (K) for (const b of tb) i[b] = true;
     if (opt.autofire) i.fire = true;
-    latK.clear(); latP.clear();
     i.left = i.mx < -0.5; i.right = i.mx > 0.5; i.up = i.my < -0.5; i.down = i.my > 0.5;
     return i;
   }
@@ -80,7 +93,9 @@ export function mountShift(root, host = {}) {
   stickEl.addEventListener('pointermove', e => { if (!stick || e.pointerId !== stick.id) return; const p = sPt(e); stick.x = p.x; stick.y = p.y; const dx = p.x - stick.ox, dy = p.y - stick.oy, d = Math.hypot(dx, dy) || 1, m = Math.min(28, d); nubEl.firstChild.style.transform = `translate(${dx / d * m}px,${dy / d * m}px)`; });
   const stickUp = e => { if (stick && e.pointerId === stick.id) { stick = null; nubEl.hidden = true; nubEl.firstChild.style.transform = ''; } }; stickEl.addEventListener('pointerup', stickUp); stickEl.addEventListener('pointercancel', stickUp);
   for (const b of touchEl.querySelectorAll('b')) { const n = b.dataset.b; const dn = e => { lastDev = 'touch'; audio.unlock(); tb.add(n); b.classList.add('on'); try { b.setPointerCapture(e.pointerId); } catch { } e.preventDefault(); }, up = () => { tb.delete(n); b.classList.remove('on'); }; b.addEventListener('pointerdown', dn); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); }
-  canvas.addEventListener('pointerdown', e => { audio.unlock(); if (e.pointerType === 'touch') lastDev = 'touch'; tap = sPt(e); canvas.focus({ preventScroll: true }); });
+  canvas.addEventListener('pointerdown', e => { audio.unlock(); if (e.pointerType === 'touch') lastDev = 'touch'; else mouse.down = true; tap = sPt(e); canvas.focus({ preventScroll: true }); });
+  canvas.addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; const p = sPt(e); mouse.x = p.x; mouse.y = p.y; mouse.t = performance.now(); });
+  const mUp = () => { mouse.down = false; }; addEventListener('pointerup', mUp);
   canvas.addEventListener('wheel', e => { const m = top(); if (m?.kind === 'scroll') { m.off = Math.max(0, m.off + e.deltaY * 0.5); e.preventDefault(); } }, { passive: false });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -90,7 +105,7 @@ export function mountShift(root, host = {}) {
   function popMenu() { const m = menus.pop(); audio.sfx('back'); prevM = { ...HELD }; return m; }
   const onoff = v => v ? 'ON' : 'OFF';
   const scrollMenu = (title, lines) => push({ title, kind: 'scroll', lines, off: 0, items: [{ label: 'BACK', act: popMenu }] });
-  function optionsMenu() { push({ title: 'OPTIONS', gap: 28, items: [
+  function optionsMenu() { push({ title: 'OPTIONS', gap: 25, items: [
     { label: () => 'MUSIC  ' + Math.round(opt.music * 10), adj: d => { opt.music = Math.max(0, Math.min(1, opt.music + d * 0.1)); audio.vol(); saveOpt(); } },
     { label: () => 'SOUND  ' + Math.round(opt.sfx * 10), adj: d => { opt.sfx = Math.max(0, Math.min(1, opt.sfx + d * 0.1)); audio.vol(); saveOpt(); audio.sfx('blip'); } },
     { label: () => 'ANNOUNCER  ' + onoff(opt.voice), adj: () => { opt.voice = !opt.voice; saveOpt(); if (opt.voice) audio.say('announcer on', true); else audio.hush(); } },
@@ -100,19 +115,29 @@ export function mountShift(root, host = {}) {
     { label: () => 'AUTO SHOOT  ' + onoff(opt.autofire), adj: () => { opt.autofire = !opt.autofire; saveOpt(); } },
     { label: () => 'START SPEED  ' + GEARS[opt.gear], adj: d => { opt.gear = (opt.gear + (d < 0 ? 2 : 1)) % 3; saveOpt(); } },
     { label: () => 'IDLE MODE  ' + onoff(opt.idle), adj: () => setIdle(!opt.idle) },
+    { label: () => 'RIVET-9 ASSIST  ' + onoff(opt.assist), adj: () => setAssist(!opt.assist) },
+    { label: () => 'BEST RUN GHOST  ' + onoff(opt.ghost), adj: () => { opt.ghost = !opt.ghost; saveOpt(); if (!opt.ghost) ghost = null; } },
+    { label: () => 'CRT FILTER  ' + onoff(opt.crt), adj: () => { opt.crt = !opt.crt; saveOpt(); } },
     { label: 'CONTROLS', act: () => push({ title: 'CONTROLS', kind: 'controls', items: [{ label: 'BACK', act: popMenu }] }) },
     { label: 'CREDITS', act: () => scrollMenu('CREDITS', CREDITS) },
     { label: 'BACK', act: popMenu }] }); }
-  function setIdle(v) { opt.idle = v; saveOpt(); if (v) assisted = true; }
+  function setIdle(v) { opt.idle = v; saveOpt(); if (v) { assisted = true; rec = null; } }
+  // RIVET-9 flies as your wingman and rolls into the right view before you do. Runs with him are tagged ASSISTED.
+  function setAssist(v) { opt.assist = v; saveOpt(); rec = null; ghost = null; if (v) assisted = true; if (g && scene === 'play' && !coop) g.wing = v ? makeWing(g.view) : null; }
   function mapMenu(after, at) { const m = push({ title: 'SOLAR MAP', kind: 'map', sel: Math.max(0, NODES.findIndex(n => n.id === (at || levelId))), after, items: after ? [{ label: 'CONTINUE', act: () => { popMenu(); after(); } }] : [{ label: 'PLAY THIS LEVEL (TEST)', act: () => { const id = NODES[m.sel].id, L = LEVELS[id]; testRun = true; returnTo = null; startLevel(id, { up: L.kit || undefined }); } }, { label: 'PLAY ITS ARENA (TEST)', act: () => { let id = NODES[m.sel].id; if (LEVELS[id].isBonus) id = LEVELS[id].of; testRun = true; returnTo = null; startLevel('arena-' + id, { up: LEVELS['arena-' + id].kit }); } }, { label: 'BACK', act: popMenu }] }); return m; }
   function scoresMenu() { const m = { title: 'HIGH SCORES', kind: 'scores', rows: LS.get('scores', []), items: [{ label: 'BACK', act: popMenu }] }; push(m); if (host.leaderboard) { m.rows = null; Promise.resolve(host.leaderboard()).then(r => { m.rows = Array.isArray(r) ? r : []; }).catch(() => { m.rows = LS.get('scores', []); }); } }
-  function titleMenu() { menus.length = 0; const items = [], sv = LS.get('save', null); if (sv && LEVELS[sv.level]) items.push({ label: 'CONTINUE  ' + LEVELS[sv.level].name, act: () => { testRun = false; returnTo = null; assisted = true; startLevel(sv.level, sv); } });
-    items.push({ label: 'START GAME', act: () => { testRun = false; returnTo = null; assisted = !!opt.idle; startStory(STORY, () => startLevel('earth', null)); } }, { label: 'OPTIONS', act: optionsMenu }, { label: 'SOLAR MAP', act: () => mapMenu(null, 'earth') }, { label: 'HIGH SCORES', act: scoresMenu }, { label: 'DEVLOG', act: () => scrollMenu('DEVLOG', DEVLOG) });
+  function titleMenu() { menus.length = 0; const items = [], sv = LS.get('save', null); if (sv && LEVELS[sv.level]) items.push({ label: 'CONTINUE  ' + LEVELS[sv.level].name, act: () => { testRun = false; returnTo = null; coop = false; daily = null; assisted = true; startLevel(sv.level, sv); } });
+    const di = dailyInfo(), db = LS.get('daily', null);
+    items.push({ label: 'START GAME', act: () => { testRun = false; returnTo = null; coop = false; daily = null; assisted = !!opt.idle || !!opt.assist; startStory(STORY, () => startLevel('earth', null)); } },
+      { label: '2 PLAYER CO-OP', act: () => { testRun = false; returnTo = null; coop = true; daily = null; assisted = true; startStory(STORY, () => { startLevel('earth', null); toast('CO-OP', 'P1 KEYBOARD   P2 CONTROLLER'); }); } },
+      { label: 'DAILY RUN  ' + di.label + (db && db.key === di.key ? '  BEST ' + db.score : ''), act: () => push({ title: 'DAILY RUN  ' + di.label, notes: ['SAME SEED FOR EVERYONE TODAY. NO CONTINUES.', '+ ' + di.help[0] + ': ' + di.help[1], '- ' + di.hurt[0] + ': ' + di.hurt[1], db && db.key === di.key ? 'YOUR BEST TODAY: ' + db.score : 'NO RUN YET TODAY'], items: [{ label: 'START', act: () => { testRun = false; returnTo = null; coop = false; daily = di; assisted = !!opt.idle || !!opt.assist; startLevel('earth', di.start); toast('DAILY RUN', di.help[0] + ' + ' + di.hurt[0]); } }, { label: 'BACK', act: popMenu }] }) },
+      { label: 'OPTIONS', act: optionsMenu }, { label: 'SOLAR MAP', act: () => mapMenu(null, 'earth') }, { label: 'HIGH SCORES', act: scoresMenu }, { label: 'DEVLOG', act: () => scrollMenu('DEVLOG', DEVLOG) });
     if (host.onExit) items.push({ label: 'EXIT GAME', act: () => host.onExit() }); push({ kind: 'title', root: true, items }); }
   function pauseMenu() { if (scene !== 'play' || menus.length || !g || g.state !== 'play') return; audio.sfx('blip'); audio.hush(); audio.music('title'); push({ title: 'PAUSED', pause: true, items: [
-    { label: 'RESUME', act: resume }, { label: 'MAP', act: () => mapMenu() }, { label: 'OPTIONS', act: optionsMenu }, { label: () => 'IDLE MODE  ' + onoff(opt.idle), act: () => setIdle(!opt.idle), adj: () => setIdle(!opt.idle) },
-    { label: 'SAVE AND QUIT', act: () => { if (!testRun) LS.set('save', returnTo ? { ...returnTo } : snapshot(g)); showTitle(); } }] }); }
-  function resume() { menus.length = 0; audio.music(g?.boss ? 'boss' : 'play'); prevIn = { pause: true, fire: true, upgrade: true, bomb: true, drone: true, shiftL: true, shiftR: true, gear: true }; last = performance.now(); acc = 0; }
+    { label: 'RESUME', act: resume }, { label: 'MAP', act: () => mapMenu() }, { label: 'OPTIONS', act: optionsMenu }, { label: () => 'IDLE MODE  ' + onoff(opt.idle), act: () => setIdle(!opt.idle), adj: () => setIdle(!opt.idle) }, ...(coop ? [] : [{ label: () => 'RIVET-9 ASSIST  ' + onoff(opt.assist), act: () => setAssist(!opt.assist), adj: () => setAssist(!opt.assist) }]),
+    { label: daily ? 'QUIT RUN' : 'SAVE AND QUIT', act: () => { if (!testRun && !daily) LS.set('save', returnTo ? { ...returnTo } : snapshot(g)); showTitle(); } }] }); }
+  const track = () => { const L = LEVELS[levelId]; return g?.boss ? 'boss' : L.isArena ? 'arena' : L.isBonus ? 'bonus' : MUSIC[levelId] || 'play'; };
+  function resume() { menus.length = 0; audio.music(track()); prevIn = { pause: true, fire: true, upgrade: true, bomb: true, drone: true, shiftL: true, shiftR: true, gear: true }; last = performance.now(); acc = 0; }
   function menuInput(i) {
     const m = top(), e = k => i[k] && !prevM[k]; if (!m) return;
     if (tap) { for (const h of hits) if (tap.x >= h.x && tap.x <= h.x + h.w && tap.y >= h.y && tap.y <= h.y + h.h) { if (h.fn) h.fn(tap); else { m.i = h.i; const it = m.items[h.i]; audio.sfx('ok'); if (it.act) it.act(); else it.adj?.(1); } break; } tap = null; prevM = i; return; }
@@ -141,21 +166,27 @@ export function mountShift(root, host = {}) {
     text(ctx, lastDev === 'touch' ? 'TAP TO SKIP' : lastDev === 'pad' ? padNames()[0] + ' TO SKIP' : 'ENTER TO SKIP', 480, 512, 7, '#5a66b0', { align: 'center', glow: false }); }
 
   // ---------- flow ----------
-  function showTitle() { scene = 'title'; sceneT = 0; g = null; returnTo = null; attract = createGame({ seed: 7 + (Math.random() * 99 | 0), level: buildLevel(ORDER[Math.random() * 4 | 0]), start: { up: [2, 2, 1, 1, 1, 1, 0, 0] } }); attract.players[0].lives = 99; titleMenu(); audio.music('title'); host.onState?.({ scene }); }
+  function showTitle() { scene = 'title'; sceneT = 0; g = null; returnTo = null; coop = false; daily = null; rec = null; ghost = null; attract = createGame({ seed: 7 + (Math.random() * 99 | 0), level: buildLevel(ORDER[Math.random() * 4 | 0]), start: { up: [2, 2, 1, 1, 1, 1, 0, 0] } }); attract.players[0].lives = 99; titleMenu(); audio.music('title'); host.onState?.({ scene }); }
   function startLevel(id, start) { menus.length = 0; story = null; hiShown = false; toasts.length = 0; levelId = id; const L = LEVELS[id];
-    g = createGame({ seed: (Math.random() * 1e9) | 0, level: buildLevel(id), start: { gear: opt.gear, ...(start || {}) } }); if (testRun || opt.idle) assisted = true; submitted = false; scene = 'play'; sceneT = 0; warpT = 0; endInfo = null;
-    audio.sfx('whoosh'); audio.music('play'); audio.say((L.isArena ? 'bonus arena. ' : L.isBonus ? 'bonus stage. ' : 'level ' + L.n + '. ') + L.name + '.', true); prevIn = { ...HELD, fire: true, upgrade: true, gear: true }; host.onState?.({ scene }); }
+    const seed = daily ? daily.key * 31 + daily.n++ : (Math.random() * 1e9) | 0, st = { gear: opt.gear, ...(start || {}) }, wing = !!opt.assist && !coop;
+    g = createGame({ seed, level: buildLevel(id), start: st, players: coop ? 2 : 1, wing, mut: daily?.mut }); if (testRun || opt.idle || opt.assist || coop) assisted = true; submitted = false; scene = 'play'; sceneT = 0; warpT = 0; endInfo = null;
+    rec = null; ghost = null; if (!L.isBonus && !st.z && !opt.idle && !coop && !daily) { rec = { v: VER, seed, start: JSON.parse(JSON.stringify(st)), wing, runs: [] }; const gd = opt.ghost && LS.get('ghost.' + id, null); if (gd && gd.v === VER) ghost = { g: createGame({ seed: gd.seed, level: buildLevel(id), start: gd.start, wing: gd.wing }), runs: gd.runs, k: 0, n: 0 }; }
+    audio.sfx('whoosh'); audio.music(track()); audio.say((L.isArena ? 'bonus arena. ' : L.isBonus ? 'bonus stage. ' : 'level ' + L.n + '. ') + L.name + '.', true); prevIn = { ...HELD, fire: true, upgrade: true, gear: true }; host.onState?.({ scene }); }
   function carry(extra) { const s = snapshot(g), p = g.players[0]; return { score: g.score, lives: Math.max(0, p.lives), bombs: p.bombs, up: [...p.up], shield: p.shield, cursor: p.cursor, dmode: p.dmode, gear: g.gear, ...extra }; }
-  function finish(cleared) { if (!g || submitted || testRun) return; submitted = true; const res = { score: g.score, cleared, assisted, level: LEVELS[levelId].n || 0, chain: g.bestChain, kills: g.stats.kills, shifts: g.stats.shifts };
-    const best = LS.get('best', 0); if (g.score > best) LS.set('best', g.score); const rows = LS.get('scores', []); rows.push({ name: assisted ? 'ASSIST' : 'YOU', score: g.score, assisted }); rows.sort((a, b) => b.score - a.score); LS.set('scores', rows.slice(0, 8));
+  function finish(cleared) { if (!g || submitted || testRun) return; submitted = true; if (daily) { const db = LS.get('daily', null); if (!db || db.key !== daily.key || g.score > db.score) LS.set('daily', { key: daily.key, score: g.score, cleared }); return; } const res = { score: g.score, cleared, assisted, level: LEVELS[levelId].n || 0, chain: g.bestChain, kills: g.stats.kills, shifts: g.stats.shifts };
+    const best = LS.get('best', 0); if (g.score > best) LS.set('best', g.score); const rows = LS.get('scores', []); rows.push({ name: coop ? 'CO-OP' : assisted ? 'ASSIST' : 'YOU', score: g.score, assisted }); rows.sort((a, b) => b.score - a.score); LS.set('scores', rows.slice(0, 8));
     try { host.submitScore?.(res); } catch { } return res; }
   function endMenu(cleared) { const L = LEVELS[levelId]; endInfo = { cleared, t: 0, bonus: !!L.isBonus }; audio.music('title'); let items;
+    if (cleared && !L.isBonus) { let m = 0; MEDALS.forEach((d, k) => { if (d[1](g)) m |= 1 << k; }); endInfo.medals = m;
+      if (!opt.idle) { const all = LS.get('medals', {}); if (bits(m) > bits(all[levelId] || 0)) { all[levelId] = m; LS.set('medals', all); endInfo.newRank = true; }
+        if (rec && rec.runs.length < 40000) { const gain = g.score - (rec.start.score || 0), old = LS.get('ghost.' + levelId, null); if (!old || old.v !== VER || gain > old.gain) { LS.set('ghost.' + levelId, { ...rec, gain }); endInfo.newGhost = true; } } } }
+    rec = null; ghost = null;
     const goNext = (from, c) => { const nx = LEVELS[from].next; startStory(BRIEF[nx] || [], () => { scene = 'play'; mapMenu(() => startLevel(nx, c), nx).locked = true; }); };
     if (L.isArena) items = [{ label: 'CONTINUE', act: () => { if (testRun || !LEVELS[L.of].next) showTitle(); else goNext(L.of, carry({ lives: Math.min(6, g.players[0].lives + 1) })); } }];
     else if (L.isBonus) { const back = returnTo; items = [{ label: 'CONTINUE', act: () => { if (back) { returnTo = null; startLevel(back.level, { ...back, ...carry({ lives: back.lives, warp: true }), z: back.z }); } else showTitle(); } }]; }
-    else if (cleared) { if (!testRun) { if (g.level.final) LS.del('save'); else LS.set('save', { ...carry(), level: L.next, z: 0 }); } if (g.level.final) finish(true);
+    else if (cleared) { if (!testRun && !daily) { if (g.level.final) LS.del('save'); else LS.set('save', { ...carry(), level: L.next, z: 0 }); } if (g.level.final) finish(true);
       items = [{ label: 'CONTINUE', act: () => { const nx = L.next; if (!nx) { startStory(ENDING, () => { scene = 'title'; showTitle(); scrollMenu('CREDITS', CREDITS); }); return; } if (testRun) { showTitle(); return; } startLevel('arena-' + levelId, carry()); } }]; }
-    else { finish(false); items = [{ label: 'RETRY FROM CHECKPOINT', act: () => { assisted = true; startLevel(levelId, { ...g.cpSnap, lives: 3 }); } }, { label: 'QUIT TO TITLE', act: showTitle }]; }
+    else { finish(false); items = daily ? [{ label: 'QUIT TO TITLE', act: showTitle }] : [{ label: 'RETRY FROM CHECKPOINT', act: () => { assisted = true; startLevel(levelId, { ...g.cpSnap, lives: 3 }); } }, { label: 'QUIT TO TITLE', act: showTitle }]; }
     push({ kind: 'end', root: true, cleared, items }); }
 
   // ---------- frame ----------
@@ -167,14 +198,17 @@ export function mountShift(root, host = {}) {
     if (scene === 'title') { titleT++; step(attract, [autopilot(attract)]); if (attract.state !== 'play' || attract.camZ > 700) { attract = createGame({ seed: sceneT, level: buildLevel(ORDER[sceneT % 4]), start: { up: [2, 2, 1, 1, 1, 1, 0, 0] } }); attract.players[0].lives = 99; } menuInput(i); return; }
     if (menus.length) { if (top().kind === 'end' && endInfo) { endInfo.t++; step(g, [{}]); } menuInput(i); return; }
     if (i.pause && !prevIn.pause) { pauseMenu(); prevIn = i; return; }
-    const inp = opt.idle ? autopilot(g) : i; if (opt.idle) assisted = true;
-    step(g, [inp]); prevIn = i;
+    let ins; if (opt.idle) { assisted = true; rec = null; ins = g.players.map((_, k) => autopilot(g, k)); } else if (coop) ins = [i.p1 || i, i.p2 || {}];
+    else { let a = i; if (g.level.rules?.arena && !i.aim && lastDev === 'kb' && performance.now() - mouse.t < 5000) { const p = g.players[0]; let wx, wz; if (g.view === 3) { wx = (mouse.x - 480) / 40; wz = (480 - mouse.y) / 19; } else { wx = (mouse.y - 319 + 11 / 26 * (mouse.x - 150)) / 15.923; wz = (mouse.x - 150 - 14 * wx) / 26; } i.aim = [wx - p.x, wz - p.z]; if (mouse.down) i.fire = true; }
+      if (rec) { const c = enc(i), r = rec.runs, n = r.length; if (n && r[n - 2] === c) r[n - 1]++; else r.push(c, 1); a = dec(c); } ins = [a]; }
+    step(g, ins); prevIn = i;
+    if (ghost) { if (ghost.g.state === 'play' && ghost.k < ghost.runs.length) { step(ghost.g, [dec(ghost.runs[ghost.k])]); if (++ghost.n >= ghost.runs[ghost.k + 1]) { ghost.k += 2; ghost.n = 0; } } else ghost = null; }
     for (const f of g.fx) { if (f.startsWith('say:')) { audio.say(f.slice(4), true); continue; } if (f.startsWith('toast:')) { const [a, b] = f.slice(6).split('|'); toast(a, b); continue; }
       if (f === 'shift' && g.intro <= 0) audio.say(VIEWS[g.view] + ' view'); if (f === 'hint' && g.hint && !g.hint.includes(' / ')) audio.say(g.hint.replace('//', '.').replace(' - ', '. '), true); audio.sfx(f === 'go' ? 'ok' : f === 'gear' ? 'blip' : f);
-      if (f === 'bossin') audio.music('boss'); if (f === 'die' || f === 'bomb' || f === 'boom2') window.ArcadeGridzPad?.rumble?.(f === 'boom2' ? 160 : 260, 0.8); }
+      if (f === 'bossin') audio.music('boss'); if (f === 'die' || f === 'bomb' || f === 'boom2' || f === 'perfect') window.ArcadeGridzPad?.rumble?.(f === 'boom2' ? 160 : 260, 0.8); }
     if (!hiShown && !assisted && g.score > LS.get('best', 0) && LS.get('best', 0) > 0) { hiShown = true; toast('NEW HIGH SCORE', 'KEEP IT ROLLING'); audio.sfx('ring'); audio.say('new high score'); }
     // a warp ring: jump to the bonus stage, and come back to this spot afterwards
-    if (g.flags.warpNow && g.state === 'play') { if (++warpT > 80) { const L = LEVELS[levelId], w = LS.get('warps', {}); w[levelId] = 1; LS.set('warps', w); g.flags.warpNow = false; if (L.bonus) { returnTo = { ...snapshot(g), level: levelId, z: g.camZ + 4, warp: true }; startLevel(L.bonus, carry()); return; } } }
+    if (g.flags.warpNow && g.state === 'play') { if (++warpT > 80) { const L = LEVELS[levelId], w = LS.get('warps', {}); w[levelId] = 1; LS.set('warps', w); g.flags.warpNow = false; if (L.bonus) { returnTo = { ...snapshot(g), level: levelId, z: g.camZ + 4, warp: true, stats: { ...g.stats } }; startLevel(L.bonus, carry()); return; } } }
     if (g.state !== 'play' && g.endT > (g.state === 'clear' ? 100 : 70) && !menus.length) endMenu(g.state === 'clear');
   }
   function panel(x, y, w, h, col = '#2ee6ff') { ctx.fillStyle = 'rgba(4,5,22,.88)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.globalAlpha = 0.12; ctx.lineWidth = 12; ctx.strokeRect(x, y, w, h); ctx.globalAlpha = 0.3; ctx.lineWidth = 6; ctx.strokeRect(x, y, w, h); ctx.globalAlpha = 1; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); }
@@ -197,13 +231,14 @@ export function mountShift(root, host = {}) {
     const p = NODES[m.sel], L = LEVELS[p.id]; panel(150, 364, 660, 92, p.col);
     text(ctx, (L.isBonus ? 'BONUS // ' : 'LEVEL ' + L.n + ' // ') + L.name + ' - ' + L.sub, 170, 376, 13, '#ffffff'); text(ctx, L.info, 170, 400, 8, '#9fb0ff', { glow: false });
     if (L.isBonus) text(ctx, 'REACHED THROUGH A HIDDEN WARP ON ' + LEVELS[L.of].name + (warp[L.of] ? ' - FOUND' : ''), 170, 420, 9, '#b06bff', { glow: false }); else { text(ctx, 'BOSS: ' + L.boss, 170, 420, 9, '#ff4d6d', { glow: false }); text(ctx, 'HIDDEN WARP: ' + (warp[p.id] ? LEVELS[L.bonus].name + ' - FOUND' : '???'), 400, 420, 9, '#b06bff', { glow: false }); }
-    text(ctx, 'BEST SCORE ' + LS.get('best', 0), 170, 438, 9, '#3dffb0', { glow: false }); text(ctx, '< > BROWSE', 640, 438, 7, '#5a66b0', { glow: false });
+    text(ctx, 'BEST SCORE ' + LS.get('best', 0), 170, 438, 9, '#3dffb0', { glow: false }); if (!L.isBonus) { const mm = LS.get('medals', {})[p.id] || 0; text(ctx, 'RANK ' + RANK[bits(mm)], 400, 438, 9, '#ffe14a', { glow: false }); for (let k = 0; k < 6; k++) { ctx.fillStyle = mm >> k & 1 ? '#ffe14a' : '#30345a'; ctx.fillRect(470 + k * 12, 439, 8, 8); } } text(ctx, '< > BROWSE', 640, 438, 7, '#5a66b0', { glow: false });
   }
   const padNames = () => window.ArcadeGridzPad?.glyphs?.() === 'xbox' ? ['B', 'A', 'X', 'Y', 'LB / RB', 'VIEW', 'MENU'] : ['A', 'B', 'Y', 'X', 'L / R', 'SELECT', 'START'];
   function drawControls() { const pn = padNames(), rows = [['MOVE', 'ARROWS / WASD', 'D-PAD'], ['FIRE', 'SPACE / Z / J', pn[0]], ['CHANGE SPEED', 'V / F', pn[1]], ['BOMB', 'X / K', pn[2]], ['DRONE MODE', 'C / L', pn[3]], ['SHIFT VIEW', 'SHIFT KEYS / Q E', pn[4]], ['BUY UPGRADE', 'ENTER / R', pn[5]], ['PAUSE', 'ESC / P', pn[6]]];
     text(ctx, 'KEYBOARD', 430, 150, 8, '#2ee6ff', { glow: false }); text(ctx, 'CONTROLLER', 660, 150, 8, '#ff3df0', { glow: false });
     rows.forEach((r, k) => { const y = 172 + k * 24; text(ctx, r[0], 210, y, 10, '#ffe14a', { glow: false }); text(ctx, r[1], 430, y, 10, '#ffffff', { glow: false }); text(ctx, r[2], 660, y, 10, '#ffffff', { glow: false }); });
-    text(ctx, 'TOUCH: DRAG LEFT SIDE TO FLY. BUTTONS ON THE RIGHT.', 480, 372, 8, '#9fb0ff', { align: 'center', glow: false }); text(ctx, 'EACH POD MOVES THE HIGHLIGHT ALONG THE BAR. BUY WHAT IS LIT. ??? IS A WILDCARD: NUKE, OVERDRIVE OR GOD MODE.', 480, 392, 6.5, '#9fb0ff', { align: 'center', glow: false }); }
+    text(ctx, 'TOUCH: DRAG LEFT SIDE TO FLY. BUTTONS ON THE RIGHT.', 480, 372, 8, '#9fb0ff', { align: 'center', glow: false }); text(ctx, 'EACH POD MOVES THE HIGHLIGHT ALONG THE BAR. BUY WHAT IS LIT. ??? IS A WILDCARD: NUKE, OVERDRIVE OR GOD MODE.', 480, 392, 6.5, '#9fb0ff', { align: 'center', glow: false });
+    text(ctx, 'SHIFT AT THE LAST MOMENT TO DODGE SOMETHING AND YOU GET A PERFECT SHIFT: SHOCKWAVE, OVERDRIVE AND A BONUS.', 480, 406, 6.5, '#ffffff', { align: 'center', glow: false }); text(ctx, 'ARENAS: RIGHT STICK OR MOUSE AIMS.   CO-OP: P1 KEYBOARD, P2 CONTROLLER (OR TWO CONTROLLERS).', 480, 420, 6.5, '#9fb0ff', { align: 'center', glow: false }); }
   function drawScroll(m) { const ST = { h1: [20, '#2ee6ff', 34], h2: [15, '#ffe14a', 30], h3: [11, '#ff3df0', 24], q: [8, '#3dffb0', 16], b: [8, '#ffffff', 16], p: [8, '#c7cdf0', 16] }; let y = 96 - m.off, total = 0;
     ctx.save(); ctx.beginPath(); ctx.rect(50, 86, 860, 340); ctx.clip();
     for (const ln of m.lines) { if (!ln) { y += 9; total += 9; continue; } const k = ln[0].replace('+', ''), cont = ln[0].endsWith('+'), s = ST[k] || ST.p; if (y > 60 && y < 440) text(ctx, (k === 'b' && !cont ? '- ' : k === 'q' && !cont ? "> " : k === 'b' || k === 'q' ? '  ' : '') + ln[1], k === 'q' ? 96 : 76, y, s[0], s[1], { glow: k[0] === 'h' }); y += s[2]; total += s[2]; }
@@ -216,18 +251,20 @@ export function mountShift(root, host = {}) {
       drawLogo(ctx, 480, 34 - (sc - 1) * 30, sc, t); ctx.setTransform(res, 0, 0, res, 0, 0);
       text(ctx, 'ONE SHIP.  FOUR WAYS TO SEE THE FIGHT.', 480, 148, 9, '#ffe14a', { align: 'center' });
       ctx.globalCompositeOperation = 'lighter'; const a = t * 0.7, pi = -0.35 + Math.sin(t) * 0.1, rl = Math.sin(t * 0.8) * 0.3; meshScreen(ctx, SHIP_HULL, 742, 330, 86, a, pi, rl, '#ffffff'); meshScreen(ctx, SHIP_WING, 742, 330, 86, a, pi, rl, '#2ee6ff'); meshScreen(ctx, SHIP_FIN, 742, 330, 86, a, pi, rl, '#ff3df0'); ctx.globalCompositeOperation = 'source-over';
-      const n = m.items.length, gap = n > 6 ? 32 : 36; panel(150, 184, 380, n * gap + 26, '#ff3df0'); drawItems(m, 340, 204, 15, gap);
+      const n = m.items.length, gap = n > 7 ? 29 : n > 6 ? 32 : 36; panel(150, 178, 380, n * gap + 24, '#ff3df0'); drawItems(m, 340, 196, n > 7 ? 13 : 15, gap);
       text(ctx, 'GITHUB GAME OFF 2026', 742, 440, 8, '#5a66b0', { align: 'center', glow: false });
       text(ctx, lastDev === 'pad' ? padNames()[0] + ' = OK     ' + padNames()[1] + ' = BACK' : lastDev === 'touch' ? 'TAP TO CHOOSE' : 'ENTER = OK     ESC = BACK', 480, 500, 8, '#8d9be0', { align: 'center', glow: false });
       text(ctx, COPY, 480, 520, 7, '#5a66b0', { align: 'center', glow: false }); return; }
     ctx.fillStyle = 'rgba(2,1,10,.74)'; ctx.fillRect(0, 0, W, H);
     if (m.kind === 'end') { const c = m.cleared, bo = endInfo.bonus, col = c ? '#3dffb0' : bo ? '#b06bff' : '#ff4d6d'; text(ctx, bo ? (LEVELS[levelId].isArena ? (c ? 'ARENA CLEAR' : 'ARENA OVER') : c ? 'BONUS COMPLETE' : 'BONUS OVER') : c ? 'SECTOR CLEAR' : 'GAME OVER', 480, 92, bo ? 34 : 40, col, { align: 'center', weight: 4, tube: true });
       const rows = [['SCORE', g.score], ['BEST CHAIN', g.bestChain], ['KILLS', g.stats.kills], ['VIEW SHIFTS', g.stats.shifts]]; if (!bo) rows.push(['HIDDEN WARP', g.flags.warp ? 'FOUND' : 'NOT FOUND']); rows.forEach((r, k) => { if (endInfo.t > 20 + k * 14) { text(ctx, r[0], 330, 172 + k * 26, 12, '#9fb0ff', { glow: false }); text(ctx, String(r[1]), 630, 172 + k * 26, 12, '#ffffff', { align: 'right' }); } });
-      if (testRun) text(ctx, 'TEST RUN - SCORE NOT POSTED', 480, 312, 8, '#ffe14a', { align: 'center', glow: false }); else if (assisted) text(ctx, 'ASSISTED RUN', 480, 312, 8, '#ffe14a', { align: 'center', glow: false });
-      if (endInfo.t > 100) drawItems(m, 480, 350, 15, 36); else m.i = 0; return; }
+      if (endInfo.medals != null && endInfo.t > 60) { const mm = endInfo.medals, n = bits(mm); text(ctx, 'RANK', 742, 172, 9, '#9fb0ff', { align: 'center', glow: false }); text(ctx, RANK[n], 742, 190, 44, n >= 5 ? '#ffe14a' : '#3dffb0', { align: 'center', weight: 4, tube: true }); if (endInfo.newRank) text(ctx, 'NEW BEST RANK', 742, 246, 7, '#ffe14a', { align: 'center', glow: false }); if (endInfo.newGhost) text(ctx, 'BEST RUN SAVED AS GHOST', 742, 260, 7, '#3dffb0', { align: 'center', glow: false });
+        let x = 480 - MEDALS.reduce((a, d) => a + textWidth(d[0], 7) + 22, -6) / 2; MEDALS.forEach((d, k) => { const on = mm >> k & 1, w = textWidth(d[0], 7) + 22; if (endInfo.t > 66 + k * 5) { ctx.strokeStyle = on ? '#ffe14a' : '#30345a'; ctx.lineWidth = 1; ctx.strokeRect(x, 300, w - 6, 16); text(ctx, d[0], x + (w - 6) / 2, 305, 7, on ? '#ffe14a' : '#4a5080', { align: 'center', glow: false }); } x += w; }); }
+      if (testRun) text(ctx, 'TEST RUN - SCORE NOT POSTED', 480, 326, 8, '#ffe14a', { align: 'center', glow: false }); else if (daily) text(ctx, 'DAILY RUN ' + daily.label, 480, 326, 8, '#ffe14a', { align: 'center', glow: false }); else if (assisted) text(ctx, coop ? 'CO-OP RUN' : 'ASSISTED RUN', 480, 326, 8, '#ffe14a', { align: 'center', glow: false });
+      if (endInfo.t > 100) drawItems(m, 480, 356, 15, 36); else m.i = 0; return; }
     const full = m.kind === 'map' || m.kind === 'controls' || m.kind === 'scores' || m.kind === 'scroll';
-    const n = m.items.length, gap = m.gap || 34, h = full ? 0 : n * gap + 80, y0 = full ? 54 : 270 - h / 2;
-    if (!full) panel(270, y0, 420, h, m.pause ? '#2ee6ff' : '#ff3df0'); else panel(40, 40, 880, 460, '#2ee6ff');
+    const n = m.items.length, gap = m.gap || 34, nn = m.notes ? m.notes.length * 20 + 14 : 0, h = full ? 0 : n * gap + 80 + nn, y0 = full ? 54 : 270 - h / 2;
+    if (!full) { panel(m.notes ? 200 : 270, y0, m.notes ? 560 : 420, h, m.pause ? '#2ee6ff' : '#ff3df0'); if (m.notes) m.notes.forEach((ln, k) => text(ctx, ln, 480, y0 + 60 + k * 20, 9, ln[0] === '+' ? '#3dffb0' : ln[0] === '-' ? '#ff4d6d' : '#9fb0ff', { align: 'center', glow: false })); } else panel(40, 40, 880, 460, '#2ee6ff');
     text(ctx, m.title, 480, y0 + (full ? 0 : 18), 22, '#ffe14a', { align: 'center', weight: 2.6, tube: true });
     if (m.kind === 'map') { drawMap(m); drawItems(m, 480, m.items.length > 2 ? 459 : m.items.length > 1 ? 462 : 474, m.items.length > 2 ? 9 : 11, m.items.length > 2 ? 14 : 20); }
     else if (m.kind === 'controls') { drawControls(); drawItems(m, 480, 440, 14, 30); }
@@ -235,7 +272,7 @@ export function mountShift(root, host = {}) {
     else if (m.kind === 'scores') { const rows = m.rows; if (!rows) text(ctx, 'LOADING...', 480, 240, 12, '#9fb0ff', { align: 'center' }); else if (!rows.length) text(ctx, 'NO SCORES YET', 480, 240, 12, '#9fb0ff', { align: 'center' });
       else rows.slice(0, 10).forEach((r, k) => { const y = 124 + k * 30; text(ctx, String(k + 1), 250, y, 13, '#ffe14a', { align: 'right' }); text(ctx, String(r.name || '???').slice(0, 14), 280, y, 13, '#ffffff'); text(ctx, String(r.score), 700, y, 13, '#3dffb0', { align: 'right' }); const tag = r.cheater ? 'CHEATER' : r.assisted ? 'ASSISTED' : r.verified === false ? 'UNVERIFIED' : ''; if (tag) text(ctx, tag, 716, y + 3, 7, '#ff8a2b', { glow: false }); });
       drawItems(m, 480, 450, 14, 30); }
-    else drawItems(m, 480, y0 + 62, 14, gap);
+    else drawItems(m, 480, y0 + 62 + nn, 14, gap);
   }
   function drawIntro() {
     const t = sceneT / 60; ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H);
@@ -250,19 +287,26 @@ export function mountShift(root, host = {}) {
   }
   function render() {
     ctx.setTransform(res, 0, 0, res, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-    const ro2 = { glow: opt.glow === 'high', shake: opt.shake, fill: opt.fill };
+    const ro2 = { glow: opt.glow === 'high', shake: opt.shake, fill: opt.fill, ghost: null }; if (ghost && g && scene === 'play' && ghost.g.players[0].dead <= 0) { const q = ghost.g.players[0]; ro2.ghost = { x: q.x, y: q.y, z: q.z + ghost.g.camZ - g.camZ }; }
     if (scene === 'intro') drawIntro();
     else if (scene === 'story') drawStory();
     else { ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H); const gg = scene === 'title' ? attract : g;
       drawWorld(ctx, gg, ro2); ctx.setTransform(res, 0, 0, res, 0, 0); ctx.globalCompositeOperation = 'source-over';
       if (scene === 'title') { ctx.fillStyle = 'rgba(2,1,10,.66)'; ctx.fillRect(0, 0, W, H); if (titleT < 14) { ctx.fillStyle = '#fff'; ctx.globalAlpha = 1 - titleT / 14; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; } }
-      else { drawHUD(ctx, g, { hi: Math.max(LS.get('best', 0), g.score), upgLabel: lastDev === 'touch' ? 'TAP' : lastDev === 'pad' ? padNames()[5] : 'ENTER' }); if (opt.idle) text(ctx, 'IDLE MODE', 150, 26, 8, '#ffe14a', { glow: false }); if (testRun) text(ctx, 'TEST RUN', 150, 40, 8, '#ff8a2b', { glow: false });
+      else { if (g.shiftT > 0) chroma(9 * Math.sin(Math.PI * g.shiftT), 0.4); else if (g.perfFx > 0) chroma(16 * Math.min(1, g.perfFx / 24), 0.55);
+        drawHUD(ctx, g, { hi: Math.max(LS.get('best', 0), g.score), upgLabel: lastDev === 'touch' ? 'TAP' : lastDev === 'pad' ? padNames()[5] : 'ENTER' }); if (opt.idle) text(ctx, 'IDLE MODE', 150, 26, 8, '#ffe14a', { glow: false }); if (testRun) text(ctx, 'TEST RUN', 150, 40, 8, '#ff8a2b', { glow: false }); else if (daily) text(ctx, 'DAILY ' + daily.label + '  ' + daily.help[0] + ' + ' + daily.hurt[0], 150, 40, 7, '#ffe14a', { glow: false }); else if (coop) text(ctx, 'CO-OP', 150, 40, 8, '#3dffb0', { glow: false });
+        if (g.boss?.dying) { ctx.fillStyle = '#02010a'; ctx.globalAlpha = 0.9; ctx.fillRect(0, 0, W, 52); ctx.fillRect(0, H - 52, W, 52); ctx.globalAlpha = 1; }
         const L = LEVELS[levelId]; if (g.intro > 0 || sceneT < INTRO + 110) { const a = g.intro > 0 ? 1 : Math.min(1, (INTRO + 110 - sceneT) / 30); text(ctx, L.isArena ? 'BONUS ARENA' : L.isBonus ? 'BONUS STAGE' : 'LEVEL ' + L.n, 480, 178, 14, '#ffe14a', { align: 'center', alpha: a }); text(ctx, L.name, 480, 204, 44, VCOL[(L.n || 2) % 4], { align: 'center', alpha: a, weight: 4, tube: true }); text(ctx, L.sub, 480, 262, 12, '#ffffff', { align: 'center', alpha: a }); if (g.intro > 0) text(ctx, 'HYPERSPACE', 480, 300, 8, '#7d8bd6', { align: 'center', alpha: (sceneT >> 3) % 2 ? 1 : 0.4, glow: false }); }
         if (warpT > 0) { ctx.fillStyle = '#b06bff'; ctx.globalAlpha = Math.min(0.85, warpT / 80); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; text(ctx, 'WARP', 480, 240, 40, '#ffffff', { align: 'center', weight: 4, tube: true }); } } }
-    if (scene === 'play' && toasts.length) { let y = 104; for (const q of toasts) { q.t++; const k = Math.min(1, q.t / 14, (300 - q.t) / 20), x = W - 18 - 250 * Math.max(0, k); if (k <= 0) continue; ctx.fillStyle = 'rgba(4,5,22,.88)'; ctx.fillRect(x, y, 250, 40); ctx.strokeStyle = '#3dffb0'; ctx.lineWidth = 2; ctx.strokeRect(x, y, 250, 40); ctx.fillStyle = '#3dffb0'; ctx.fillRect(x, y, 5, 40); text(ctx, q.a, x + 16, y + 8, 11, '#ffffff'); text(ctx, q.b, x + 16, y + 26, 7, '#3dffb0', { glow: false }); y += 48; } while (toasts.length && toasts[0].t > 300) toasts.shift(); }
+    if (scene === 'play' && toasts.length) { let y = 114; for (const q of toasts) { q.t++; const k = Math.min(1, q.t / 14, (300 - q.t) / 20), x = W - 18 - 250 * Math.max(0, k); if (k <= 0) continue; ctx.fillStyle = 'rgba(4,5,22,.88)'; ctx.fillRect(x, y, 250, 40); ctx.strokeStyle = '#3dffb0'; ctx.lineWidth = 2; ctx.strokeRect(x, y, 250, 40); ctx.fillStyle = '#3dffb0'; ctx.fillRect(x, y, 5, 40); text(ctx, q.a, x + 16, y + 8, 11, '#ffffff'); text(ctx, q.b, x + 16, y + 26, 7, '#3dffb0', { glow: false }); y += 48; } while (toasts.length && toasts[0].t > 300) toasts.shift(); }
     drawMenu();
+    if (opt.crt) { if (!crtPat) { const c = document.createElement('canvas'); c.width = 2; c.height = 3; const x = c.getContext('2d'); x.fillStyle = 'rgba(0,0,0,.34)'; x.fillRect(0, 2, 2, 1); crtPat = ctx.createPattern(c, 'repeat'); }
+      ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = crtPat; ctx.fillRect(0, 0, W, H); const vg = ctx.createRadialGradient(480, 270, 250, 480, 270, 590); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.6)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H); }
     const showTouch = lastDev === 'touch' && scene === 'play' && !menus.length; if (touchEl.hidden === showTouch) { touchEl.hidden = !showTouch; if (!showTouch) { tb.clear(); stick = null; nubEl.hidden = true; } }
   }
+  // colour split: the frame is drawn again in red and cyan, pulled apart sideways (on shifts and perfect shifts)
+  function chroma(k, a) { if (opt.glow !== 'high' || k < 0.5) return; if (!fxC) fxC = document.createElement('canvas'); if (fxC.width !== canvas.width || fxC.height !== canvas.height) { fxC.width = canvas.width; fxC.height = canvas.height; } const f = fxC.getContext('2d');
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); for (const [col, dx] of [['#ff0030', -k], ['#00e0ff', k]]) { f.globalCompositeOperation = 'copy'; f.drawImage(canvas, 0, 0); f.globalCompositeOperation = 'multiply'; f.fillStyle = col; f.fillRect(0, 0, fxC.width, fxC.height); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.drawImage(fxC, dx * res, 0); } ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
   function frame(now) {
     if (destroyed) return; raf = requestAnimationFrame(frame);
     let dt = (now - last) / 1000; last = now; if (dt > 0.25) dt = 0.25; if (focusPaused) return; acc += dt; let n = 0;
@@ -276,12 +320,12 @@ export function mountShift(root, host = {}) {
   const onBlur = () => pauseForFocus(), onFocus = () => wake(), onVis = () => document.hidden ? pauseForFocus() : wake();
   addEventListener('blur', onBlur); addEventListener('focus', onFocus); document.addEventListener('visibilitychange', onVis);
   canvas.addEventListener('pointerdown', () => wake());
-  function destroy() { if (destroyed) return; destroyed = true; cancelAnimationFrame(raf); ro.disconnect(); removeEventListener('resize', fit); removeEventListener('keydown', onKey, true); removeEventListener('keyup', onKey, true); removeEventListener('blur', onBlur); removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onVis); audio.close(); root.innerHTML = ''; }
+  function destroy() { if (destroyed) return; destroyed = true; cancelAnimationFrame(raf); ro.disconnect(); removeEventListener('resize', fit); removeEventListener('keydown', onKey, true); removeEventListener('keyup', onKey, true); removeEventListener('blur', onBlur); removeEventListener('focus', onFocus); removeEventListener('pointerup', mUp); document.removeEventListener('visibilitychange', onVis); audio.close(); root.innerHTML = ''; }
 
   fit(); prevM = { ok: true, pause: true }; raf = requestAnimationFrame(frame); try { canvas.focus({ preventScroll: true }); } catch { }
   return { ownsFocusPause: true, destroy, pauseForFocus, resumeFromFocus: wake,
-    getState: () => ({ scene, state: g?.state || scene, score: g?.score || 0, lives: g ? Math.max(0, g.players[0].lives) : 0, view: g ? VIEWS[g.view] : '-', chain: g?.chain || 0, best: LS.get('best', 0), level: LEVELS[levelId].name, bonus: !!LEVELS[levelId].isBonus, speed: g ? GEARS[g.gear] : '-', boss: g?.boss ? g.boss.name : '', warp: !!g?.flags.warp, paused: menus.length > 0 && scene === 'play', idle: !!opt.idle, muted: !!opt.mute, menu: scene !== 'play' }),
-    control(a) { if (a === 'sound') { opt.mute = !opt.mute; saveOpt(); audio.vol(); if (opt.mute) audio.hush(); } else if (a === 'exit') host.onExit?.(); else if (a === 'pause') { if (menus.length && top().pause) resume(); else pauseMenu(); } else if (a === 'idle') setIdle(!opt.idle); else if (a === 'menu') showTitle(); else if (a === 'start' || a === 'restart') { testRun = false; returnTo = null; assisted = !!opt.idle; startLevel('earth', null); } },
+    getState: () => ({ scene, state: g?.state || scene, score: g?.score || 0, lives: g ? Math.max(0, g.players[0].lives) : 0, view: g ? VIEWS[g.view] : '-', chain: g?.chain || 0, best: LS.get('best', 0), level: LEVELS[levelId].name, bonus: !!LEVELS[levelId].isBonus, speed: g ? GEARS[g.gear] : '-', boss: g?.boss ? g.boss.name : '', warp: !!g?.flags.warp, paused: menus.length > 0 && scene === 'play', idle: !!opt.idle, assist: !!opt.assist, coop, daily: daily ? daily.label : '', muted: !!opt.mute, menu: scene !== 'play' }),
+    control(a) { if (a === 'sound') { opt.mute = !opt.mute; saveOpt(); audio.vol(); if (opt.mute) audio.hush(); } else if (a === 'exit') host.onExit?.(); else if (a === 'pause') { if (menus.length && top().pause) resume(); else pauseMenu(); } else if (a === 'idle') setIdle(!opt.idle); else if (a === 'assist') setAssist(!opt.assist); else if (a === 'menu') showTitle(); else if (a === 'start' || a === 'restart') { testRun = false; returnTo = null; coop = false; daily = null; assisted = !!opt.idle || !!opt.assist; startLevel('earth', null); } },
     getResult: () => ({ score: g?.score || 0, state: g?.state || scene, assisted }),
-    _debug: { game: () => g, scene: () => scene, menus, opt, startLevel: (id, s, test = true) => { testRun = test; returnTo = null; startLevel(id, s); }, showTitle, setIdle, startStory, skipIntro: () => { showTitle(); titleT = 99; } } };
+    _debug: { ghost: () => ghost, rec: () => rec, setCoop: v => { coop = v; }, setAssist, game: () => g, scene: () => scene, menus, opt, startLevel: (id, s, test = true) => { testRun = test; returnTo = null; startLevel(id, s); }, showTitle, setIdle, startStory, skipIntro: () => { showTitle(); titleT = 99; } } };
 }
