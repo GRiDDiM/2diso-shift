@@ -56,7 +56,7 @@ export function mountShift(root, host = {}) {
   let stick = null, tap = null, prevM = {};
   const typing = e => { const a = e.target; return a && a !== canvas && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); };
   const GAMEKEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab', 'Enter', 'Escape', 'ShiftLeft', 'ShiftRight', 'Backspace', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyF', 'KeyH', 'KeyJ', 'KeyK', 'KeyL', 'KeyQ', 'KeyE', 'KeyR', 'KeyP', 'KeyM']);
-  function onKey(e) { if (destroyed || typing(e) || e.ctrlKey || e.metaKey || e.altKey) return; if (!GAMEKEYS.has(e.code)) return;
+  function onKey(e) { if (destroyed || typing(e) || e.ctrlKey || e.metaKey || e.altKey || window.ArcadeGridzSystemMenu?.isOpen?.()) return; if (!GAMEKEYS.has(e.code)) return;
     const set = e.isTrusted === false ? pad : keys; if (e.type === 'keydown') { set.add(e.code); (e.isTrusted === false ? latP : latK).add(e.code); lastDev = e.isTrusted === false ? 'pad' : 'kb'; audio.unlock(); } else set.delete(e.code); e.preventDefault(); if (e.type === 'keydown') e.stopPropagation(); }
   addEventListener('keydown', onKey, true); addEventListener('keyup', onKey, true);
   function readInput() {
@@ -110,7 +110,7 @@ export function mountShift(root, host = {}) {
     if (host.onExit) items.push({ label: 'EXIT GAME', act: () => host.onExit() }); push({ kind: 'title', root: true, items }); }
   function pauseMenu() { if (scene !== 'play' || menus.length) return; audio.sfx('blip'); audio.hush(); audio.music('title'); push({ title: 'PAUSED', pause: true, items: [
     { label: 'RESUME', act: resume }, { label: 'MAP', act: () => mapMenu() }, { label: 'OPTIONS', act: optionsMenu }, { label: () => 'IDLE MODE  ' + onoff(opt.idle), act: () => setIdle(!opt.idle), adj: () => setIdle(!opt.idle) },
-    { label: 'SAVE AND QUIT', act: () => { LS.set('save', snapshot(g)); finish(false); showTitle(); } }] }); }
+    { label: 'SAVE AND QUIT', act: () => { LS.set('save', snapshot(g)); showTitle(); } }] }); }
   function resume() { menus.length = 0; audio.music(g?.boss ? 'boss' : 'play'); prevIn = { pause: true, fire: true, upgrade: true, bomb: true, drone: true, shiftL: true, shiftR: true }; last = performance.now(); acc = 0; }
   function menuInput(i) {
     const m = top(), e = k => i[k] && !prevM[k]; if (!m) return;
@@ -265,7 +265,8 @@ export function mountShift(root, host = {}) {
 
   fit(); prevM = { ok: true, pause: true }; raf = requestAnimationFrame(frame); try { canvas.focus({ preventScroll: true }); } catch { }
   return { ownsFocusPause: true, destroy, pauseForFocus, resumeFromFocus: wake,
-    control(a) { if (a === 'pause') { if (menus.length && top().pause) resume(); else pauseMenu(); } else if (a === 'idle') setIdle(!opt.idle); else if (a === 'menu') showTitle(); else if (a === 'start' || a === 'restart') startGame(null); },
+    getState: () => ({ scene, state: g?.state || scene, score: g?.score || 0, lives: g ? Math.max(0, g.players[0].lives) : 0, view: g ? VIEWS[g.view] : '-', chain: g?.chain || 0, best: LS.get('best', 0), boss: !!g?.boss, warp: !!g?.flags.warp, paused: menus.length > 0 && scene === 'play', idle: !!opt.idle, muted: !!opt.mute, menu: scene !== 'play' }),
+    control(a) { if (a === 'sound') { opt.mute = !opt.mute; saveOpt(); audio.vol(); if (opt.mute) audio.hush(); } else if (a === 'exit') host.onExit?.(); else if (a === 'pause') { if (menus.length && top().pause) resume(); else pauseMenu(); } else if (a === 'idle') setIdle(!opt.idle); else if (a === 'menu') showTitle(); else if (a === 'start' || a === 'restart') startGame(null); },
     getResult: () => ({ score: g?.score || 0, state: g?.state || scene, assisted }),
     _debug: { game: () => g, scene: () => scene, menus, opt, startGame, showTitle, setIdle, startStory, skipIntro: () => { showTitle(); titleT = 99; } } };
 }

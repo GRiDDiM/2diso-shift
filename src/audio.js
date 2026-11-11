@@ -9,7 +9,7 @@ export function createAudio(opt) {
     noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.6, ac.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     return true;
   }
-  function vol() { if (!ac) return; sfxG.gain.value = opt.sfx * 0.5; musG.gain.value = opt.music * 0.6; }
+  function vol() { if (!ac) return; sfxG.gain.value = opt.mute ? 0 : opt.sfx * 0.5; musG.gain.value = opt.mute ? 0 : opt.music * 0.6; }
   function tone(type, f0, f1, dur, v, t = ac.currentTime, out = sfxG) { const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur); o.connect(g); g.connect(out); o.start(t); o.stop(t + dur + 0.02); }
   function noise(dur, v, f0, f1, t = ac.currentTime, out = sfxG, q = 1) { const s = ac.createBufferSource(), fl = ac.createBiquadFilter(), g = ac.createGain(); s.buffer = noiseBuf; fl.type = 'bandpass'; fl.Q.value = q; fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur); s.connect(fl); fl.connect(g); g.connect(out); s.start(t); s.stop(t + dur + 0.02); }
   const SFX = {
@@ -55,7 +55,7 @@ export function createAudio(opt) {
   }
   // ---- announcer ----
   let lastSay = 0, vox = null;
-  function say(txt, force) { const sy = window.speechSynthesis; if (!sy || !opt.voice || opt.sfx <= 0) return; const now = performance.now(); if (!force && (sy.speaking || now - lastSay < 900)) return; lastSay = now;
+  function say(txt, force) { const sy = window.speechSynthesis; if (!sy || !opt.voice || opt.mute || opt.sfx <= 0) return; const now = performance.now(); if (!force && (sy.speaking || now - lastSay < 900)) return; lastSay = now;
     try { if (force) sy.cancel(); const u = new SpeechSynthesisUtterance(String(txt).toLowerCase()); if (!vox) { const vs = sy.getVoices(); vox = vs.find(v => /Google UK English Male|Microsoft (David|Mark|George)|Daniel/i.test(v.name)) || vs.find(v => /^en/i.test(v.lang)) || null; } if (vox) u.voice = vox; u.pitch = 0.55; u.rate = 1.08; u.volume = Math.min(1, opt.sfx * 1.1); sy.speak(u); } catch { } }
   return { unlock() { if (init() && ac.state === 'suspended') ac.resume().catch(() => { }); }, sfx, vol, say, hush() { try { window.speechSynthesis?.cancel(); } catch { } },
     music(m) { if (m === mode) return; mode = m; step = 0; nextT = 0; clearInterval(timer); if (m) timer = setInterval(sched, 60); },
