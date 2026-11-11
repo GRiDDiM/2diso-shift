@@ -21,11 +21,12 @@ export function createAudio(opt) {
     die: () => { noise(0.9, 0.7, 1200, 40); tone('sawtooth', 400, 30, 0.8, 0.3); }, shield: () => tone('sine', 900, 200, 0.3, 0.25), bomb: () => { noise(1.1, 0.8, 200, 3000); tone('sine', 90, 25, 1, 0.6); },
     ring: () => { tone('sine', 880, 0, 0.1, 0.14); tone('sine', 1320, 0, 0.16, 0.14, ac.currentTime + 0.07); }, warp: () => [0, 1, 2, 3, 4, 5].forEach(i => tone('sine', 300 * Math.pow(1.5, i), 0, 0.5, 0.14, ac.currentTime + i * 0.07)),
     god: () => [0, 1, 2, 3, 4, 5, 6, 7].forEach(i => tone('square', 440 * Math.pow(1.122, i * 2), 0, 0.09, 0.09, ac.currentTime + i * 0.045)), hint: () => { tone('square', 990, 0, 0.07, 0.08); tone('square', 990, 0, 0.07, 0.08, ac.currentTime + 0.12); },
+    wave: () => { tone('sine', 300, 900, 0.18, 0.1); tone('triangle', 450, 1350, 0.18, 0.05); }, bolt: () => { noise(0.25, 0.22, 4000, 900, undefined, undefined, 5); tone('sawtooth', 1800, 200, 0.2, 0.07); }, hyper: () => { tone('sawtooth', 110, 130, 0.22, 0.16); tone('square', 880, 1320, 0.2, 0.05); noise(0.2, 0.12, 2000, 5000); },
     ting: () => tone('triangle', 2200, 1800, 0.05, 0.06), zap: () => { noise(0.4, 0.35, 3000, 600, undefined, undefined, 4); tone('sawtooth', 90, 60, 0.4, 0.2); }, charge: () => tone('sawtooth', 110, 660, 0.9, 0.09),
     bossin: () => { tone('sawtooth', 55, 50, 1.6, 0.4); tone('sawtooth', 82, 78, 1.6, 0.25); }, over: () => [392, 330, 262, 196].forEach((f, i) => tone('triangle', f, 0, 0.4, 0.2, ac.currentTime + i * 0.28)),
     clear: () => { [523, 523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => { tone('square', f, 0, i === 7 ? 0.9 : 0.16, 0.12, ac.currentTime + i * 0.13); tone('triangle', f / 2, 0, i === 7 ? 0.9 : 0.16, 0.14, ac.currentTime + i * 0.13); }); }, whoosh: () => noise(1.3, 0.45, 200, 4000, undefined, undefined, 2), slam: () => { noise(0.5, 0.7, 500, 60); tone('sine', 80, 30, 0.5, 0.6); }
   };
-  const MIN = { shot: 60, eshot: 80, boom: 50, laser: 90, ting: 90, pod: 40 };
+  const MIN = { shot: 70, eshot: 80, boom: 50, laser: 110, ting: 90, pod: 40, zap: 90, wave: 120, bolt: 120, hyper: 180, missile: 150 };
   function sfx(n) { if (!ac || ac.state !== 'running' || !SFX[n] || opt.sfx <= 0) return; const now = performance.now(); if (MIN[n] && now - (last[n] || 0) < MIN[n]) return; last[n] = now; try { SFX[n](); } catch { } }
   // ---- music: liquid drum and bass in flight, lo-fi on the menus, a darker roller for the boss ----
   const hz = m => 440 * Math.pow(2, (m - 69) / 12);

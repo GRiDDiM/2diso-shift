@@ -7,7 +7,7 @@ const G = {
   0:'103041453616050110 0541',1:'112026 1636',2:'01103041420646',3:'01103041423313 334445361605',4:'36300444',5:'4000033344453606',
   6:'40100105163645443303',7:'004016',8:'13020110304142331304051636454433',9:'43130201103041453606',
   '-':'1333','.':'2526',':':'2122 2425','!':'2024 2526','?':'01103041422324 2526','/':'0640','+':'0343 2125','>':'003306','<':'400346',
-  "'":'2021',',':'2516','=':'0242 0444','(':'30121436',')':'10323416','%':'0640 0011 3546','*':'0343 1135 3115','_':'0646','#':'1016 3036 0242 0444'
+  "'":'2021',',':'2516','=':'0242 0444','(':'30121436',')':'10323416','%':'0640 0011 3546','*':'0343 1135 3115','_':'0646','#':'1016 3036 0242 0444','i':'2226 2021','|':'2026','@':'10300141451636150501 10'
 };
 const P = {};
 for (const k in G) P[k] = G[k].split(' ').map(s => { const a = []; for (let i = 0; i < s.length; i += 2) a.push(+s[i], +s[i + 1]); return a; });
@@ -15,7 +15,7 @@ export const ADV = 5.6 / 6;
 export function textWidth(str, size) { return str.length * size * ADV - size * 1.6 / 6; }
 // draws str with cap height `size` px; (x,y) is the top-left (or top-center / top-right with align)
 export function text(ctx, str, x, y, size, col, o = {}) {
-  str = String(str).toUpperCase();
+  str = o.raw ? String(str) : String(str).toUpperCase();
   const u = size / 6, sk = o.italic ? 0.28 : 0, w = textWidth(str, size);
   if (o.align === 'center') x -= w / 2; else if (o.align === 'right') x -= w;
   ctx.beginPath();
@@ -29,7 +29,7 @@ export function text(ctx, str, x, y, size, col, o = {}) {
   }
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   const a = o.alpha == null ? 1 : o.alpha, lw = o.weight || Math.max(1.2, size / 9);
-  if (o.glow !== false) { ctx.globalAlpha = a * 0.28; ctx.strokeStyle = col; ctx.lineWidth = lw * 3.4; ctx.stroke(); }
+  if (o.glow !== false) { ctx.strokeStyle = col; if (o.tube) { ctx.globalAlpha = a * 0.1; ctx.lineWidth = lw * 7; ctx.stroke(); } ctx.globalAlpha = a * 0.28; ctx.lineWidth = lw * 3.4; ctx.stroke(); }
   ctx.globalAlpha = a; ctx.strokeStyle = o.core || col; ctx.lineWidth = lw; ctx.stroke();
   ctx.globalAlpha = 1;
   return w;
