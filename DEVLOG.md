@@ -187,6 +187,7 @@ Nine ideas went on the list and all nine went in, plus one more from Benjamin.
 - **Jupiter:** drifting fog banks, ammonia ice that grows across the one open lane, wandering tornadoes, floating storm buoys that shoot.
 - **Planet X:** blob walls to burst, spore pods that pop into rings of acid, long tentacles that whip right across the forest.
 - **Upgrade bar:** MISSILE and SPREAD swapped places, so the screen does not fill with spread shots early.
+- **A shorter title menu.** PLAY, OPTIONS, HIGH SCORES, DEVLOG, EXIT GAME. Continue, New Game and Co-op live under PLAY. The solar map is still in the pause menu. The Daily Run is shelved.
 - **Speed.** Jupiter and Planet X were dropping frames. Faint lines, sparks and smoke no longer get the expensive glow passes, and the game now steps its own quality down if frames run long.
 
 ## Still to do
