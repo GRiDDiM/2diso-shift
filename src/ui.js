@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r13';
+const VER = 'r14';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3]];
@@ -48,6 +48,7 @@ export function mountShift(root, host = {}) {
   const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
   const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: coarse ? 'low' : 'high', shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true, assist: false, ghost: true, crt: false }, LS.get('opt', {})); const saveOpt = () => LS.set('opt', opt);
   const audio = createAudio(opt);
+  let q = 0, slow = 0, ema = 16; // q: automatic quality step-down when frames run long (0 full, 1 no outer halo + lower res, 2 no glow)
   let destroyed = false, raf = 0, last = performance.now(), acc = 0, scale = 1, res = 1, rotOk = false;
   let scene = 'intro', sceneT = 0, g = null, attract = null, assisted = false, testRun = false, submitted = false, focusPaused = false, lastDev = coarse ? 'touch' : 'kb', titleT = 0, endInfo = null, levelId = 'earth', returnTo = null, warpT = 0, coop = false, daily = null, rec = null, ghost = null, fxC = null, crtPat = null; const mouse = { x: 0, y: 0, t: -1e9, down: false };
   const menus = []; let hits = []; const toasts = []; let story = null, hiShown = false;
@@ -55,7 +56,7 @@ export function mountShift(root, host = {}) {
 
   // ---------- layout ----------
   function fit() { const r = shell.getBoundingClientRect(); if (!r.width || !r.height) return; scale = Math.min(r.width / W, r.height / H); stage.style.transform = `translate(${(r.width - W * scale) / 2}px,${(r.height - H * scale) / 2}px) scale(${scale})`;
-    const want = Math.min(opt.glow === 'low' ? 1.25 : 2, Math.max(1, scale * (window.devicePixelRatio || 1))); if (Math.abs(want - res) > 0.05 || canvas.width !== Math.round(W * want)) { res = want; canvas.width = Math.round(W * res); canvas.height = Math.round(H * res); }
+    const want = Math.min(opt.glow === 'low' ? 1.25 : [2, 1.5, 1.25][q], Math.max(1, scale * (window.devicePixelRatio || 1))); if (Math.abs(want - res) > 0.05 || canvas.width !== Math.round(W * want)) { res = want; canvas.width = Math.round(W * res); canvas.height = Math.round(H * res); }
     rotEl.hidden = !(lastDev === 'touch' && r.height > r.width * 1.1 && !rotOk); }
   rotEl.querySelector('button').onclick = () => { rotOk = true; fit(); };
   const ro = new ResizeObserver(fit); ro.observe(shell); addEventListener('resize', fit);
@@ -289,7 +290,7 @@ export function mountShift(root, host = {}) {
   }
   function render() {
     ctx.setTransform(res, 0, 0, res, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-    const ro2 = { glow: opt.glow === 'high', shake: opt.shake, fill: opt.fill, ghost: null }; if (ghost && g && scene === 'play' && ghost.g.players[0].dead <= 0) { const q = ghost.g.players[0]; ro2.ghost = { x: q.x, y: q.y, z: q.z + ghost.g.camZ - g.camZ }; }
+    const ro2 = { glow: opt.glow === 'high', shake: opt.shake, fill: opt.fill, ghost: null, q }; if (ghost && g && scene === 'play' && ghost.g.players[0].dead <= 0) { const q = ghost.g.players[0]; ro2.ghost = { x: q.x, y: q.y, z: q.z + ghost.g.camZ - g.camZ }; }
     if (scene === 'intro') drawIntro();
     else if (scene === 'story') drawStory();
     else { ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H); const gg = scene === 'title' ? attract : g;
@@ -311,7 +312,8 @@ export function mountShift(root, host = {}) {
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); for (const [col, dx] of [['#ff0030', -k], ['#00e0ff', k]]) { f.globalCompositeOperation = 'copy'; f.drawImage(canvas, 0, 0); f.globalCompositeOperation = 'multiply'; f.fillStyle = col; f.fillRect(0, 0, fxC.width, fxC.height); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.drawImage(fxC, dx * res, 0); } ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
   function frame(now) {
     if (destroyed) return; raf = requestAnimationFrame(frame);
-    let dt = (now - last) / 1000; last = now; if (dt > 0.25) dt = 0.25; if (focusPaused) return; acc += dt; let n = 0;
+    let dt = (now - last) / 1000; last = now; if (dt > 0.25) dt = 0.25; if (focusPaused) return;
+    if (scene === 'play' && !menus.length && q < 2) { ema += (dt * 1000 - ema) * 0.05; if (ema > 25) { if (++slow > 80) { q++; slow = 0; ema = 16; fit(); } } else slow = Math.max(0, slow - 1); } acc += dt; let n = 0;
     while (acc >= 1 / 60 && n < 5) { acc -= 1 / 60; n++; const i = readInput(); update(i); if (tap && scene !== 'intro' && scene !== 'story' && !menus.length) tap = null; } if (n === 5) acc = 0;
     render();
   }

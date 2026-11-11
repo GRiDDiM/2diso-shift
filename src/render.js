@@ -19,9 +19,9 @@ function p1(v, x, y, z) {
   X = 480 + (x - cam.x) / d * 440; Y = 300 - (y - cam.y) / d * 440; S = 440 / d / 34; return ok;
 }
 function P(x, y, z) {
-  if (mix >= 1) { OK = p1(vB, x, y, z); if (wob) { const c = Math.cos(wob), s = Math.sin(wob), dx = X - 480, dy = Y - 270; X = 480 + dx * c - dy * s; Y = 270 + dx * s + dy * c; } return; }
+  if (mix >= 1) { OK = p1(vB, x, y, z); if (ZK !== 1) { X = 480 + (X - 480) * ZK; Y = 285 + (Y - 285) * ZK; S *= ZK; } if (wob) { const c = Math.cos(wob), s = Math.sin(wob), dx = X - 480, dy = Y - 270; X = 480 + dx * c - dy * s; Y = 270 + dx * s + dy * c; } return; }
   const okA = p1(vA, x, y, z), ax = X, ay = Y, as = S, okB = p1(vB, x, y, z);
-  let px = ax + (X - ax) * mix, py = ay + (Y - ay) * mix; S = as + (S - as) * mix; OK = mix < 0.5 ? okA : okB;
+  let px = ax + (X - ax) * mix, py = ay + (Y - ay) * mix; S = as + (S - as) * mix; OK = mix < 0.5 ? okA : okB; if (ZK !== 1) { px = 480 + (px - 480) * ZK; py = 285 + (py - 285) * ZK; S *= ZK; }
   const c = Math.cos(rollA), s = Math.sin(rollA), dx = px - 480, dy = py - 270; X = 480 + dx * c - dy * s; Y = 270 + dx * s + dy * c;
 }
 
@@ -31,11 +31,11 @@ const NL = 26, layers = Array.from({ length: NL }, () => new Map()), qlay = Arra
 function depth(x, z) { if (!OCC) return; const d = vOcc === 1 ? z - 0.5 * x : z; LAY = Math.max(2, Math.min(NL - 1, ((40 - d) / 1.8) | 0)); buckets = layers[LAY]; }
 function depth0() { LAY = 0; buckets = layers[0]; }
 let vOcc = 0;
-let LW = 1; // tube thickness for what is drawn next (1 = normal)
+let LW = 1, NG = false, HQ = true, ZK = 1; // LW: tube thickness for what is drawn next. NG: no glow (sparks, smoke). HQ: draw the wide outer halo. ZK: camera zoom (pulls back for bosses)
 function seg(x1, y1, z1, x2, y2, z2, col, a = 1) {
   P(x1, y1, z1); if (!OK) return; const ax = X, ay = Y; P(x2, y2, z2); if (!OK) return;
   if ((ax < -200 && X < -200) || (ax > W + 200 && X > W + 200) || (ay < -200 && Y < -200) || (ay > H + 200 && Y > H + 200)) return;
-  const k = (a >= 1 ? col : col + '|' + (a * 10 | 0)) + (LW !== 1 ? '~' + LW : ''); let b = buckets.get(k); if (!b) { b = { col, a: a >= 1 ? 1 : Math.max(0.05, (a * 10 | 0) / 10), w: LW, d: [] }; buckets.set(k, b); } b.d.push(ax, ay, X, Y);
+  const k = (a >= 1 ? col : col + '|' + (a * 10 | 0)) + (LW !== 1 ? '~' + LW : '') + (NG ? '!' : ''); let b = buckets.get(k); if (!b) { b = { col, a: a >= 1 ? 1 : Math.max(0.05, (a * 10 | 0) / 10), w: LW, ng: NG, d: [] }; buckets.set(k, b); } b.d.push(ax, ay, X, Y);
 }
 const rotCache = new Map();
 function hueRot(hex, deg) { const k = hex + deg; let r = rotCache.get(k); if (r) return r;
@@ -45,7 +45,7 @@ function flush(ctx, glow, trip, L = 0) {
   ctx.lineCap = 'round';
   for (const b of layers[L].values()) {
     const d = b.d; if (!d.length) continue; ctx.beginPath(); for (let i = 0; i < d.length; i += 4) { ctx.moveTo(d[i], d[i + 1]); ctx.lineTo(d[i + 2], d[i + 3]); }
-    ctx.strokeStyle = trip ? hueRot(b.col, trip) : b.col; const w = b.w || 1; if (glow) { ctx.globalAlpha = 0.07 * b.a; ctx.lineWidth = 13 * Math.min(w, 2.2); ctx.stroke(); ctx.globalAlpha = 0.2 * b.a; ctx.lineWidth = 6 * w; ctx.stroke(); }
+    ctx.strokeStyle = trip ? hueRot(b.col, trip) : b.col; const w = b.w || 1; if (glow && !b.ng && b.a >= 0.25) { if (HQ && b.a >= 0.5) { ctx.globalAlpha = 0.07 * b.a; ctx.lineWidth = 13 * Math.min(w, 2.2); ctx.stroke(); } ctx.globalAlpha = 0.2 * b.a; ctx.lineWidth = 6 * w; ctx.stroke(); } // faint lines and sparks skip the glow passes: they cost the most and show the least
     ctx.globalAlpha = b.a; ctx.lineWidth = 1.6 * w; ctx.stroke(); d.length = 0;
   }
   ctx.globalAlpha = 1;
@@ -199,6 +199,35 @@ function drawObs(g, b, t) {
   if (k === 'statue') { const hs = b.hx / 0.62, top = Math.min(9.6, b.y + b.hy), neck = top - hs * 2; fillBox({ x: b.x, y: neck / 2, z: b.z, hx: b.hx * 0.7, hy: neck / 2, hz: b.hz * 0.7 }, col); fillBox({ x: b.x, y: neck + hs, z: b.z, hx: hs * 0.5, hy: hs, hz: hs * 0.45 }, col, 0.8, false); box({ x: b.x, y: neck / 2, z: b.z, hx: b.hx * 0.7, hy: neck / 2, hz: b.hz * 0.7 }, col, a, 3); mesh(HEAD, b.x, neck + hs, b.z, hs, 0, 0, 0, col, a); mesh(EYES, b.x, neck + hs, b.z, hs, 0, 0, 0, '#ff3df0', a); circle(b.x, 0.04, b.z, b.hx * 1.3, col, 0.7, 8, 1); if (vB === 3) { seg(b.x - b.hx, 9.5, b.z - b.hz, b.x + b.hx, 9.5, b.z + b.hz, col, 0.6); seg(b.x + b.hx, 9.5, b.z - b.hz, b.x - b.hx, 9.5, b.z + b.hz, col, 0.6); } return; }
   if (k === 'tentacle') { for (let s = -1; s <= 1; s++) { let lx = b.x + s * 0.4, ly = 0; for (let i = 1; i <= 7; i++) { const py = i * 1.37, px = b.x + s * 0.4 + Math.sin(i * 0.9 + t * 0.05 + s) * 0.35; seg(lx, ly, b.z, px, py, b.z, s ? col : '#ff3df0', a); lx = px; ly = py; } } circle(b.x, 0.05, b.z, b.hx * 1.2, col, 0.6, 8, 1); return; }
   if (k === 'ice') { fillBox(b, col, 1.2); box(b, col, a); const x0 = Math.max(-9, b.x - b.hx), x1 = Math.min(9, b.x + b.hx), y0 = Math.max(0, b.y - b.hy), y1 = Math.min(9.6, b.y + b.hy), z = b.z - b.hz, n = Math.max(1, (x1 - x0) / 3 | 0); for (let i = 0; i < n; i++) { const xa = x0 + (x1 - x0) * i / n, xb = x0 + (x1 - x0) * (i + 1) / n; seg(xa, y0, z, xb, y1, z, '#ffffff', a * 0.6); seg(xb, y0, z, xa, y1, z, col, a * 0.5); } return; }
+  if (k === 'lava') { // a river of lava: glowing banks and chevrons flowing downstream
+    const x0 = b.x - b.hx, x1 = b.x + b.hx, z0 = b.z - b.hz, z1 = b.z + b.hz, top = b.y + b.hy; fillBox(b, col, 1.4, false);
+    for (const x of [x0, x1]) { let lz = z0, lx = x; for (let i = 1; i <= 6; i++) { const pz = z0 + (z1 - z0) * i / 6, px = x + Math.sin(pz * 1.3 + t * 0.05) * 0.18; LW = 1.8; seg(lx, top, lz, px, top, pz, '#ffe14a', a); LW = 1; seg(lx, 0.02, lz, px, 0.02, pz, col, a * 0.6); lx = px; lz = pz; } }
+    for (let z = z1 - ((t * 0.07) % 1.6); z > z0; z -= 1.6) { seg(x0 + 0.2, top, z + 0.5, b.x, top, z, col, a); seg(x1 - 0.2, top, z + 0.5, b.x, top, z, col, a); }
+    for (let i = 0; i < 3; i++) { const px = b.x + (hash(i + (t >> 3)) - 0.5) * b.hx * 1.6, pz = z0 + hash(i * 5 + (t >> 3)) * b.hz * 2; seg(px, top, pz, px, top + 0.3 + hash(i * 9 + (t >> 3)) * 0.7, pz, '#ffe14a', 0.8); } return; }
+  if (k === 'lavafall') { // a curtain of falling lava that stops and starts
+    const x0 = Math.max(-9, b.x - b.hx), x1 = Math.min(9, b.x + b.hx), n = 9; circle(0, 0.05, b.z, 1.6, col, 0.5, 10, 1);
+    if (b.idle) { for (let i = 0; i <= n; i++) { const x = x0 + (x1 - x0) * i / n; seg(x, 9.5, b.z, x, 9.5 - 0.4 - hash(i + (t >> 3)) * (b.soon ? 3 : 0.8), b.z, b.soon && (t >> 2) % 2 ? '#ffe14a' : col, b.soon ? 0.9 : 0.4); } seg(x0, 9.5, b.z, x1, 9.5, b.z, col, 0.5); return; }
+    fillBox(b, col, 1.5, false); for (let i = 0; i <= n; i++) { const x = x0 + (x1 - x0) * i / n, off = ((t * 0.25 + i * 1.7) % 2.4); LW = 1.8; for (let y = 9.6 - off; y > 0; y -= 2.4) seg(x, y, b.z, x, Math.max(0, y - 1.5), b.z, i % 2 ? '#ffe14a' : col, 1); LW = 1; } seg(x0, 0.05, b.z, x1, 0.05, b.z, '#ffe14a', 1); seg(x0, 9.5, b.z, x1, 9.5, b.z, col, 1); return; }
+  if (k === 'boulder') { const r = Math.min(b.hx, b.hy), dmg = b.hpMax ? 1 - Math.max(0, b.hp) / b.hpMax : 0; fillBox(b, col, 1, true); mesh(ROCK, b.x, b.y, b.z, r * 1.25, (b.vx || 0) ? -b.x * 0.9 : 0.4, 0.3, 0, col, a); if (dmg > 0.3) mesh(ROCK, b.x, b.y, b.z, r * 0.8, 1, 0.5, 0, '#ffe14a', a * dmg); return; }
+  if (k === 'crystal') { const h = b.hy, w = Math.min(b.hx, 1.1); fillBox({ x: b.x, y: b.y, z: b.z, hx: w, hy: h, hz: b.hz }, col, 1.2, false); for (const dx of b.hx > 1.5 ? [-b.hx * 0.6, 0, b.hx * 0.6] : [0]) { const x = b.x + dx; for (const [sx, sz] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { seg(x, b.y + h * 1.3, b.z, x + sx * w * 0.7, b.y, b.z + sz * w * 0.7, col, a); seg(x, b.y - h * 1.3, b.z, x + sx * w * 0.7, b.y, b.z + sz * w * 0.7, '#ffffff', a * 0.8); } circle(x, b.y, b.z, w * 0.7, col, a, 4, 1, 0.78); } return; }
+  if (k === 'billboard') { const x0 = b.x - b.hx, x1 = b.x + b.hx, y0 = b.y - b.hy, y1 = b.y + b.hy, on = (t >> 4) % 2; fillBox(b, col, 1.2, false); box(b, col, a); seg(b.x, 0, b.z, b.x, y0, b.z, col, a * 0.5); LW = 2; zig(x0 + 0.3, b.y, b.z - b.hz, x1 - 0.3, b.y, b.z - b.hz, on ? '#ffe14a' : '#ffffff', a, 6, b.hy * 0.9, 3); LW = 1; return; }
+  if (k === 'blob') { // a wall of mutant blobs: shoot it until it bursts
+    const x0 = Math.max(-9, b.x - b.hx), x1 = Math.min(9, b.x + b.hx), y0 = Math.max(0.2, b.y - b.hy), y1 = Math.min(9.5, b.y + b.hy), hurt = b.hpMax ? 1 - Math.max(0, b.hp) / b.hpMax : 0, c2 = b.hit > 0 ? '#ffffff' : hurt > 0.5 ? '#ffe14a' : '#b6ff3d', pl = vB === 3 ? 1 : vB === 0 ? 2 : 0; fillBox({ x: (x0 + x1) / 2, y: (y0 + y1) / 2, z: b.z, hx: (x1 - x0) / 2, hy: (y1 - y0) / 2, hz: b.hz }, col, 1.2, false);
+    let i = 0; for (let y = y0 + 1; y < y1; y += 2.1) for (let x = x0 + 1.2 + (i++ % 2) * 1.2; x < x1; x += 2.4) { const r = 1.05 + Math.sin(t * 0.09 + x * 2 + y) * 0.18 + hurt * 0.25; circle(x, y, b.z, r, col, a, 8, pl, x); circle(x, y, b.z, r * 0.45, c2, a, 6, pl, -t * 0.03); }
+    seg(x0, y0, b.z, x1, y0, b.z, col, a); seg(x0, y1, b.z, x1, y1, b.z, col, a); seg(x0, y0, b.z, x0, y1, b.z, col, a); seg(x1, y0, b.z, x1, y1, b.z, col, a); return; }
+  if (k === 'fog') { NG = true; for (let i = 0; i < 9; i++) { const y = b.y - b.hy + (i + 0.5) * b.hy * 2 / 9, z = b.z - b.hz + ((i * 5) % 9) / 9 * b.hz * 2; let lx = b.x - b.hx, ly = y; for (let j = 1; j <= 6; j++) { const px = b.x - b.hx + j * b.hx / 3, py = y + Math.sin(j * 1.7 + i * 2 + t * 0.03) * 0.45; seg(lx, ly, z, px, py, z, i % 3 ? col : '#ffffff', 0.4); lx = px; ly = py; } } NG = false; return; }
+  if (k === 'funnel') { // a tornado: stacked rings that widen with height and lean as it wanders
+    for (let i = 0; i < 8; i++) { const y = 0.3 + i * 1.3, r = 0.35 + i * 0.2, ox = Math.sin(t * 0.08 + i * 0.7) * 0.25 * i * 0.4; circle(b.x + ox, y, b.z, r * (b.hx / 1.1), i % 2 ? '#ffffff' : col, a, 10, 1, t * 0.15 + i); if (i) seg(b.x + ox, y, b.z, b.x + Math.sin(t * 0.08 + (i - 1) * 0.7) * 0.25 * (i - 1) * 0.4, y - 1.3, b.z, col, a * 0.5); } circle(b.x, 0.05, b.z, b.hx * 1.5, col, 0.5, 10, 1, -t * 0.1); return; }
+  if (k === 'beam') { // the boss looks at you: a thin line while it aims, then the real thing
+    const z0 = 0, z1 = b.z + b.hz, wide = b.hx > 5, tall = b.hy > 3;
+    if (b.warm > 0) { const fl = (t >> 1) % 2 ? 0.9 : 0.35; seg(wide ? -9 : b.x, tall ? 0.2 : b.y, z1, wide ? -9 : b.x, tall ? 0.2 : b.y, z0, col, fl); if (wide) { seg(9, b.y, z1, 9, b.y, z0, col, fl); for (let z = 1; z < z1; z += 3) seg(-9, b.y, z, 9, b.y, z, col, fl * 0.6); } if (tall) { seg(b.x, 9.4, z1, b.x, 9.4, z0, col, fl); for (let z = 1; z < z1; z += 3) seg(b.x, 0.2, z, b.x, 9.4, z, col, fl * 0.6); } if (!wide && !tall) circle(b.x, b.y, 3, 0.9 + b.warm / 40, col, fl, 12); return; }
+    fillBox(b, col, 1.6, false); const xs = wide ? [-9, -4.5, 0, 4.5, 9] : [b.x], ys = tall ? [0.3, 2.5, 4.8, 7, 9.3] : [b.y]; for (const x of xs) for (const y of ys) { LW = 3; zig(x, y, z1, x, y, z0, '#ffffff', 1, 9, 0.5, t >> 1); LW = 1.6; zig(x, y, z1, x, y, z0, col, 1, 7, 0.9, (t >> 1) + 9); } LW = 1; return; }
+  if (k === 'strike') { if (b.warm > 0) { const f = b.warm / 70; circle(b.x, 0.05, b.z, b.hx * (0.4 + f * 1.4), col, 0.9, 10, 1); circle(b.x, 9.5, b.z, b.hx * (0.4 + f * 1.4), col, 0.6, 10, 1); if ((t >> 1) % 2) seg(b.x, 0, b.z, b.x, 9.6, b.z, col, 0.35); return; }
+    fillBox(b, col, 1.5, false); LW = 3; zig(b.x, 9.6, b.z, b.x, 0, b.z, '#ffffff', 1, 8, 0.8, t >> 1); LW = 1.6; zig(b.x - 0.3, 9.6, b.z, b.x + 0.3, 0, b.z, col, 1, 7, 1.3, (t >> 1) + 5); LW = 1; circle(b.x, 0.05, b.z, b.hx * 1.4, '#ffffff', 1, 10, 1); return; }
+  if (k === 'slam') { // a row of tentacles bursting out of the ground along a whole lane
+    const z0 = b.z - b.hz, z1 = b.z + b.hz; if (b.warm > 0) { const fl = (t >> 2) % 2 ? 0.9 : 0.4; seg(b.x - b.hx, 0.05, z0, b.x - b.hx, 0.05, z1, col, fl); seg(b.x + b.hx, 0.05, z0, b.x + b.hx, 0.05, z1, col, fl); for (let z = z0; z < z1; z += 1.8) { seg(b.x - b.hx, 0.05, z, b.x, 0.05, z + 0.9, col, fl * 0.7); seg(b.x + b.hx, 0.05, z, b.x, 0.05, z + 0.9, col, fl * 0.7); } return; }
+    fillBox(b, col, 1.3, false); for (let z = z0 + 0.6; z < z1; z += 1.7) for (const s of [-0.4, 0.4]) { let lx = b.x + s, ly = 0; for (let i = 1; i <= 6; i++) { const py = i * 1.6, px = b.x + s + Math.sin(i * 0.9 + t * 0.2 + z) * 0.4; seg(lx, ly, z, px, py, z, s > 0 ? col : '#ff3df0', 1); lx = px; ly = py; } } return; }
+  if (k === 'elevator') { fillBox(b, col, 1.2); box(b, col, a); hatch(b, col, a * 0.4, 4); seg(b.x, b.y + b.hy, b.z, b.x, 9.6, b.z, col, a * 0.4); seg(b.x, b.y - b.hy, b.z, b.x, 0, b.z, col, a * 0.25); return; }
   if (!ghost) fillBox(b, b.col, k === 'car' ? 1.3 : 1);
   box(b, col, a, k === 'tower' || k === 'thunderhead' || k === 'rockwall' ? Math.min(5, b.hy | 0) : 0);
   if (k === 'gate') hatch(b, col, a * 0.4, 6); else if (k === 'slab' || k === 'arch' || k === 'clouddeck' || k === 'membrane') hatch(b, col, a * 0.35, 10);
@@ -211,6 +240,7 @@ export function drawWorld(ctx, g, o = {}) {
   const t = g.tick, p0 = g.players[0], th = g.level.theme || {};
   vA = g.viewFrom; vB = g.view; mix = g.shiftT > 0 ? ease(1 - g.shiftT) : 1; rollA = g.shiftT > 0 ? g.shiftDir * mix * TAU : 0; wob = th.trippy ? Math.sin(t * 0.013) * 0.05 : 0;
   { const al = g.players.filter(q => q.dead <= 0), n = al.length || 1, cx = al.length ? al.reduce((a, q) => a + q.x, 0) / n : p0.x, cy = al.length ? al.reduce((a, q) => a + q.y, 0) / n : p0.y, cz = al.length ? Math.min(...al.map(q => q.z)) : p0.z; cam.x = cx * 0.55; cam.y = cy * 0.55 + 1.9; cam.z = cz - 7.5; } const tags = [];
+  HQ = !(o.q >= 1); { const bz = g.boss && !g.boss.dying && g.boss.z < 30 ? 0.8 : 1; ZK += (bz - ZK) * 0.04; if (Math.abs(ZK - bz) < 0.002) ZK = bz; } // the camera pulls back for a boss so there is room to move
   ctx.save();
   if (g.shake > 0.5 && o.shake !== false) ctx.translate((Math.random() - 0.5) * g.shake, (Math.random() - 0.5) * g.shake);
   ctx.globalCompositeOperation = 'lighter';
@@ -250,9 +280,9 @@ export function drawWorld(ctx, g, o = {}) {
       mesh(SHIP_HULL, w.x, w.y, w.z, 0.78, yaw, 0, roll, '#ffb070'); mesh(SHIP_WING, w.x, w.y, w.z, 0.78, yaw, 0, roll, vc); mesh(SHIP_FIN, w.x, w.y, w.z, 0.78, yaw, 0, roll, '#ffe14a');
       P(w.x, w.y + 1.1, w.z); if (OK && g.shiftT <= 0) tags.push([X, Y - (vB === 3 ? 30 : 8), 'R9', '#ffb070']); }
     const gh = o.ghost; if (gh && gh.z > -2 && gh.z < 30) { depth(gh.x, gh.z); mesh(SHIP_HULL, gh.x, gh.y, gh.z, 1, 0, 0, 0, '#3dffb0', 0.32); mesh(SHIP_WING, gh.x, gh.y, gh.z, 1, 0, 0, 0, '#3dffb0', 0.2); P(gh.x, gh.y + 0.9, gh.z); if (OK) tags.push([X, Y - 4, 'BEST', '#2a9a70']); } }
-  for (const q of g.parts) { depth(q.x, q.z); if (q.splat) { seg(q.x, q.y, q.z, q.x - q.vx * 0.05, q.y - q.vy * 0.05 + 0.15, q.z - q.vz * 0.05, q.col, Math.min(1, q.life / q.max * 1.6)); seg(q.x - 0.12, q.y, q.z, q.x + 0.12, q.y, q.z, q.col, Math.min(1, q.life / q.max * 1.6)); } else seg(q.x, q.y, q.z, q.x - q.vx * 0.035, q.y - q.vy * 0.035, q.z - q.vz * 0.035, q.col, Math.min(1, q.life / q.max * 1.6)); }
-  for (const s of g.shocks) { depth(s.x, s.z); circle(s.x, s.y, s.z, s.r, s.col, s.life / s.max, 16, vB === 3 ? 1 : vB === 0 ? 2 : 0); }
-  { const trip = th.trippy ? ((t * 0.8) % 360 / 30 | 0) * 30 : 0; for (let L = 0; L < NL; L++) { if (FILL) drawQuads(ctx, L); flush(ctx, o.glow !== false, trip, L); } depth0(); }
+  NG = true; for (const q of g.parts) { depth(q.x, q.z); if (q.splat) { seg(q.x, q.y, q.z, q.x - q.vx * 0.05, q.y - q.vy * 0.05 + 0.15, q.z - q.vz * 0.05, q.col, Math.min(1, q.life / q.max * 1.6)); seg(q.x - 0.12, q.y, q.z, q.x + 0.12, q.y, q.z, q.col, Math.min(1, q.life / q.max * 1.6)); } else seg(q.x, q.y, q.z, q.x - q.vx * 0.035, q.y - q.vy * 0.035, q.z - q.vz * 0.035, q.col, Math.min(1, q.life / q.max * 1.6)); }
+  NG = false; for (const s of g.shocks) { depth(s.x, s.z); circle(s.x, s.y, s.z, s.r, s.col, s.life / s.max, 16, vB === 3 ? 1 : vB === 0 ? 2 : 0); }
+  { const trip = th.trippy ? ((t * 0.8) % 360 / 30 | 0) * 30 : 0; for (let L = 0; L < NL; L++) { if (FILL) drawQuads(ctx, L); flush(ctx, o.glow !== false && !(o.q >= 2), trip, L); } depth0(); }
   for (const q of g.pops) { P(q.x, q.y, q.z); if (!OK) continue; text(ctx, q.txt, X, Y, q.big ? 15 : 9, q.col, { align: 'center', alpha: Math.min(1, q.life / 20), glow: q.big }); }
   for (const q of tags) text(ctx, q[2], q[0], q[1], 7, q[3], { align: 'center', glow: false });
   ctx.restore();

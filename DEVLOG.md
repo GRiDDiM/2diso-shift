@@ -174,6 +174,21 @@ Nine ideas went on the list and all nine went in, plus one more from Benjamin.
 - **Missiles you can see.** Finned rockets with smoke trails, a blast on every hit.
 - **Menus.** Holding a button no longer presses a menu item over and over. SAVE AND QUIT now saves the exact spot instead of the last checkpoint.
 
+### 11. Fourth playtest: every planet its own
+> "each boss needs its own unique mechanics ... the levels need more of their own unique level themed mechanics too. not just giant boxes that get in the way"
+
+- **Bosses stop sharing tricks.** The grid walls and thrown gates now belong to OVERSEER alone.
+  - THE COLOSSUS ends with widening rings of fire that have one gap.
+  - THE EYE is new from top to bottom: lightning that walks down the lane behind warning rings, a stare that locks onto your height and fires, a cyclone that drags you in while spiral arms of sparks sweep the deck, and storm orbs that circle the pupil and soak up shots.
+  - THE SHIFTER throws walls of mutant blobs you have to burst, and rows of tentacles that erupt along whole lanes.
+- **The camera pulls back for bosses.**
+- **Earth:** neon billboards to shoot down, freight lifts riding between the skyways, blinking laser fences, cross traffic between the towers, and a second, faster stream of hover traffic with buses.
+- **Mars:** rivers of lava that wander across the floor, lavafalls that pour and stop, basalt boulders to blast, boulders that roll.
+- **Jupiter:** drifting fog banks, ammonia ice that grows across the one open lane, wandering tornadoes, floating storm buoys that shoot.
+- **Planet X:** blob walls to burst, spore pods that pop into rings of acid, long tentacles that whip right across the forest.
+- **Upgrade bar:** MISSILE and SPREAD swapped places, so the screen does not fill with spread shots early.
+- **Speed.** Jupiter and Planet X were dropping frames. Faint lines, sparks and smoke no longer get the expensive glow passes, and the game now steps its own quality down if frames run long.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

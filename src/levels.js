@@ -1,6 +1,6 @@
 // 2DISO SHIFT — every level. Four planets, each with a hidden warp to a bonus stage.
 // Each stretch is built so one view is the way through; the banner and the flashing view pip say which.
-import { addEnemy, addObs, addRing, addPod, bullet, aimed, explode, hint, doShift, pop, SPAWN_Z, DT, VIEWS } from './game.js';
+import { addEnemy, addObs, addRing, addPod, bullet, aimed, explode, hint, doShift, pop, near, SPAWN_Z, DT, VIEWS } from './game.js';
 const SIDE = 0, ISO = 1, CHASE = 2, TOP = 3;
 
 const FAR = 48;
@@ -33,6 +33,12 @@ function sheetV(g, gapX, gapW, o = {}) { const k = { rel: true, y: 4.8, z: 9, hy
 function throwGate(g, b, o = {}) { const hx = -4 + g.rand() * 8, hy = 2.8 + g.rand() * 3.8, w = 2.3, h = 2, k = { rel: true, z: b.z - 2, hz: 0.45, vz: -8, col: '#ffe14a', kind: 'gate', ...o };
   addObs(g, { ...k, x: (-9 + hx - w) / 2, y: 4.8, hx: (hx - w + 9) / 2, hy: 5 }); addObs(g, { ...k, x: (9 + hx + w) / 2, y: 4.8, hx: (9 - hx - w) / 2, hy: 5 }); addObs(g, { ...k, x: hx, y: (9.8 + hy + h) / 2, hx: w, hy: (9.8 - hy - h) / 2 }); addObs(g, { ...k, x: hx, y: (hy - h) / 2, hx: w, hy: (hy - h) / 2 });
   addObs(g, { ...k, x: hx, y: hy, hx: w, hy: h, ghost: true, kind: 'safe' }); g.fx.push('charge'); }
+// the boss looks straight at you: 'y' = a flat beam at your height (for SIDE), 'x' = a column at your x (for TOP), 'xy' = a narrow shaft (for CHASE / ISO). It aims, locks, then fires.
+function eyeBeam(g, b, axis, o = {}) { const p = near(g, b), hz = (b.z - 1) / 2; addObs(g, { rel: true, kind: 'beam', x: axis === 'y' ? 0 : p.x, y: axis === 'x' ? 4.8 : p.y, z: hz + 0.5, hx: axis === 'y' ? 9 : 0.85, hy: axis === 'x' ? 5 : 0.75, hz, warm: 80, life: 40, col: '#ffffff', ...o }); g.fx.push('charge'); }
+// a lightning strike (or anything else that comes straight down): a ring on the ground warns you, then the column fills
+const strike = (g, x, z, o = {}) => addObs(g, { rel: true, kind: 'strike', x, y: 4.75, z, hx: 0.95, hy: 4.75, hz: 0.95, warm: 70, life: 28, col: '#7df9ff', ...o });
+// a ring of fire with one gap in it, widening as it comes
+function fireRing(g, b, col, n = 16, sp = 2.6, hole = 4) { const gap = g.rand() * n | 0; for (let i = 0; i < n; i++) if ((i - gap + n) % n >= hole) { const a = i / n * 6.283; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * sp, Math.sin(a) * sp, -6, col); } g.fx.push('eshot'); }
 const fan = (g, b, n, sp = 8, col) => { for (let i = 0; i < n; i++) aimed(g, b, sp, (i - (n - 1) / 2) * 0.17, col); g.fx.push('eshot'); };
 function boss(spec) {
   const update = (g, b, dt) => {
@@ -67,22 +73,27 @@ function earth() {
   const turret = (z, x) => ground(z, { x, x0: x, col: '#ffe14a', hp: 4, r: 0.7, score: 200, fire: 120, shape: 'turret', ph: (x + 9) * 0.37 });
   const tower = (z, x, h, o) => obs(z, { x, y: h / 2, hx: 1.3, hy: h / 2, hz: 1.3, col: C.tower, kind: 'tower', ...o });
   const slab = (z, low, o) => obs(z, low ? { x: 0, y: 2.1, hx: 8.6, hy: 2.1, hz: 1.2, col: C.sky, kind: 'slab', ...o } : { x: 0, y: 6.95, hx: 8.6, hy: 2.55, hz: 1.2, col: C.sky, kind: 'slab', ...o });
-  const car = (z, x, y, vx) => obs(z, { x, y, hx: 1.3, hy: 0.45, hz: 0.7, vx, wrap: 11, col: C.car, kind: 'car' });
+  const car = (z, x, y, vx, hx = 1.3) => obs(z, { x, y, hx, hy: hx > 2 ? 0.6 : 0.45, hz: 0.7, vx, wrap: 11, col: hx > 2 ? '#ffe14a' : C.car, kind: 'car' });
+  const sign = (z, x, y) => obs(z, { x, y, hx: 1.6, hy: 0.8, hz: 0.3, col: '#ff3df0', kind: 'billboard', hp: 5, score: 150, gem: true }); // neon billboards: shoot them down for gems
+  const lift = (z, ph) => obs(z, { x: 0, y: 4.75, hx: 2.2, hy: 0.55, hz: 1.1, col: '#3dffb0', kind: 'elevator', osc: { ax: 0, ay: 2.7, w: 1.1, ph } }); // freight lifts riding up and down between the skyways
+  const fence = (z, x, ph) => obs(z, { x, y: 4.75, hx: 0.4, hy: 4.75, hz: 0.5, col: '#ff4d6d', kind: 'bolt', pulse: [60, 80, ph] }); // security laser fences that blink on and off
 
   zone(-99, 110, SIDE, 'SECTOR 1 // NEO TERRA');
   at(40, g => hint(g, 'L / R  SHIFT VIEW     B  CHANGE SPEED', 240));
   for (let z = 30; z < 108; z += 9) tower(z, ((z * 7) % 13) - 6, 1.4 + (z % 4) * 0.45);
+  sign(48, 2, 7.6); sign(78, -3, 2.6); sign(96, 0, 7.2);
   wing(38, 5, { ...dart, y: 6.5, ay: 1.6, x: 0 }); wing(58, 5, { ...dart, y: 4.2, ay: 1.4, x: -2 }); carrier(72, { y: 6, x: 2 }); wing(86, 6, { ...dart, y: 7, ay: 1.5, x: 3 }); carrier(100, { y: 5, x: -2 });
 
   zone(110, 335, TOP, 'SKYSCRAPERS - SHIFT TO TOP VIEW');
   for (let i = 0, z = 146; z < 322; z += 16, i++) { for (const x of i % 2 ? [-3.2, 3.2] : [-6.4, 0, 6.4]) tower(z, x, 9.5);
     if (i % 2) { obs(z, { x: -8.1, y: 4.75, hx: 0.5, hy: 4.75, hz: 1.3, col: C.tower, kind: 'tower' }); obs(z, { x: 8.1, y: 4.75, hx: 0.5, hy: 4.75, hz: 1.3, col: C.tower, kind: 'tower' }); }
-    if (i % 3 === 1) turret(z + 8, i % 2 ? 0 : 3.2); if (i % 3 === 2) turret(z + 8, -3.2); }
+    if (i % 3 === 1) turret(z + 8, i % 2 ? 0 : 3.2); if (i % 3 === 2) turret(z + 8, -3.2);
+    if (i % 4 === 0 && i) car(z + 8, -8 + i, 5, i % 8 ? 2.6 : -2.6, 2.4); if (i % 4 === 2) fence(z + 8, i % 8 === 2 ? 6.4 : -6.4, i * 30); } // cross traffic and laser fences between the towers
   wing(162, 5, { ...dart, x: 0, ax: 4, y: 5 }); saucer(192, { x: 0, y: 6 }); wing(228, 6, { ...dart, x: -2, ax: 5, y: 3 }); carrier(252, { x: 3.2, y: 5 }); wing(278, 5, { ...dart, x: 2, ax: 4, y: 6 }); carrier(305, { x: -3.2, y: 5 });
   K.checkpoints.push(338);
 
   zone(335, 565, SIDE, 'SKYWAYS AHEAD - SHIFT TO SIDE VIEW');
-  for (let i = 0, z = 372; z < 550; z += 18, i++) { slab(z, i % 2 === 0); if (i % 3 === 2) slab(z + 6, i % 2 === 0); }
+  for (let i = 0, z = 372; z < 550; z += 18, i++) { slab(z, i % 2 === 0); if (i % 3 === 2) slab(z + 6, i % 2 === 0); if (i % 3 === 0 && i) lift(z + 9, i); if (i % 3 === 1) sign(z + 10, 0, i % 2 ? 7.4 : 2.2); }
   wing(384, 4, { ...dart, y: 5.6, ay: 0.6, x: 0 }); wing(418, 5, { ...dart, y: 3, ay: 0.8, x: 2 }); carrier(444, { y: 5, x: -2 }); kami(476, { x: 0, y: 5 }); wing(504, 6, { ...dart, y: 5, ay: 1.8, x: 0 }); carrier(534, { y: 4.6, x: 1 });
   K.checkpoints.push(568);
 
@@ -94,7 +105,7 @@ function earth() {
 
   // the Moon warp hides up in the corner here, and only exists in ISO
   zone(800, 1010, ISO, 'HOVER TRAFFIC - SHIFT TO ISO VIEW');
-  for (let i = 0, z = 838; z < 1000; z += 10, i++) { const y = [2.4, 5, 7.4][i % 3], d = i % 2 ? 4 : -4; car(z, -8 + (i * 5) % 16, y, d); car(z, 2 - (i * 3) % 10, y, d); if (i % 4 === 1) obs(z + 5, { x: ((i * 5) % 11) - 5, y: 4.75, hx: 0.7, hy: 4.75, hz: 0.7, col: C.pylon, kind: 'pylon' }); if (i % 6 === 3 && z < 900) slab(z + 5, false, { hz: 0.8 }); }
+  for (let i = 0, z = 838; z < 1000; z += 10, i++) { const y = [2.4, 5, 7.4][i % 3], d = i % 2 ? 4 : -4; car(z, -8 + (i * 5) % 16, y, d); car(z, 2 - (i * 3) % 10, y, d); car(z + 5, 6 - (i * 7) % 14, [5, 7.4, 2.4][i % 3], -d * 1.4, i % 3 === 0 ? 2.4 : 1.3); if (i % 4 === 1) obs(z + 5, { x: ((i * 5) % 11) - 5, y: 4.75, hx: 0.7, hy: 4.75, hz: 0.7, col: C.pylon, kind: 'pylon' }); if (i % 6 === 3 && z < 900) slab(z + 5, false, { hz: 0.8 }); }
   K.warp(58, 3, 6.4);
   wing(852, 5, { ...dart, x: 0, y: 6, ax: 3, ay: 1 }); saucer(884, { x: -2, y: 6.5 }); carrier(916, { x: -4, y: 4 }); wing(952, 6, { ...dart, x: 2, y: 3.5, ax: 4, ay: 1.5 }); carrier(980, { x: 2, y: 6 });
   K.checkpoints.push(1014);
@@ -129,28 +140,32 @@ function mars() {
   const spire = (z, x) => obs(z, { x, y: 4.75, hx: 0.9, hy: 4.75, hz: 0.9, col: STONE, kind: 'statue' });
   const arc = (z, y, o) => obs(z, { x: 0, y, hx: 8.6, hy: 0.55, hz: 0.9, col: FIRE, kind: 'firearc', ...o });
   const worm = (z, x, n = 6) => { const gr = 'worm' + z; for (let i = 0; i < n; i++) at(z + i * 0.9, g => addEnemy(g, { type: 'pop', rel: false, z: 30 + i * 0.9, vz: 0, group: gr, x, y: 0, y0: 0.2, ay: 5.2, w: 1.6, ph: -i * 0.33, hp: 2, r: 0.6, col: i ? '#ff5a1f' : '#ffe14a', score: 80, shape: 'worm' })); };
+  const river = (z, x, ph) => obs(z, { x, y: 0.7, hx: 1.25, hy: 0.7, hz: 3.4, col: FIRE, kind: 'lava', osc: { ax: 1.7, ay: 0, w: 0.7, ph } }); // a river of lava that wanders across the floor
+  const fall = (z, ph) => obs(z, { x: 0, y: 4.75, hx: 8.6, hy: 4.75, hz: 0.45, col: FIRE, kind: 'lavafall', pulse: [75, 95, ph] }); // lavafalls that pour, stop, and pour again
+  const boulder = (z, x, y, o) => obs(z, { x, y, hx: 1.1, hy: 1.1, hz: 1.1, col: ROCK, kind: 'boulder', hp: 7, score: 120, ...o }); // basalt you can blast apart
   const forge = (z, o) => en(z, { type: 'saucer', col: STONE, hp: 8, r: 0.95, score: 400, hold: 15, dur: 420, ax: 3, ay: 1.5, fire: 120, fan: 2, shape: 'head', pod: true, ...o });
 
   zone(-99, 95, SIDE, 'SECTOR 2 // MARS - THE FORGE');
   for (let z = 44; z < 92; z += 24) obs(z, { x: ((z * 3) % 11) - 5, y: 1.3, hx: 0.8, hy: 1.3, hz: 0.8, col: STONE, kind: 'statue' });
   for (let z = 30; z < 92; z += 13) cone(z, ((z * 5) % 13) - 6, 1.6 + (z % 3) * 0.5);
+  boulder(50, 0, 4.6, { gem: true }); boulder(68, 0, 6.8); boulder(88, 0, 3, { pod: true });
   wing(36, 5, { ...ember, y: 6.5, ay: 1.8 }); volcano(54, -3); wing(62, 5, { ...ember, y: 5, ay: 2 }); volcano(80, 4); worm(72, 0, 5);
 
   zone(95, 300, TOP, 'LAVA GEYSERS - SHIFT TO TOP VIEW');
-  for (let i = 0, z = 130; z < 290; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7]; xs.forEach((x, k) => k === i % 3 ? spire(z, x) : geyser(z, x, i * 37 + k * 50)); if (i % 3 === 0) volcano(z + 7, i % 2 ? 2.5 : -6); }
+  for (let i = 0, z = 130; z < 290; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7]; xs.forEach((x, k) => k === i % 3 ? spire(z, x) : geyser(z, x, i * 37 + k * 50)); if (i % 3 === 0) volcano(z + 7, i % 2 ? 2.5 : -6); if (i % 3 === 1) river(z + 7, i % 2 ? -3 : 3, i); if (i % 4 === 3) boulder(z + 7, i % 8 === 3 ? 6 : -6, 1.1, { vx: i % 8 === 3 ? -2.4 : 2.4, wrap: 9, hp: 9 }); }
   wing(150, 5, { ...ember, x: 0, ax: 4, y: 5 }); forge(185, { x: 0, y: 6 }); wing(225, 6, { ...ember, x: -2, ax: 5, y: 4 }); wing(265, 5, { ...ember, x: 2, ax: 4, y: 6 });
   K.checkpoints.push(303);
 
   // the Sun warp sits down inside a crater: nothing but TOP view can reach it
   zone(300, 520, SIDE, 'FIRE ARCS - SHIFT TO SIDE VIEW');
   for (let i = 0, z = 334; z < 420; z += 15, i++) arc(z, i % 2 ? 6.6 : 2.6, { osc: { ax: 0, ay: 1.5, w: 2, ph: i } });
-  obs(446, { x: 3, y: 1, hx: 2.4, hy: 1, hz: 2.4, col: '#b06bff', kind: 'crater', ghost: true }); K.warp(42, -3, 6);
+  K.warp(42, -3, 6); fall(428, 0); fall(444, 60); fall(460, 120); at(398, g => hint(g, 'LAVAFALLS - WAIT FOR THEM TO STOP', 200));
   for (let i = 0, z = 472; z < 512; z += 15, i++) arc(z, i % 2 ? 2.4 : 6.8, { osc: { ax: 0, ay: 1.6, w: 2.4, ph: i * 2 } });
   worm(350, 0); worm(388, 0, 7); wing(410, 5, { ...ember, y: 5, ay: 1.2 }); forge(436, { x: 0, y: 6.5, ax: 1 }); worm(486, 0, 7);
   K.checkpoints.push(523);
 
   zone(520, 740, CHASE, 'MAGMA TUBES - SHIFT TO CHASE VIEW');
-  [[0, 4.5], [3.5, 5.5], [-3.5, 3.5], [0, 6], [4, 3.4], [-4, 5.6], [0, 4], [3, 6]].forEach(([x, y], i) => { const z = 556 + i * 23; gate(z, x, y, { col: FIRE, kind: 'gate', osc: i > 2 ? { ax: 1.3, ay: 0, w: 1.5, ph: i } : null }); if (i % 2) wing(z + 11, 3, { ...ember, x: x * 0.5, y, ax: 1.5 }); else if (i % 4 === 2) forge(z + 10, { x: 0, y: 5 }); });
+  [[0, 4.5], [3.5, 5.5], [-3.5, 3.5], [0, 6], [4, 3.4], [-4, 5.6], [0, 4], [3, 6]].forEach(([x, y], i) => { const z = 556 + i * 23; gate(z, x, y, { col: FIRE, kind: 'gate', osc: i > 2 ? { ax: 1.3, ay: 0, w: 1.5, ph: i } : null }); if (i % 2) wing(z + 11, 3, { ...ember, x: x * 0.5, y, ax: 1.5 }); else if (i % 4 === 2) forge(z + 10, { x: 0, y: 5 }); else boulder(z + 11, -6, 1.1, { vx: 3, wrap: 9, hp: 9, gem: true }); if (i % 3 === 1) river(z + 12, 0, i); });
   at(700, g => addPod(g, 0, 5, SPAWN_Z, 'god'));
   K.checkpoints.push(744);
 
@@ -166,7 +181,7 @@ function mars() {
       if (c === 290) { addObs(g, { rel: true, kind: 'tide', ash: true, x: 0, y: 13.8, hx: 9, hy: 4, hz: 11, z: 9, vy: -1.45, warm: 40, life: 190, col: '#c0532a' }); hint(g, 'ASH FALLING - DIVE!', 110); g.fx.push('charge'); }
       if (c === 150 || c === 410) { const lowArc = c === 150; for (let i = 0; i < 7; i++) addEnemy(g, { type: 'pop', x: 0, y: 0, y0: lowArc ? 6.6 : 2.6, ay: 2, w: 2.2, ph: -i * 0.45, z: b.z - 2 + i * 0.9, vz: -6, hp: 2, r: 0.6, col: i ? FIRE : '#ffe14a', shape: 'worm', score: 80 }); }
       if (t % 120 === 100) fan(g, b, 2, 7); } },
-    { name: 'THE GAZE', vuln: [CHASE, ISO], rec: CHASE, col: '#ff8a2b', attack(g, b, t) { if (t % 180 === 20) throwGate(g, b, { col: FIRE }); if (t % 180 === 110) for (let i = 0; i < 2; i++) addEnemy(g, { type: 'kami', x: b.x + (i ? 3 : -3), y: b.y + (i ? 1.5 : -1.5), z: b.z - 2, vz: -8, hp: 3, r: 0.7, col: STONE, score: 150, shape: 'head' }); } }] });
+    { name: 'THE GAZE', vuln: [CHASE, ISO], rec: CHASE, col: '#ff8a2b', attack(g, b, t) { if (t % 150 === 20) fireRing(g, b, FIRE); if (t % 300 === 95) fireRing(g, b, '#ffe14a', 12, 1.5, 3); if (t % 240 === 170) for (let i = 0; i < 2; i++) addEnemy(g, { type: 'kami', x: b.x + (i ? 3 : -3), y: b.y + (i ? 1.5 : -1.5), z: b.z - 2, vz: -8, hp: 3, r: 0.7, col: STONE, score: 150, shape: 'head' }); } }] });
   return K.done({ name: 'MARS', title: 'THE FORGE', boss: B, warpName: 'THE SUN', theme: { sky: 'volcano', grid: '#8a2a12' } });
 }
 
@@ -182,35 +197,49 @@ function jupiter() {
   const vbolt = (z, x, ph) => obs(z, { x, y: 4.75, hx: 0.45, hy: 4.75, hz: 0.5, col: ZAP, kind: 'bolt', pulse: [70, 60, ph] });
   const head = (z, x) => obs(z, { x, y: 4.75, hx: 1.5, hy: 4.75, hz: 1.5, col: CLOUD, kind: 'thunderhead' });
   const deck = (z, low) => obs(z, low ? { x: 0, y: 1.9, hx: 8.6, hy: 1.9, hz: 1.4, col: CLOUD, kind: 'clouddeck' } : { x: 0, y: 7.2, hx: 8.6, hy: 2.3, hz: 1.4, col: CLOUD, kind: 'clouddeck' });
+  const fog = (z, x, y, o) => obs(z, { x, y, hx: 4.5, hy: 2.2, hz: 4, col: CLOUD, kind: 'fog', ghost: true, ...o }); // fog banks: nothing in them hurts, you just cannot see through them
+  const crystal = (z, y, o) => obs(z, { x: 0, y, hx: 8.6, hy: 0.85, hz: 0.7, col: '#9fe9ff', kind: 'crystal', hp: 6, score: 120, ...o }); // ammonia ice that grows across a lane: shoot through it
+  const funnel = (z, x, ph, ax = 3.2) => obs(z, { x, y: 4.75, hx: 1.15, hy: 4.75, hz: 1.15, col: '#b06bff', kind: 'funnel', osc: { ax, ay: 0, w: 0.9, ph } }); // tornadoes that wander from side to side
+  const buoy = (z, x, y) => K.ground(z, { x, x0: x, y, y0: y, col: '#ffe14a', hp: 5, r: 0.75, score: 250, fire: 135, fan: 3, bs: 6.5, bcol: ZAP, shape: 'sat', ph: (x + 9) * 0.3, pod: true }); // storm buoys: floating gun platforms
   const wraith = (z, o) => en(z, { type: 'saucer', col: '#ffffff', hp: 6, r: 0.9, score: 500, hold: 13, dur: 400, ax: 4, ay: 2, fire: 100, fan: 3, shape: 'wraith', phase: ISO, haunt: true, pod: true, ...o });
 
   zone(-99, 95, SIDE, 'SECTOR 3 // JUPITER - STORM DECK');
+  fog(44, 0, 6.5, { vx: 0.6, wrap: 12 }); fog(70, 0, 2.8, { vx: -0.5, wrap: 12 }); crystal(60, 4.8, { gem: true }); crystal(90, 6.4); buoy(78, 3, 3);
   wing(36, 5, { ...spark, y: 6, ax: 3 }); jelly(54, { x: -2, y: 6 }); wing(66, 6, { ...spark, y: 3.5, ax: 4 }); jelly(84, { x: 3, y: 4 });
 
   zone(95, 300, SIDE, 'LIGHTNING CHAINS - STAY IN SIDE VIEW');
-  for (let i = 0, z = 130; z < 290; z += 13, i++) { const lane = i % 3; [2.2, 4.8, 7.4].forEach((y, k) => { if (k !== lane) hbolt(z, y, i * 23 + k * 40); }); if (i % 4 === 3) deck(z + 6, i % 8 === 3); }
+  for (let i = 0, z = 130; z < 290; z += 13, i++) { const lane = i % 3; [2.2, 4.8, 7.4].forEach((y, k) => { if (k !== lane) hbolt(z, y, i * 23 + k * 40); }); if (i % 4 === 3) deck(z + 6, i % 8 === 3); if (i % 4 === 1) crystal(z, [2.2, 4.8, 7.4][lane], { gem: i % 8 === 1 }); if (i % 6 === 2) buoy(z + 6, 0, [7.4, 2.2, 4.8][lane]); if (i % 5 === 4) fog(z + 6, 0, 4.8, { hy: 3.4 }); }
   wing(150, 5, { ...spark, y: 5, ax: 0, ay: 2, zig: false }); jelly(190, { x: 0, y: 5 }); wing(230, 6, { ...spark, y: 4, ax: 0, ay: 2.5, zig: false }); jelly(268, { x: 0, y: 6 });
   K.checkpoints.push(303);
 
   // the Asteroid warp hangs outside the lane: only SIDE view, which ignores left and right, can touch it
   zone(300, 520, TOP, 'STORM WALLS - SHIFT TO TOP VIEW');
   for (let i = 0, z = 334; z < 410; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7.5]; xs.forEach((x, k) => k === i % 3 ? head(z, x) : vbolt(z, x, i * 31 + k * 45)); }
-  K.warp(48, 3.5, 3.4);
+  K.warp(48, 3.5, 3.4); funnel(420, -4, 0); funnel(434, 4, 2); funnel(448, 0, 4, 4.5); buoy(441, 6.5, 5); at(392, g => hint(g, 'TORNADOES - THEY WANDER', 180));
   for (let i = 0, z = 462; z < 512; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7.5]; xs.forEach((x, k) => k === (i + 1) % 3 ? head(z, x) : vbolt(z, x, i * 29 + k * 45)); }
   wing(350, 5, { ...spark, x: 0, ax: 5, y: 5 }); jelly(392, { x: 0, y: 5 }); wing(474, 6, { ...spark, x: 0, ax: 5, y: 4 });
   K.checkpoints.push(523);
 
   zone(520, 760, ISO, 'DENSE CLOUD - WRAITHS ONLY SHOW IN ISO VIEW');
-  for (let i = 0, z = 556; z < 750; z += 24, i++) { obs(z, { x: (i % 3 - 1) * 4, y: 4.75, hx: 3.2, hy: 4.75, hz: 5, col: CLOUD, kind: 'cloud', ghost: true }); if (i % 2) { hbolt(z + 12, i % 4 === 1 ? 2.6 : 7, i * 40); vbolt(z + 12, i % 4 === 1 ? 4 : -4, i * 40 + 20); } }
+  for (let i = 0, z = 556; z < 750; z += 24, i++) { obs(z, { x: (i % 3 - 1) * 4, y: 4.75, hx: 3.2, hy: 4.75, hz: 5, col: CLOUD, kind: 'cloud', ghost: true }); if (i % 2) { hbolt(z + 12, i % 4 === 1 ? 2.6 : 7, i * 40); vbolt(z + 12, i % 4 === 1 ? 4 : -4, i * 40 + 20); } else { funnel(z + 12, (i % 4 ? -1 : 1) * 3, i, 2.4); fog(z + 12, (i % 4 ? 1 : -1) * 3, 4.8, { hy: 4, hx: 3 }); } }
   wraith(560, { x: -3, y: 6 }); wraith(610, { x: 3, y: 3.5 }); wing(640, 5, { ...spark, x: 0, ax: 4, y: 5 }); wraith(670, { x: 0, y: 6.5 }); wraith(715, { x: -2, y: 4 }); at(730, g => addPod(g, 0, 5, SPAWN_Z, 'god'));
   K.checkpoints.push(764);
 
   zone(760, 1e9, SIDE, 'WARNING // THE EYE OPENS');
   spawnBoss(K, 810, { name: 'THE EYE', look: 'eye', hp: 3200, col: ZAP });
   const B = boss({ name: 'THE EYE', toast: 'JUPITER CALMED', stages: [
-    { name: 'SQUALL', vuln: [SIDE], rec: SIDE, col: ZAP, bob: 2.2, attack(g, b, t) { if (t % 240 === 30) { const up = g.rand() < 0.5; sheetH(g, up ? 2 : 7.4, 1.35, { vy: up ? 1 : -1, life: 170, col: ZAP }); } if (t % 180 === 120) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'pop', x: 0, y: 2 + i * 1.8, z: b.z - 1, vz: -9, ay: 1, hp: 2, col: ZAP, shape: 'spark', ph: i }); } },
-    { name: 'CYCLONE', vuln: [TOP], rec: TOP, col: '#b06bff', sway: 4, attack(g, b, t) { if (t % 240 === 30) { const l = g.rand() < 0.5; sheetV(g, l ? -5 : 5, 1.5, { vx: l ? 1.1 : -1.1, life: 170, col: ZAP }); } if (t % 110 === 90) for (let i = -2; i <= 2; i++) bullet(g, b.x, 4.6, b.z - 2, i * 2, 0, -7, ZAP); } },
-    { name: 'THE PUPIL', vuln: [ISO, CHASE], rec: ISO, col: '#ffffff', attack(g, b, t) { if (t % 180 === 20) throwGate(g, b, { col: ZAP }); if (t % 300 === 150) addEnemy(g, { type: 'saucer', col: '#ffffff', hp: 5, r: 0.9, score: 500, hold: 12, dur: 240, ax: 4, ay: 2, x: 0, y: 5, z: b.z, fire: 90, fan: 3, shape: 'wraith', phase: ISO, haunt: true }); if (t % 14 === 0 && t % 280 > 210) { const a = t * 0.1; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3.5, Math.sin(a) * 3.5, -7, ZAP); } } }] });
+    // STATIC: lightning walks down the lane toward you, then the Eye stares: a flat beam at whatever height you are flying
+    { name: 'STATIC', vuln: [SIDE], rec: SIDE, col: ZAP, bob: 2.2, attack(g, b, t) { const p = near(g, b), c = t % 360;
+      if (c === 30) { hint(g, 'LIGHTNING - WATCH THE RINGS', 110); g.fx.push('charge'); } if (c >= 30 && c < 150 && c % 24 === 6) { const k = (c - 30) / 24 | 0; strike(g, p.x, 11.5 - k * 2.3 + (k % 2 ? 0.6 : 0)); }
+      if (c === 215) { eyeBeam(g, b, 'y', { col: ZAP }); hint(g, 'IT IS LOOKING AT YOU - CHANGE HEIGHT', 100); } if (c === 300) for (let i = 0; i < 3; i++) addEnemy(g, { type: 'pop', x: 0, y: 2.5 + i * 2.2, z: b.z - 1, vz: -8, ay: 1, hp: 2, col: ZAP, shape: 'spark', ph: i }); } },
+    // CYCLONE: the storm drags you toward the Eye while two spiral arms of sparks sweep the deck
+    { name: 'CYCLONE', vuln: [TOP], rec: TOP, col: '#b06bff', sway: 3, attack(g, b, t) { const p = near(g, b); g.pull = [Math.max(-1.6, Math.min(1.6, (b.x - p.x) * 0.5)), 0, p.z < 9 ? 1.5 : 0];
+      if (t % 420 === 5) hint(g, 'CYCLONE - FLY AGAINST THE PULL', 120); if (t % 9 === 0 && t % 420 < 300) for (const k of [0, 3.1416]) { const a = t * 0.045 + k; bullet(g, b.x, 4.6, b.z - 2, Math.cos(a) * 4.2, 0, -3.4 - (Math.sin(a) + 1) * 1.6, k ? '#b06bff' : ZAP); }
+      if (t % 420 === 330) { strike(g, p.x, p.z); strike(g, p.x - 2.6, p.z + 1.5); strike(g, p.x + 2.6, p.z + 1.5); g.fx.push('charge'); } } },
+    // THE PUPIL: storm orbs circle it and soak up shots, and its stare is now a narrow shaft that follows you
+    { name: 'THE PUPIL', vuln: [ISO, CHASE], rec: ISO, col: '#ffffff', attack(g, b, t) { const orbs = g.enemies.filter(e => e.orb && e.hp > 0).length;
+      if (t % 480 === 20 && orbs < 2) { for (let i = 0; i < 4; i++) addEnemy(g, { type: 'pop', orb: true, x: b.x, x0: 0, y0: 4.8, ax: 3.3, ay: 3.3, w: 1.3, ph: i * 1.5708, z: b.z - 3, vz: 0, hp: 9, r: 0.8, col: ZAP, score: 300, shape: 'plasma', fire: 170, bs: 6 }); hint(g, 'STORM ORBS - CLEAR THEM TO REACH THE PUPIL', 150); }
+      if (t % 230 === 120) eyeBeam(g, b, 'xy', { col: ZAP, warm: 70 }); if (t % 480 === 330) { const p = near(g, b); for (let i = -1; i <= 1; i++) strike(g, p.x + i * 3, p.z + 1, { hz: 3 }); g.fx.push('charge'); } } }] });
   return K.done({ name: 'JUPITER', title: 'STORM DECK', boss: B, warpName: 'THE ASTEROID BELT', theme: { sky: 'cloud', grid: '#7a4a1e', nofloor: true },
     rules: { wind: g => g.camZ > 540 && g.camZ < 760 && !g.boss ? [Math.sin(g.tick * 0.012) * 1.4, 0] : [0, 0] } });
 }
@@ -225,25 +254,29 @@ function planetx() {
   const spitter = (z, o) => en(z, { type: 'saucer', col: FLESH, hp: 8, r: 0.95, score: 450, hold: 15, dur: 420, ax: 4, ay: 1.5, fire: 115, fan: 4, bs: 7.5, bcol: ACID, shape: 'spitter', pod: true, ...o });
   const eye = (z, x, top) => ground(z, { x, x0: x, y: top ? 9 : 0.6, y0: top ? 9 : 0.6, col: '#ffffff', hp: 4, r: 0.7, score: 220, fire: 125, bcol: ACID, shape: 'eye', ph: (x + 9) * 0.3 });
   const tent = (z, x, ph) => obs(z, { x, y: 4.75, hx: 0.75, hy: 4.75, hz: 0.75, col: BIO, kind: 'tentacle', osc: { ax: 1.4, ay: 0, w: 1.3, ph } });
+  const blob = (z, o) => obs(z, { x: 0, y: 4.75, hx: 8.6, hy: 4.75, hz: 0.7, col: FLESH, kind: 'blob', hp: 12, score: 250, ...o }); // a wall of mutant blobs right across the lane: it bursts when you shoot it enough
+  const mine = (z, x, y) => ground(z, { x, x0: x, y, y0: y, col: ACID, hp: 3, r: 0.85, score: 120, burst: 10, shape: 'spore' }); // fat spore pods that burst into a ring of acid
   const memb = (z, low, ph) => obs(z, low ? { x: 0, y: 1.8, hx: 8.6, hy: 1.8, hz: 1, col: FLESH, kind: 'membrane', osc: { ax: 0, ay: 0.7, w: 1.6, ph } } : { x: 0, y: 7.3, hx: 8.6, hy: 2.2, hz: 1, col: FLESH, kind: 'membrane', osc: { ax: 0, ay: 0.7, w: 1.6, ph } });
 
   zone(-99, 85, SIDE, 'SECTOR 4 // PLANET X - THE BLOOM');
+  blob(78, { pod: true }); at(46, g => hint(g, 'BLOB WALL - SHOOT IT UNTIL IT BURSTS', 220)); mine(60, 0, 3); mine(68, 0, 7);
   wing(34, 8, { ...spore, y: 5, ay: 2.5, ax: 0 }, 1.4); spitter(52, { x: 0, y: 6 }); wing(64, 8, { ...spore, y: 4, ay: 3 }, 1.4);
 
   zone(85, 285, TOP, 'TENTACLE FOREST - SHIFT TO TOP VIEW');
-  for (let i = 0, z = 120; z < 276; z += 13, i++) (i % 2 ? [-5.2, 0, 5.2] : [-2.6, 2.6, 7.6, -7.6]).forEach((x, k) => tent(z, x, i + k * 2));
+  for (let i = 0, z = 120; z < 276; z += 13, i++) (i % 2 ? [-5.2, 0, 5.2] : [-2.6, 2.6, 7.6, -7.6]).forEach((x, k) => i % 3 === 2 && k === 1 ? obs(z, { x, y: 4.75, hx: 0.8, hy: 4.75, hz: 0.8, col: FLESH, kind: 'tentacle', osc: { ax: 2.7, ay: 0, w: 2, ph: i } }) : tent(z, x, i + k * 2));
+  for (let z = 152; z < 270; z += 39) { mine(z, -5.2, 4.6); mine(z + 13, 5.2, 4.6); }
   wing(140, 8, { ...spore, x: 0, ax: 5, y: 5 }, 1.4); spitter(180, { x: 0, y: 6 }); wing(215, 8, { ...spore, x: 0, ax: 6, y: 4 }, 1.4); spitter(252, { x: 2, y: 5 });
   K.checkpoints.push(288);
 
   // the Pluto warp is tucked into the roof here, and only exists in CHASE
   zone(285, 475, SIDE, 'MEMBRANES - SHIFT TO SIDE VIEW');
-  for (let i = 0, z = 320; z < 466; z += 17, i++) { memb(z, i % 2 === 0, i); eye(z + 8, (i % 3 - 1) * 4, i % 2 === 1); }
+  for (let i = 0, z = 320; z < 466; z += 17, i++) { memb(z, i % 2 === 0, i); eye(z + 8, (i % 3 - 1) * 4, i % 2 === 1); if (i % 3 === 2) blob(z + 9, { hp: 10, gem: true }); }
   K.warp(38, -3.5, 6.2);
   wing(336, 8, { ...spore, y: 5, ay: 1 }, 1.4); spitter(372, { x: 0, y: 5, ay: 0.5 }); wing(430, 8, { ...spore, y: 4.5, ay: 1.2 }, 1.4);
   K.checkpoints.push(478);
 
   zone(475, 690, CHASE, 'THE GULLET - SHIFT TO CHASE VIEW');
-  [[0, 4.5], [3, 5.5], [-3, 3.6], [0, 6], [3.5, 3.6], [-3.5, 5.6], [0, 4.4], [2, 6]].forEach(([x, y], i) => { const z = 510 + i * 22; gate(z, x, y, { col: FLESH, osc: { ax: 1.6, ay: i % 2 ? 0.8 : 0, w: 1.4, ph: i * 1.3 } }); if (i % 2) wing(z + 11, 5, { ...spore, x: x * 0.5, y, ax: 2 }, 1.2); else if (i % 4 === 2) spitter(z + 10, { x: 0, y: 5 }); });
+  [[0, 4.5], [3, 5.5], [-3, 3.6], [0, 6], [3.5, 3.6], [-3.5, 5.6], [0, 4.4], [2, 6]].forEach(([x, y], i) => { const z = 510 + i * 22; gate(z, x, y, { col: FLESH, osc: { ax: 1.6, ay: i % 2 ? 0.8 : 0, w: 1.4, ph: i * 1.3 } }); if (i % 2) wing(z + 11, 5, { ...spore, x: x * 0.5, y, ax: 2 }, 1.2); else if (i % 4 === 2) spitter(z + 10, { x: 0, y: 5 }); else { mine(z + 11, -3, 3.4); mine(z + 11, 3, 6.2); } if (i === 5) blob(z + 12, { hp: 14, pod: true }); });
   K.checkpoints.push(694);
 
   zone(690, 760, TOP, 'REALITY FOLDS - TOP VIEW!'); for (let i = 0, z = 722; z < 756; z += 14, i++) (i % 2 ? [-5.2, 0, 5.2] : [-2.6, 2.6, 7.6, -7.6]).forEach((x, k) => tent(z, x, i + k));
@@ -257,10 +290,10 @@ function planetx() {
   // every stage wants a different view, and between attacks it folds reality and throws you into another one
   const fold = (g, b, t) => { const c = t % 400; if (c === 215) { hint(g, 'REALITY SHIFT!', 70); g.fx.push('charge'); } if (c === 270) { let to = (g.view + 1 + (g.rand() * 3 | 0)) % 4; doShift(g, to, 1, null); g.flash = 6; } };
   const B = boss({ name: 'THE SHIFTER', toast: 'THE SHIFT IS OVER', splat: true, stages: [
-    { name: 'FIRST FACE', vuln: [SIDE], rec: SIDE, col: FLESH, bob: 2, attack(g, b, t) { if (t % 400 === 30) sheetH(g, 1.8 + g.rand() * 5.6, 1.3, { col: FLESH }); if (t % 100 === 80 && t % 400 < 200) fan(g, b, 3, 7, ACID); fold(g, b, t); } },
-    { name: 'SECOND FACE', vuln: [TOP], rec: TOP, col: BIO, sway: 4, attack(g, b, t) { if (t % 400 === 30) sheetV(g, -5.5 + g.rand() * 11, 1.5, { col: BIO }); if (t % 400 === 120) for (let i = 0; i < 6; i++) addEnemy(g, { type: 'pop', x: -6 + i * 2.4, y: 4.6, z: b.z - 1, vz: -4, ax: 1, hp: 1, r: 0.4, col: ACID, shape: 'spore', score: 40, ph: i }); fold(g, b, t); } },
-    { name: 'THIRD FACE', vuln: [CHASE], rec: CHASE, col: ACID, attack(g, b, t) { if (t % 400 === 20 || t % 400 === 130) throwGate(g, b, { col: FLESH }); fold(g, b, t); } },
-    { name: 'TRUE FACE', vuln: [ISO], rec: ISO, col: '#ffffff', attack(g, b, t) { if (t % 400 === 20) throwGate(g, b, { col: '#ffffff' }); if (t % 400 === 120) sheetH(g, 4.7, 2.2, { col: FLESH, warm: 80, life: 30 }); if (t % 12 === 0 && t % 400 > 150 && t % 400 < 205) { const a = t * 0.1; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3.2, Math.sin(a) * 3.2, -6.5, ACID); } fold(g, b, t); } }] });
+    { name: 'FIRST FACE', vuln: [SIDE], rec: SIDE, col: FLESH, bob: 2, attack(g, b, t) { if (t % 400 === 30) { addObs(g, { rel: true, kind: 'blob', x: 0, y: 4.8, hx: 9, hy: 5, hz: 0.7, z: b.z - 3, vz: -2.6, hp: 34, col: FLESH, score: 600, pod: g.rand() < 0.3 }); hint(g, 'BLOB WALL - BURST IT BEFORE IT REACHES YOU', 130); g.fx.push('charge'); } if (t % 100 === 80 && t % 400 > 200) fan(g, b, 3, 6.5, ACID); fold(g, b, t); } },
+    { name: 'SECOND FACE', vuln: [TOP], rec: TOP, col: BIO, sway: 4, attack(g, b, t) { if (t % 200 === 30) { const safe = g.rand() * 5 | 0; [-6.4, -3.2, 0, 3.2, 6.4].forEach((x, i) => { if (i !== safe && i !== (safe + 1 + (t % 400 < 200 ? 0 : 2)) % 5) addObs(g, { rel: true, kind: 'slam', x, y: 4.75, hx: 1.25, hy: 4.75, hz: 5.5, z: 6, warm: 95, life: 50, col: BIO }); }); g.fx.push('charge'); } if (t % 400 === 120) for (let i = 0; i < 6; i++) addEnemy(g, { type: 'pop', x: -6 + i * 2.4, y: 4.6, z: b.z - 1, vz: -4, ax: 1, hp: 1, r: 0.4, col: ACID, shape: 'spore', score: 40, ph: i }); fold(g, b, t); } },
+    { name: 'THIRD FACE', vuln: [CHASE], rec: CHASE, col: ACID, attack(g, b, t) { if (t % 400 === 20) addObs(g, { rel: true, kind: 'blob', x: 0, y: 4.8, hx: 9, hy: 5, hz: 0.7, z: b.z - 3, vz: -2.4, hp: 46, col: ACID, score: 800 }); if (t % 400 === 150) for (let i = 0; i < 5; i++) addEnemy(g, { type: 'kami', x: -5 + i * 2.5, y: 2.5 + (i % 2) * 4, z: b.z - 2, vz: -6.5, hp: 1, r: 0.45, col: ACID, shape: 'spore', score: 60 }); fold(g, b, t); } },
+    { name: 'TRUE FACE', vuln: [ISO], rec: ISO, col: '#ffffff', attack(g, b, t) { if (t % 400 === 20) fireRing(g, b, ACID, 18, 2.3, 4); if (t % 400 === 120) { const p = near(g, b); for (let i = -1; i <= 1; i++) strike(g, p.x + i * 2.8, p.z + (i ? 1.2 : 0), { col: FLESH }); g.fx.push('charge'); } if (t % 12 === 0 && t % 400 > 150 && t % 400 < 205) { const a = t * 0.1; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3.2, Math.sin(a) * 3.2, -6.5, ACID); } fold(g, b, t); } }] });
   return K.done({ name: 'PLANET X', title: 'THE BLOOM', boss: B, warpName: 'PLUTO', final: true, theme: { sky: 'bio', grid: '#6a1e8a', trippy: true, splat: true } });
 }
 
