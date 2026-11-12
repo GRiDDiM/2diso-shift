@@ -213,6 +213,7 @@ Nine ideas went on the list and all nine went in, plus one more from Benjamin.
 - **Lightning chains read in every view.** Seen end-on in the flat views they used to be a dot. Now they crackle.
 - **Solid bosses.** Each boss has a shaded body behind its wireframe.
 - **The shield hugs the hull.** One outline around the ship per layer, up to three.
+- **Mars, again.** The lavafalls are thick, rippling curtains now, there are more rivers of lava, and THE COLOSSUS was re-cut so it reads as a giant stone head from every side: flat top with a topknot stone, a heavy brow shelf, a long nose, pursed lips, a jutting chin, long ears and buried shoulders.
 - **Pods always pay.** Buying anything is worth 500 points, so pods still matter when everything is maxed.
 - **A lost ship takes its weapons with it.** Drones stay, the guns start over. It was too easy to max everything by the middle of the second planet and never look back.
 

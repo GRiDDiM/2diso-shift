@@ -152,31 +152,32 @@ function mars() {
   const arc = (z, y, o) => obs(z, { x: 0, y, hx: 8.6, hy: 0.55, hz: 0.9, col: FIRE, kind: 'firearc', ...o });
   const worm = (z, x, n = 6) => { const gr = 'worm' + z; for (let i = 0; i < n; i++) at(z + i * 0.9, g => addEnemy(g, { type: 'pop', rel: false, z: 30 + i * 0.9, vz: 0, group: gr, x, y: 0, y0: 0.2, ay: 5.2, w: 1.6, ph: -i * 0.33, hp: 2, r: 0.6, col: i ? '#ff5a1f' : '#ffe14a', score: 80, shape: 'worm' })); };
   const river = (z, x, ph) => obs(z, { x, y: 0.7, hx: 1.25, hy: 0.7, hz: 3.4, col: FIRE, kind: 'lava', osc: { ax: 1.7, ay: 0, w: 0.7, ph } }); // a river of lava that wanders across the floor
-  const fall = (z, ph) => obs(z, { x: 0, y: 4.75, hx: 8.6, hy: 4.75, hz: 0.45, col: FIRE, kind: 'lavafall', pulse: [75, 95, ph] }); // lavafalls that pour, stop, and pour again
+  const fall = (z, ph) => obs(z, { x: 0, y: 4.75, hx: 8.6, hy: 4.75, hz: 1.05, col: FIRE, kind: 'lavafall', pulse: [70, 115, ph] }); // lavafalls that pour, stop, and pour again
   const boulder = (z, x, y, o) => obs(z, { x, y, hx: 1.1, hy: 1.1, hz: 1.1, col: ROCK, kind: 'boulder', hp: 7, score: 120, ...o }); // basalt you can blast apart
   const forge = (z, o) => en(z, { type: 'saucer', col: STONE, hp: 8, r: 0.95, score: 400, hold: 15, dur: 420, ax: 3, ay: 1.5, fire: 120, fan: 2, shape: 'head', pod: true, ...o });
 
   zone(-99, 95, SIDE, 'SECTOR 2 // MARS - THE FORGE');
   for (let z = 44; z < 92; z += 24) obs(z, { x: ((z * 3) % 11) - 5, y: 1.3, hx: 0.8, hy: 1.3, hz: 0.8, col: STONE, kind: 'statue' });
   for (let z = 30; z < 92; z += 13) cone(z, ((z * 5) % 13) - 6, 1.6 + (z % 3) * 0.5);
+  river(58, 0, 0); river(82, 0, 2); river(404, 0, 1);
   boulder(50, 0, 4.6, { gem: true }); boulder(68, 0, 6.8); boulder(88, 0, 3, { pod: true });
   wing(36, 5, { ...ember, y: 6.5, ay: 1.8 }); volcano(54, -3); wing(62, 5, { ...ember, y: 5, ay: 2 }); volcano(80, 4); worm(72, 0, 5);
 
   zone(95, 300, TOP, 'LAVA GEYSERS - SHIFT TO TOP VIEW');
-  for (let i = 0, z = 130; z < 290; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7]; xs.forEach((x, k) => k === i % 3 ? spire(z, x) : geyser(z, x, i * 37 + k * 50)); if (i % 3 === 0) volcano(z + 7, i % 2 ? 2.5 : -6); if (i % 3 === 1) river(z + 7, i % 2 ? -3 : 3, i); if (i % 4 === 3) boulder(z + 7, i % 8 === 3 ? 6 : -6, 1.1, { vx: i % 8 === 3 ? -2.4 : 2.4, wrap: 9, hp: 9 }); }
+  for (let i = 0, z = 130; z < 272; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7]; xs.forEach((x, k) => k === i % 3 ? spire(z, x) : geyser(z, x, i * 37 + k * 50)); if (i % 3 === 0) volcano(z + 7, i % 2 ? 2.5 : -6); if (i % 3 && z < 258) river(z + 7, i % 2 ? -3.5 : 3.5, i); if (i % 4 === 3) boulder(z + 7, i % 8 === 3 ? 6 : -6, 1.1, { vx: i % 8 === 3 ? -2.4 : 2.4, wrap: 9, hp: 9 }); }
   wing(150, 5, { ...ember, x: 0, ax: 4, y: 5 }); forge(185, { x: 0, y: 6 }); wing(225, 6, { ...ember, x: -2, ax: 5, y: 4 }); wing(265, 5, { ...ember, x: 2, ax: 4, y: 6 });
   K.checkpoints.push(303);
 
   // the Sun warp sits down inside a crater: nothing but TOP view can reach it
   zone(300, 520, SIDE, 'FIRE ARCS - SHIFT TO SIDE VIEW');
   for (let i = 0, z = 334; z < 420; z += 15, i++) arc(z, i % 2 ? 6.6 : 2.6, { osc: { ax: 0, ay: 1.5, w: 2, ph: i } });
-  K.warp(42, -3, 6); fall(428, 0); fall(444, 60); fall(460, 120); at(398, g => hint(g, 'LAVAFALLS - WAIT FOR THEM TO STOP', 200));
+  K.warp(42, -3, 6); fall(424, 0); fall(446, 85); fall(468, 170); at(398, g => hint(g, 'LAVAFALLS - WAIT FOR THEM TO STOP', 200));
   for (let i = 0, z = 472; z < 512; z += 15, i++) arc(z, i % 2 ? 2.4 : 6.8, { osc: { ax: 0, ay: 1.6, w: 2.4, ph: i * 2 } });
   worm(350, 0); worm(388, 0, 7); wing(410, 5, { ...ember, y: 5, ay: 1.2 }); forge(436, { x: 0, y: 6.5, ax: 1 }); worm(486, 0, 7);
   K.checkpoints.push(523);
 
   zone(520, 740, CHASE, 'MAGMA TUBES - SHIFT TO CHASE VIEW');
-  [[0, 4.5], [3.5, 5.5], [-3.5, 3.5], [0, 6], [4, 3.4], [-4, 5.6], [0, 4], [3, 6]].forEach(([x, y], i) => { const z = 556 + i * 23; gate(z, x, y, { col: FIRE, kind: 'gate', osc: i > 2 ? { ax: 1.3, ay: 0, w: 1.5, ph: i } : null }); if (i % 2) wing(z + 11, 3, { ...ember, x: x * 0.5, y, ax: 1.5 }); else if (i % 4 === 2) forge(z + 10, { x: 0, y: 5 }); else boulder(z + 11, -6, 1.1, { vx: 3, wrap: 9, hp: 9, gem: true }); if (i % 3 === 1) river(z + 12, 0, i); });
+  [[0, 4.5], [3.5, 5.5], [-3.5, 3.5], [0, 6], [4, 3.4], [-4, 5.6], [0, 4], [3, 6]].forEach(([x, y], i) => { const z = 556 + i * 23; gate(z, x, y, { col: FIRE, kind: 'gate', osc: i > 2 ? { ax: 1.3, ay: 0, w: 1.5, ph: i } : null }); if (i % 2) wing(z + 11, 3, { ...ember, x: x * 0.5, y, ax: 1.5 }); else if (i % 4 === 2) forge(z + 10, { x: 0, y: 5 }); else boulder(z + 11, -6, 1.1, { vx: 3, wrap: 9, hp: 9, gem: true }); if (i % 3 !== 2) river(z + 12, i % 2 ? 3 : -3, i); });
   at(700, g => addPod(g, 0, 5, SPAWN_Z, 'god'));
   K.checkpoints.push(744);
 
