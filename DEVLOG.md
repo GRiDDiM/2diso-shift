@@ -303,6 +303,11 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **Ice is cut stone.** Small ice blocks are irregular gems with facets, the Pluto shelf is a jagged sheet with cracks, and Pluto's spires are six-sided crystal shafts drawn to a point.
 - **Bigger solar flares.** Wider strands, thicker glow, a slower sweep and a bigger hitbox to match in the first half of the Sun stage.
 
+### 25. Centred views, lava that crosses your path, and arenas with a floor worth looking at (r31)
+- **The view is centred again.** Pulling the camera back had left dead space at the bottom of the top-down view and down the left of the side view, most obviously in the arenas. Each view now zooms out from its own anchor, so the field sits between the HUD and the upgrade bar. The side view also pulls back a little less than the others.
+- **Mars lava rivers flow across the lane.** They are wide, they stream sideways, and they no longer block. Instead the lava drags the ship to a crawl and fills a heat meter: cross one at the slowest speed and you overheat and take a hit. Shift up, or dash forward, and you get through with heat to spare.
+- **Arena floors belong to their planet.** Earth is a circuit board with pulses running down the traces. Mars is a cracked crucible with glowing fissures, lava at both ends and braziers in the corners. Jupiter is a slowly turning storm spiral ringed with cloud. Planet X is a beating heart with veins running out to eye stalks.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

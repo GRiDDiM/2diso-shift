@@ -222,7 +222,7 @@ export function step(g, inputs) {
   if (g.wing) wingStep(g, dt, playing);
 
   // ----- scroll + level script -----
-  g.speedMul += (GEARMUL[g.gear] * (g.mut.turbo ? 1.25 : 1) * LOOP.scroll[lp(g)] - g.speedMul) * 0.06;
+  g.speedMul += (GEARMUL[g.gear] * (g.mut.turbo ? 1.25 : 1) * LOOP.scroll[lp(g)] * (g.overLava ? 0.6 : 1) - g.speedMul) * 0.06;
   const dz = rules.arena ? 0 : playing ? SCROLL * g.speedMul * dt : SCROLL * 0.4 * dt;
   if (playing) {
     g.camZ += dz;
@@ -234,6 +234,9 @@ export function step(g, inputs) {
     if (g.loop && g.boss && g.boss.hp > 0 && !g.boss.dying && g.boss.z < 30 && g.state === 'play' && g.tick % LOOP.boss[lp(g)] === 0) { const n = LOOP.bfan[lp(g)]; for (let i = 0; i < n; i++) aimed(g, g.boss, 7, (i - (n - 1) / 2) * 0.2, '#ff4d6d'); g.fx.push('eshot'); }
     if (g.loop && g.state === 'play' && g.intro <= 0 && !rules.arena && g.tick % LOOP.hunt[lp(g)] === 0) addEnemy(g, { type: 'kami', col: '#ff4d6d', hp: 2, r: 0.55, score: 150, vz: -11 - 2 * lp(g), shape: 'kami', x: (g.rand() * 2 - 1) * 7, y: 1.5 + g.rand() * 6.5 }); // hunters dive at you all level long // on later loops the bosses shoot at you as well
     if (lvd.endZ && g.camZ >= lvd.endZ && !g.boss && !(g.mini && g.mini.hp > 0)) { g.state = 'clear'; g.endT = 0; g.score += lvd.endBonus || 0; g.fx.push('clear', 'toast:BONUS COMPLETE|+' + (lvd.endBonus || 0)); }
+    if (!rules.heat) { const p = P[0]; let over = false; for (const o of g.obs) if (o.kind === 'lava' && Math.abs(p.z - o.z) < o.hz) { over = true; break; } // lava underfoot cooks the hull and drags the ship: shift up, or dash forward, to get across
+      if (over && !g.overLava) { pop(g, 'LAVA - SPEED UP', p.x, p.y + 1.3, p.z + 2, '#ff8a2b', true); g.fx.push('gear'); } g.overLava = over; g.heat = clamp((g.heat || 0) + (over ? 0.46 : -0.4), 0, 100);
+      if (g.heat >= 100 && p.dead <= 0) { g.heat = 45; g.cause = 'lava'; hurt(g, p); pop(g, 'OVERHEAT', p.x, p.y + 1, p.z, '#ff4d6d', true); } }
     if (rules.heat && g.camZ > 26 && !g.mini) { /* no cooking during the miniboss: there is no shade left by then */ const p = P[0], m = MASK[g.view]; let shade = false; for (const o of g.obs) if (o.kind === 'shade' && ov({ x: p.x, y: p.y, z: p.z, r: 0.1 }, o, m)) { shade = true; break; }
       g.heat = clamp(g.heat + (shade ? -1.2 : 0.3), 0, 100); if (g.heat >= 100 && p.dead <= 0) { g.heat = 45; hurt(g, p); pop(g, 'OVERHEAT', p.x, p.y + 1, p.z, '#ff4d6d', true); } }
     if (lvd.tick) lvd.tick(g);
@@ -385,5 +388,6 @@ export function autopilot(g, i = 0) {
   if (bc > 150 && p.bombs > 0 && !pv.bomb && p.inv <= 0) out.bomb = true;
   const cu = p.cursor; if (cu >= 0 && !pv.upgrade) { const lo = Math.min(p.up[1], p.up[2], p.up[3], p.up[4], p.up[5]); if (cu === 7 || cu === 0 && p.up[0] <= lo * 2 + 1 && p.up[0] < 6 || cu >= 1 && cu <= 5 && p.up[cu] <= lo && p.up[cu] < 3 || cu === 6 && p.shield < 2) out.upgrade = true; }
   if (arena) { let bd = 1e9, be = null; for (const e of g.enemies) if (e.hp > 0 && live(e, v)) { const d = Math.hypot(e.x - p.x, e.z - p.z); if (d < bd) { bd = d; be = e; } } if (be) out.aim = [be.x - p.x, be.z - p.z]; } // the autopilot points its guns by hand, like a right stick
+  if (g.tick % 8 === 0) { if (g.overLava && g.gear < 3) { out.gear = true; g.apGear = true; } else if (!g.overLava && g.apGear) { if (g.gear !== 0) out.gear = true; else g.apGear = false; } } // idle mode shifts up through lava and back down after
   return out;
 }

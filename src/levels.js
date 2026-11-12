@@ -167,7 +167,7 @@ function mars() {
   const spire = (z, x) => obs(z, { x, y: 4.75, hx: 0.9, hy: 4.75, hz: 0.9, col: STONE, kind: 'statue' });
   const arc = (z, y, o) => obs(z, { x: 0, y, hx: 8.6, hy: 0.55, hz: 0.9, col: FIRE, kind: 'firearc', ...o });
   const worm = (z, x, n = 6) => { const gr = 'worm' + z; for (let i = 0; i < n; i++) at(z + i * 0.9, g => addEnemy(g, { type: 'pop', rel: false, z: 30 + i * 0.9, vz: 0, group: gr, gn: n, x, y: 0, y0: 0.2, ay: 5.2, w: 1.6, ph: -i * 0.33, hp: 2, r: 0.6, col: i ? '#ff5a1f' : '#ffe14a', score: 80, shape: 'worm' })); };
-  const river = (z, x, ph) => obs(z, { x, y: 0.7, hx: 1.25, hy: 0.7, hz: 3.4, col: FIRE, kind: 'lava', osc: { ax: 1.7, ay: 0, w: 0.7, ph } }); // a river of lava that wanders across the floor
+  const river = (z, x, ph) => obs(z, { x: 0, y: 0.2, hx: 9.6, hy: 0.2, hz: 4.2, col: FIRE, kind: 'lava', ghost: true, flow: x < 0 ? -1 : 1 }); // a wide river of lava flowing across the lane: it does not block, it cooks and drags
   const fall = (z, ph) => obs(z, { x: 0, y: 4.75, hx: 8.6, hy: 4.75, hz: 1.05, col: FIRE, kind: 'lavafall', pulse: [70, 115, ph] }); // lavafalls that pour, stop, and pour again
   const boulder = (z, x, y, o) => obs(z, { x, y, hx: 1.1, hy: 1.1, hz: 1.1, col: ROCK, kind: 'boulder', hp: 7, score: 120, ...o }); // basalt you can blast apart
   const forge = (z, o) => en(z, { type: 'saucer', col: STONE, hp: 8, r: 0.95, score: 400, hold: 15, dur: 420, ax: 3, ay: 1.5, fire: 120, fan: 2, shape: 'head', pod: true, ...o });
@@ -180,7 +180,7 @@ function mars() {
   wing(36, 5, { ...ember, y: 6.5, ay: 1.8 }); volcano(54, -3); wing(62, 5, { ...ember, y: 5, ay: 2 }); volcano(80, 4); worm(72, 0, 5);
 
   zone(95, 300, TOP, 'LAVA GEYSERS - SHIFT TO TOP VIEW');
-  for (let i = 0, z = 130; z < 272; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7]; xs.forEach((x, k) => k === i % 3 ? spire(z, x) : geyser(z, x, i * 37 + k * 50)); if (i % 3 === 0) volcano(z + 7, i % 2 ? 2.5 : -6); if (i % 3 && z < 258) river(z + 7, i % 2 ? -3.5 : 3.5, i); if (i % 4 === 3) boulder(z + 7, i % 8 === 3 ? 6 : -6, 1.1, { vx: i % 8 === 3 ? -2.4 : 2.4, wrap: 9, hp: 9 }); }
+  for (let i = 0, z = 130; z < 272; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7]; xs.forEach((x, k) => k === i % 3 ? spire(z, x) : geyser(z, x, i * 37 + k * 50)); if (i % 3 === 0) volcano(z + 7, i % 2 ? 2.5 : -6); if (i % 3 === 1 && z < 258) river(z + 7, i % 2 ? -3.5 : 3.5, i); if (i % 4 === 3) boulder(z + 7, i % 8 === 3 ? 6 : -6, 1.1, { vx: i % 8 === 3 ? -2.4 : 2.4, wrap: 9, hp: 9 }); }
   wing(150, 5, { ...ember, x: 0, ax: 4, y: 5 }); forge(185, { x: 0, y: 6 }); wing(225, 6, { ...ember, x: -2, ax: 5, y: 4 }); wing(265, 5, { ...ember, x: 2, ax: 4, y: 6 });
   K.checkpoints.push(303);
 
