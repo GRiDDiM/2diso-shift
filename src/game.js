@@ -11,7 +11,7 @@ const EFF = [0, 2, 4, 5]; // three ranks per weapon: the weak early ranks are sk
 export const U = { DRONE: 0, MISSILE: 1, LASER: 2, WAVE: 3, BOLT: 4, SPREAD: 5, SHIELD: 6, WILD: 7 };
 export const TIER = { 5: [, 'TWIN FAN', 'STAR FAN', 'NOVA FAN'], 2: [, 'FOCUS', 'LANCE', 'PRISM'], 3: [, 'WIDE', 'TIDAL', 'TSUNAMI'], 4: [, 'FORK', 'CHAIN', 'STORM'], 1: [, 'SWARM', 'BARRAGE', 'CLUSTER'] };
 export const DRONE_MODES = ['TRAIL', 'ORBIT', 'WALL', 'HUNT'];
-export const GEARS = ['SLOW', 'CRUISE', 'FAST'], GEARMUL = [0.7, 1, 1.7];
+export const GEARS = ['SLOW', 'CRUISE', 'FAST', 'TURBO'], GEARMUL = [0.58, 0.82, 1.2, 1.7];
 export const SCROLL = 7, DT = 1 / 60, SPAWN_Z = 30, INTRO = 132, INTRO_RUN = 46;
 
 function rng(seed) { let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -45,7 +45,7 @@ export function snapshot(g) { const p = g.players[0]; return { level: g.level.id
 export const LOOP = { hp: [1, 1.7, 2.6, 4], bs: [1, 1.3, 1.6, 1.95], fire: [1, 0.65, 0.45, 0.3], rev: [0, 4, 8, 10], boss: [0, 80, 40, 24], bfan: [0, 3, 5, 7], all: [0, 75, 38, 28], fan: [0, 1, 2, 3], scroll: [1, 1.15, 1.3, 1.5], inv: [90, 70, 50, 30], hunt: [0, 170, 80, 60] }, lp = g => Math.min(3, g.loop || 0);
 export function addEnemy(g, e) {
   const o = Object.assign({ type: 'pop', x: 0, y: 4.5, z: SPAWN_Z, vx: 0, vy: 0, vz: -8, hp: 2, r: 0.6, t: 0, col: '#ff3df0', score: 100, x0: e.x ?? 0, y0: e.y ?? 4.5, ax: 0, ay: 0, w: 2, ph: 0, fire: 0, rel: true }, e);
-  if (o.type !== 'boss' && o.type !== 'bomb' && !o.mini) o.hp = Math.round(o.hp * 2); // sturdier, so you see them take the hits
+  if (o.type !== 'boss' && o.type !== 'bomb' && !o.mini) { const p = g.players[0], k = p ? p.up[0] * 0.1 + p.up[1] + p.up[2] + p.up[3] + p.up[4] + p.up[5] : 0; o.hp = Math.round(o.hp * Math.min(5.2, 1.6 + 0.24 * k)); } // sturdier, and sturdier still as your guns grow (about 4x by mid-game, 5x at full power), so you see them take the hits
   if (g.loop) { const l = lp(g), h = LOOP.hp[l] + Math.max(0, g.loop - 3); o.hp = Math.round(o.hp * h); if (o.hpMax) o.hpMax = Math.round(o.hpMax * h); if (o.fire) o.fire = Math.max(18, Math.round(o.fire * LOOP.fire[l])); else if (o.type !== 'boss' && o.type !== 'bomb' && o.type !== 'rock' && !o.mini) o.fire = LOOP.all[l]; /* everything shoots */ if (o.fire && LOOP.fan[l]) o.fan = (o.fan || (o.type === 'saucer' ? 3 : 1)) + LOOP.fan[l]; }
   o.max = o.hp; if (o.group) { const gr = g.groups[o.group] ||= { n: 0, k: 0, next: -1, ord: true, dead: [] }; o.gi = gr.n++; }
   g.enemies.push(o); return o;
@@ -177,7 +177,7 @@ export function step(g, inputs) {
     if (edge('upgrade')) buy(g, p);
     if (edge('bomb')) nuke(g, p);
     if (edge('drone')) { p.dmode = (p.dmode + 1) % 4; pop(g, 'DRONES: ' + DRONE_MODES[p.dmode], p.x, p.y + 1, p.z, '#b06bff'); g.fx.push('blip'); }
-    if (edge('gear')) { g.gear = (g.gear + 1) % 3; pop(g, GEARS[g.gear], p.x, p.y + 1, p.z, '#ffe14a'); g.fx.push('gear'); }
+    if (edge('gear')) { g.gear = (g.gear + 1) % GEARS.length; const up = g.gear > 0; pop(g, (up ? 'SHIFTING UP - ' : 'SHIFTING DOWN - ') + GEARS[g.gear], p.x, p.y + 1.2, p.z + 2, up ? '#ffe14a' : '#5ee7ff', true); g.fx.push('gear', up ? 'say:shifting up' : 'say:shifting down'); }
     const sp = (8.5 + g.gear * 1.2) * DT, mx = clamp(inp.mx || 0, -1, 1), my = clamp(inp.my || 0, -1, 1), v = g.view, ox = p.x, oy = p.y;
     let ax = mx, ay = my; if (rules.inertia) { p.ivx += (mx - p.ivx) * 0.045; p.ivy += (my - p.ivy) * 0.045; ax = p.ivx; ay = p.ivy; }
     if (rules.arena) { // free flight over a fixed arena; the guns fire the way the ship is facing, and it faces the way it moves

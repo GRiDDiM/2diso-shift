@@ -277,6 +277,11 @@ BDC's note: everything was dying in one shot before you even noticed it.
 - **Damage numbers** float off whatever you are hitting, in small batches so they stay readable. Score numbers still float up on a kill.
 - **A wider view again.** The camera sits further back in levels, and further still for bosses and arenas.
 
+### 21. Tougher still, a slower pace and a fourth speed (r27)
+- **Enemy health scales with your guns.** Doubling it was not enough once the weapons were built up, and a flat four times starved a fresh ship of kills and pods. So ordinary enemies now start at 1.6 times their old health and climb as you upgrade: about four times by mid-game, just over five at full power.
+- **The levels move slower,** and there are four speeds now: SLOW, CRUISE, FAST and TURBO. Slow is about a sixth slower than it was; turbo is the old top speed. Par times are longer to match.
+- **Changing speed is called out.** SHIFTING UP or SHIFTING DOWN shows over the ship with the new speed, and the announcer says it.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

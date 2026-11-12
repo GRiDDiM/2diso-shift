@@ -30,7 +30,7 @@ What a view flattens does not exist for collisions, so a wall in one view is ope
 |---|---|---|---|
 | Move | Arrows / WASD | D-pad | drag the left side |
 | Fire | Space / Z / J | A | auto |
-| Change speed (slow, cruise, fast) | V / F | B | SPEED |
+| Change speed (slow, cruise, fast, turbo) | V / F | B | SPEED |
 | Bomb | X / K | Y | BOMB |
 | Drone mode | C / L | X | DRONE |
 | SHIFT view | Shift keys / Q E | L / R | L / R |
