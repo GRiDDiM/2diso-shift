@@ -95,6 +95,7 @@ function earth() {
   zone(-99, 110, SIDE, 'SECTOR 1 // NEO TERRA');
   at(40, g => hint(g, 'L / R  SHIFT VIEW     B  CHANGE SPEED', 240));
   for (let z = 30; z < 108; z += 9) tower(z, ((z * 7) % 13) - 6, 1.4 + (z % 4) * 0.45);
+  for (let i = 0, z = 34.5; z < 106; z += 9, i++) { if (i % 2) obs(z, { x: ((z * 5) % 11) - 5, y: 2.4, hx: 0.3, hy: 2.4, hz: 0.3, col: C.pylon, kind: 'pylon' }); else tower(z, ((z * 3) % 13) - 6, 2.4 + (i % 3) * 0.4); } // more city: infill blocks and antenna masts between the towers
   sign(48, 2, 7.6); sign(78, -3, 2.6); sign(96, 0, 7.2);
   wing(38, 5, { ...dart, y: 6.5, ay: 1.6, x: 0 }); wing(58, 5, { ...dart, y: 4.2, ay: 1.4, x: -2 }); carrier(72, { y: 6, x: 2 }); wing(86, 6, { ...dart, y: 7, ay: 1.5, x: 3 }); carrier(100, { y: 5, x: -2 });
 
@@ -102,12 +103,13 @@ function earth() {
   for (let i = 0, z = 146; z < 322; z += 16, i++) { for (const x of i % 2 ? [-3.2, 3.2] : [-6.4, 0, 6.4]) tower(z, x, 9.5);
     if (i % 2) { obs(z, { x: -8.1, y: 4.75, hx: 0.5, hy: 4.75, hz: 1.3, col: C.tower, kind: 'tower' }); obs(z, { x: 8.1, y: 4.75, hx: 0.5, hy: 4.75, hz: 1.3, col: C.tower, kind: 'tower' }); }
     if (i % 3 === 1) turret(z + 8, i % 2 ? 0 : 3.2); if (i % 3 === 2) turret(z + 8, -3.2);
-    if (i % 4 === 0 && i) car(z + 8, -8 + i, 5, i % 8 ? 2.6 : -2.6, 2.4); if (i % 4 === 2) fence(z + 8, i % 8 === 2 ? 6.4 : -6.4, i * 30); } // cross traffic and laser fences between the towers
+    if (i % 4 === 0 && i) car(z + 8, -8 + i, 5, i % 8 ? 2.6 : -2.6, 2.4); if (i % 4 === 2) fence(z + 8, i % 8 === 2 ? 6.4 : -6.4, i * 30);
+    if (i % 2) tower(z + 8, i % 4 === 1 ? 6.4 : -6.4, 9.5); else if (i % 3 === 0) tower(z + 8, i % 4 === 0 ? -3.2 : 3.2, 9.5); sign(z + 4, i % 2 ? 0 : (i % 4 ? -3.2 : 3.2), 5); } // cross traffic and laser fences between the towers
   wing(162, 5, { ...dart, x: 0, ax: 4, y: 5 }); saucer(192, { x: 0, y: 6 }); wing(228, 6, { ...dart, x: -2, ax: 5, y: 3 }); carrier(252, { x: 3.2, y: 5 }); wing(278, 5, { ...dart, x: 2, ax: 4, y: 6 }); carrier(305, { x: -3.2, y: 5 });
   K.checkpoints.push(338);
 
   zone(335, 565, SIDE, 'SKYWAYS AHEAD - SHIFT TO SIDE VIEW');
-  for (let i = 0, z = 372; z < 550; z += 18, i++) { slab(z, i % 2 === 0); if (i % 3 === 2) slab(z + 6, i % 2 === 0); if (i % 3 === 0 && i) lift(z + 9, i); if (i % 3 === 1) sign(z + 10, 0, i % 2 ? 7.4 : 2.2); }
+  for (let i = 0, z = 372; z < 550; z += 18, i++) { slab(z, i % 2 === 0); if (i % 3 === 2) slab(z + 6, i % 2 === 0); if (i % 3 === 0 && i) lift(z + 9, i); if (i % 3 === 1) sign(z + 10, 0, i % 2 ? 7.4 : 2.2); if (i % 3 === 1) tower(z + 14, 0, i % 2 === 0 ? 2 : 1.4); }
   wing(384, 4, { ...dart, y: 5.6, ay: 0.6, x: 0 }); wing(418, 5, { ...dart, y: 3, ay: 0.8, x: 2 }); carrier(444, { y: 5, x: -2 }); kami(476, { x: 0, y: 5 }); wing(504, 6, { ...dart, y: 5, ay: 1.8, x: 0 }); carrier(534, { y: 4.6, x: 1 });
   K.checkpoints.push(568);
 
@@ -192,26 +194,39 @@ function mars() {
   worm(350, 0); worm(388, 0, 7); wing(410, 5, { ...ember, y: 5, ay: 1.2 }); forge(436, { x: 0, y: 6.5, ax: 1 }); worm(486, 0, 7);
   K.checkpoints.push(523);
 
-  zone(520, 740, CHASE, 'MAGMA TUBES - SHIFT TO CHASE VIEW');
-  [[0, 4.5], [3.5, 5.5], [-3.5, 3.5], [0, 6], [4, 3.4], [-4, 5.6], [0, 4], [3, 6]].forEach(([x, y], i) => { const z = 556 + i * 23; gate(z, x, y, { col: FIRE, kind: 'gate', osc: i > 2 ? { ax: 1.3, ay: 0, w: 1.5, ph: i } : null }); if (i % 2) wing(z + 11, 3, { ...ember, x: x * 0.5, y, ax: 1.5 }); else if (i % 4 === 2) forge(z + 10, { x: 0, y: 5 }); else boulder(z + 11, -6, 1.1, { vx: 3, wrap: 9, hp: 9, gem: true }); if (i % 3 !== 2) river(z + 12, i % 2 ? 3 : -3, i); });
-  at(700, g => addPod(g, 0, 5, SPAWN_Z, 'god'));
-  K.checkpoints.push(744);
+  // the caves: rock spikes from the floor and the roof, pillars, and rocks that let go of the ceiling as you pass. Only ISO shows where everything is
+  zone(520, 730, ISO, 'THE CAVES - SHIFT TO ISO VIEW');
+  const spike = (z, x, up, h = 4.4) => obs(z, { x, y: up ? h / 2 : 9.6 - h / 2, hx: 0.8, hy: h / 2, hz: 0.8, col: ROCK, kind: 'stalag' });
+  const rockfall = (z, x, o) => obs(z, { x, y: 8.6, hx: 0.95, hy: 0.95, hz: 0.95, col: ROCK, kind: 'boulder', hp: 6, score: 120, drop: 13, ...o });
+  for (let i = 0, z = 552; z < 716; z += 11, i++) { const m = i % 4, sd = i % 8 < 4 ? 1 : -1;
+    if (m === 0) { spike(z, -5 * sd, true); spike(z, 1 * sd, true, 3.6); spike(z, 5.5 * sd, false); }
+    else if (m === 1) { rockfall(z, 3 * sd, { gem: true }); rockfall(z + 3, -3.5 * sd); rockfall(z + 6, 0.5 * sd, { pod: i % 8 === 1 }); }
+    else if (m === 2) { spike(z, -4 * sd, false); spike(z, 2 * sd, false, 3.8); spike(z, 6 * sd, true); spike(z + 5, -1 * sd, true, 3.2); }
+    else { obs(z, { x: 3.5 * sd, y: 4.75, hx: 1.1, hy: 4.75, hz: 1.1, col: ROCK, kind: 'rockwall' }); spike(z, -3 * sd, true, 3); rockfall(z + 5, -6 * sd); volcano(z + 5, -2 * sd); } }
+  wing(540, 5, { ...ember, x: 0, y: 5, ax: 3, ay: 1.2 }); forge(590, { x: -2, y: 6 }); wing(630, 6, { ...ember, x: 2, y: 4, ax: 4, ay: 1.4 }); worm(668, 0, 6); wing(700, 5, { ...ember, x: -2, y: 6, ax: 3 });
+  at(546, g => hint(g, 'WATCH THE ROOF - ROCKS FALL', 200));
+  K.checkpoints.push(733);
 
-  zone(740, 1e9, TOP, 'WARNING // THE COLOSSUS WAKES');
-  spawnBoss(K, 790, { name: 'THE COLOSSUS', look: 'colossus', hp: 2400, col: STONE });
+  zone(730, 950, CHASE, 'MAGMA TUBES - SHIFT TO CHASE VIEW');
+  [[0, 4.5], [3.5, 5.5], [-3.5, 3.5], [0, 6], [4, 3.4], [-4, 5.6], [0, 4], [3, 6]].forEach(([x, y], i) => { const z = 766 + i * 23; gate(z, x, y, { col: FIRE, kind: 'gate', osc: i > 2 ? { ax: 1.3, ay: 0, w: 1.5, ph: i } : null }); if (i % 2) wing(z + 11, 3, { ...ember, x: x * 0.5, y, ax: 1.5 }); else if (i % 4 === 2) forge(z + 10, { x: 0, y: 5 }); else boulder(z + 11, -6, 1.1, { vx: 3, wrap: 9, hp: 9, gem: true }); if (i % 3 !== 2) river(z + 12, i % 2 ? 3 : -3, i); });
+  at(910, g => addPod(g, 0, 5, SPAWN_Z, 'god'));
+  K.checkpoints.push(954);
+
+  zone(950, 1e9, TOP, 'WARNING // THE COLOSSUS WAKES');
+  spawnBoss(K, 1000, { name: 'THE COLOSSUS', look: 'colossus', hp: 2400, col: STONE });
   // THE COLOSSUS: a giant alien stone head. It makes the ground erupt, floods the lane with lava and ash, then spits rings of fire and its own small heads.
   const B = boss({ name: 'THE COLOSSUS', toast: 'MARS COOLED', stages: [
     { name: 'ERUPTION', vuln: [TOP], rec: TOP, col: STONE, sway: 2.5, bob: 0.3, attack(g, b, t) {
       if (t % 200 === 30) { const lanes = [-6, -3, 0, 3, 6], skip = g.rand() * 5 | 0; lanes.forEach((x, i) => { if (i !== skip) addObs(g, { rel: true, kind: 'geyser', x: x + (g.rand() - 0.5), y: 4.75, hx: 1.15, hy: 4.75, hz: 1.15, z: 1.5 + g.rand() * 9.5, warm: 95, life: 70, col: FIRE }); }); g.fx.push('charge'); }
       if (t % 200 === 130) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'bomb', x: b.x, y: b.y + 2, z: b.z - 1, vx: -5 + i * 3.3, vy: 6 + g.rand() * 2, vz: -8 - g.rand() * 3, hp: 1, r: 0.5, col: '#ff8a2b', score: 50, shape: 'bomb' }); } },
     { name: 'LAVA TIDE', vuln: [SIDE], rec: SIDE, col: '#ffe14a', sway: 1, bob: 0.5, attack(g, b, t) {
-      const c = t % 520; if (c === 30) { addObs(g, { rel: true, kind: 'tide', x: 0, y: -4.2, hx: 9, hy: 4, hz: 11, z: 9, vy: 1.45, warm: 40, life: 190, col: FIRE }); hint(g, 'LAVA RISING - CLIMB!', 110); g.fx.push('charge'); }
+      const c = t % 730; if (c === 30) { addObs(g, { rel: true, kind: 'tide', x: 0, y: -4.2, hx: 9, hy: 4, hz: 11, z: 9, vy: 1.45, warm: 40, life: 190, col: FIRE }); hint(g, 'LAVA RISING - CLIMB!', 110); g.fx.push('charge'); }
       if (c === 290) { addObs(g, { rel: true, kind: 'tide', ash: true, x: 0, y: 13.8, hx: 9, hy: 4, hz: 11, z: 9, vy: -1.45, warm: 40, life: 190, col: '#c0532a' }); hint(g, 'ASH FALLING - DIVE!', 110); g.fx.push('charge'); }
       if (c === 150 || c === 410) { const lowArc = c === 150; for (let i = 0; i < 7; i++) addEnemy(g, { type: 'pop', x: 0, y: 0, y0: lowArc ? 6.6 : 2.6, ay: 2, w: 2.2, ph: -i * 0.45, z: b.z - 2 + i * 0.9, vz: -6, hp: 2, r: 0.6, col: i ? FIRE : '#ffe14a', shape: 'worm', score: 80 }); }
       if (t % 120 === 100) fan(g, b, 2, 7); } },
     { name: 'THE GAZE', vuln: [CHASE, ISO], rec: CHASE, col: '#ff8a2b', attack(g, b, t) { if (t % 150 === 20) fireRing(g, b, FIRE); if (t % 300 === 95) fireRing(g, b, '#ffe14a', 12, 1.5, 3); if (t % 240 === 170) for (let i = 0; i < 2; i++) addEnemy(g, { type: 'kami', x: b.x + (i ? 3 : -3), y: b.y + (i ? 1.5 : -1.5), z: b.z - 2, vz: -8, hp: 3, r: 0.7, col: STONE, score: 150, shape: 'head' }); } }] });
-  K.fill(ember, 105, 740, 42, 'boulder', 'walker');
-  return K.done({ name: 'MARS', title: 'THE FORGE', boss: B, warpName: 'THE SUN', theme: { sky: 'volcano', grid: '#8a2a12' } });
+  K.fill(ember, 105, 950, 42, 'boulder', 'walker');
+  return K.done({ name: 'MARS', title: 'THE FORGE', boss: B, warpName: 'THE SUN', theme: { sky: 'volcano', grid: '#8a2a12', cave: [522, 728] } });
 }
 
 // =====================================================================================

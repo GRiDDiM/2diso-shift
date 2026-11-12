@@ -311,6 +311,16 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 ### 26. The real logos (r32)
 - The opening GRiDDiM and ArcadeGridz screens now show the actual logos when their image files sit beside the game (`src/logo-griddim.png` and `src/logo-arcadegridz.png`). On ArcadeGridz they do. Where the files are missing the game falls back to the drawn versions, so nothing breaks.
 
+### 27. A sleeker font, shots that stop, a leaner gun, and worlds with less grid (r34)
+- **The font.** Every corner of every letter is now rounded and the whole face leans slightly, so it reads as bent neon tube instead of calculator segments. The zero lost its slash.
+- **Hits keep flashing.** Enemies and bosses strobe red while they are under continuous fire, where before they just stayed red.
+- **Shots stop at what they hit.** Bullets, the laser, bolts and missiles are all spent on the first enemy or obstacle in their way. Only the wave and the god-mode pulse still pass through. The laser and the main gun hit harder to make up for it.
+- **The main gun fires one bullet.** SPREAD now upgrades it: three ahead, then three ahead and one behind, then three ahead and three behind.
+- **Mars has ground, not a grid.** Cracked, uneven terrain with rocks and craters, in the level and in its arena.
+- **A cave on Mars.** A new ISO section between the fire arcs and the magma tubes: rock spikes rising from the floor and hanging from the roof, pillars, and rocks that let go of the ceiling as you get near and smash on the floor. A red ring on the ground marks where each will land.
+- **More city on Earth.** Infill blocks and antenna masts in the opening stretch, extra towers and signs between the rows in the top-down section, and more on the skyways.
+- **Jupiter's cloud is a net.** Three layers of fine wavy mesh drift past underneath at different speeds, with one more overhead, and the cloud banks themselves have a soft net of threads across them.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

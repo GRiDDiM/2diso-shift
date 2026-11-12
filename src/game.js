@@ -133,23 +133,28 @@ function nuke(g, p, spend = true) {
 function beam(g, x, y, z, w, dmg, col, o = {}) {
   const m = MASK[g.view]; let zEnd = 34;
   if (o.dx != null && !(o.dx === 0 && o.dz === 1)) { const len = 30, dx = o.dx, dz = o.dz; // aimed beam (arena): a ray in the ground plane
+    if (!o.pierce) { let best = null, bt = len, isObs = false; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, g.view)) continue; const ex = e.x - x, ez = e.z - z, t = ex * dx + ez * dz; if (t > 0 && t < bt && Math.abs(ex * dz - ez * dx) < (e.hx ?? e.r) + w) { bt = t; best = e; } }
+      for (const b of g.obs) if (solid(b, g.view)) { const ex = b.x - x, ez = b.z - z, t = ex * dx + ez * dz; if (t > 0 && t < bt && Math.abs(ex * dz - ez * dx) < b.hx + w) { bt = t; best = b; isObs = true; } }
+      if (best) { if (isObs) { if (best.hp != null) { best.hp -= dmg; best.hit = 2; } } else damage(g, best, dmg); }
+      g.beams.push({ x, y, z0: z, z1: z + dz * bt, ex: x + dx * bt, life: o.life || 5, max: o.life || 5, col, w: 0, lw: o.lw || 0 }); return; } // an ordinary beam ends at the first thing in its way
     for (const e of g.enemies) { if (e.hp <= 0 || !live(e, g.view)) continue; const ex = e.x - x, ez = e.z - z, t = ex * dx + ez * dz; if (t < 0 || t > len) continue; if (Math.abs(ex * dz - ez * dx) < (e.hx ?? e.r) + w) { damage(g, e, dmg); if (o.hyper) explode(g, e.x, e.y, e.z, '#ffffff', 8, 9); } }
     for (const b of g.obs) if (b.hp != null && solid(b, g.view)) { const ex = b.x - x, ez = b.z - z, t = ex * dx + ez * dz; if (t > 0 && t < len && Math.abs(ex * dz - ez * dx) < b.hx + w) b.hp -= dmg; }
     if (o.eat) for (const b of g.ebul) { const ex = b.x - x, ez = b.z - z, t = ex * dx + ez * dz; if (t > 0 && t < len && Math.abs(ex * dz - ez * dx) < w + 0.3) b.life = 0; }
     g.beams.push({ x, y, z0: z, z1: z + dz * len, ex: x + dx * len, life: o.life || 5, max: o.life || 5, col, w: o.hyper ? w : 0, lw: o.lw || 0 }); return; }
   if (!o.pierce) { let blk = null; for (const b of g.obs) { if (!solid(b, g.view)) continue; if (b.z - b.hz > z && (!m[0] || Math.abs(b.x - x) < b.hx + w) && (!m[1] || Math.abs(b.y - y) < b.hy + w) && b.z - b.hz < zEnd) { zEnd = b.z - b.hz; blk = b; } } if (blk && blk.hp != null) { blk.hp -= dmg; blk.hit = 2; } }
   else for (const b of g.obs) if (b.hp != null && solid(b, g.view) && b.z > z && (!m[0] || Math.abs(b.x - x) < b.hx + w) && (!m[1] || Math.abs(b.y - y) < b.hy + w)) b.hp -= dmg;
-  for (const e of g.enemies) { if (e.hp <= 0 || !live(e, g.view) || e.z < z || e.z > zEnd + 1) continue; if ((!m[0] || Math.abs(e.x - x) < (e.hx ?? e.r) + w) && (!m[1] || Math.abs(e.y - y) < (e.hy ?? e.r) + w)) { damage(g, e, dmg); if (o.hyper) explode(g, e.x, e.y, e.z, '#ffffff', 8, 9); } }
+  if (!o.pierce) { let best = null; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, g.view) || e.z < z || e.z - (e.hz ?? e.r) > zEnd) continue; if ((!m[0] || Math.abs(e.x - x) < (e.hx ?? e.r) + w) && (!m[1] || Math.abs(e.y - y) < (e.hy ?? e.r) + w) && (!best || e.z < best.z)) best = e; }
+    if (best) { damage(g, best, dmg); zEnd = Math.min(zEnd, Math.max(z + 0.5, best.z)); } } // stops at the nearest enemy
+  else for (const e of g.enemies) { if (e.hp <= 0 || !live(e, g.view) || e.z < z || e.z > zEnd + 1) continue; if ((!m[0] || Math.abs(e.x - x) < (e.hx ?? e.r) + w) && (!m[1] || Math.abs(e.y - y) < (e.hy ?? e.r) + w)) { damage(g, e, dmg); if (o.hyper) explode(g, e.x, e.y, e.z, '#ffffff', 8, 9); } }
   if (o.eat) for (const b of g.ebul) if (b.z > z && (!m[0] || Math.abs(b.x - x) < w + 0.3) && (!m[1] || Math.abs(b.y - y) < w + 0.3)) b.life = 0;
   g.beams.push({ x, y, z0: z, z1: zEnd, life: o.life || 5, max: o.life || 5, col, w: o.hyper ? w : 0, lw: o.lw || 0 });
 }
 function fire(g, p) { // everything is fired relative to where the ship points: f = forward, r = right (straight ahead outside the arena)
   const v = g.view, sp = lv(p, U.SPREAD), od = p.over > 0 || p.god > 0, fx = p.ax, fz = p.az, rx = fz, rz = -fx, side = v === 0 && !g.level.rules?.arena;
-  const S = (off, fwd, lat, vy, dmg) => { if (g.shots.length < 420) g.shots.push({ x: p.x + rx * off + fx * fwd, y: p.y, z: p.z + rz * off + fz * fwd, vx: fx * 40 + rx * lat, vy, vz: fz * 40 + rz * lat, dmg, r: 0.3, kind: 0, life: 60, pierce: sp >= 4 ? 1 : 0 }); };
-  S(-0.26, 0.8, 0, 0, 1.15); S(0.26, 0.8, 0, 0, 1.15);
-  for (let k = 1; k <= sp; k++) { const a = Math.sin(k * 0.13) * 40; if (side) { S(0, 0.6, 0, a, 0.8); S(0, 0.6, 0, -a, 0.8); } else { S(0, 0.6, a, 0, 0.8); S(0, 0.6, -a, 0, 0.8); if (k >= 3 && v !== 3 && !g.level.rules?.arena) { const b = Math.sin((k - 2) * 0.13) * 40; S(0, 0.6, 0, b, 0.8); S(0, 0.6, 0, -b, 0.8); } } }
-  if (sp >= 5) for (const a of [-7, 7]) if (g.shots.length < 420) g.shots.push({ x: p.x - fx * 0.7, y: p.y, z: p.z - fz * 0.7, vx: -fx * 40 + (side ? 0 : rx * a), vy: side ? a : 0, vz: -fz * 40 + (side ? 0 : rz * a), dmg: 0.8, r: 0.3, kind: 0, life: 60, pierce: 1 }); // max rank covers your tail
-  p.fireT = Math.max(6, 13 - sp) * (od ? 0.6 : 1) | 0; g.fx.push('shot');
+  const rank = sp >= 5 ? 3 : sp >= 4 ? 2 : sp >= 2 ? 1 : 0, dmg = rank ? 2.3 : 3.4; // SPREAD upgrades the main gun: 1 bullet, then 3 ahead, then 3 ahead + 1 behind, then 3 ahead + 3 behind. Nothing passes through what it hits
+  const S = (dir, a) => { if (g.shots.length < 420) g.shots.push({ x: p.x + fx * 0.8 * dir, y: p.y, z: p.z + fz * 0.8 * dir, vx: fx * 40 * dir + (side ? 0 : rx * a), vy: side ? a : 0, vz: fz * 40 * dir + (side ? 0 : rz * a), dmg, r: 0.3, kind: 0, life: 60 }); };
+  S(1, 0); if (rank >= 1) { S(1, 6.5); S(1, -6.5); } if (rank >= 2) S(-1, 0); if (rank >= 3) { S(-1, 6.5); S(-1, -6.5); }
+  p.fireT = (10 - rank) * (od ? 0.6 : 1) | 0; g.fx.push('shot');
 }
 
 export function step(g, inputs) {
@@ -196,12 +201,12 @@ export function step(g, inputs) {
     if (firing && p.fireT <= 0) fire(g, p);
     if (p.god > 0 && p.god % 16 === 0) { beam(g, p.x + p.ax, p.y, p.z + p.az, 1.9, 20, '#ffffff', { pierce: true, eat: true, hyper: true, life: 11, dx: p.ax, dz: p.az }); g.fx.push('hyper'); g.shake = Math.max(g.shake, 6); explode(g, p.x + p.ax * 1.6, p.y, p.z + p.az * 1.6, '#ffffff', 12, 9); for (let i = 1; i < 4; i++) g.shocks.push({ x: p.x + p.ax * i * 6, y: p.y, z: p.z + p.az * i * 6, r: 0.6, vr: 12, life: 14, max: 14, col: i % 2 ? '#ffffff' : '#ffe14a' }); }
     const L = lv(p, U.LASER);
-    if (L && firing && --p.laserT <= 0) { p.laserT = (11 - L) * (od ? 0.6 : 1) | 0; const r = L >= 5 ? 3 : L >= 4 ? 2 : 1; beam(g, p.x + p.ax, p.y, p.z + p.az, 0.3 + 0.28 * r, [1.3, 3.2, 5.2][r - 1], '#3dffb0', { pierce: L >= 4, dx: p.ax, dz: p.az, lw: r }); if (g.tick % 12 < 6) g.fx.push('laser'); } // one beam: each rank makes it thicker and harder-hitting
+    if (L && firing && --p.laserT <= 0) { p.laserT = (11 - L) * (od ? 0.6 : 1) | 0; const r = L >= 5 ? 3 : L >= 4 ? 2 : 1; beam(g, p.x + p.ax, p.y, p.z + p.az, 0.3 + 0.28 * r, [2.4, 4.8, 7.5][r - 1], '#3dffb0', { dx: p.ax, dz: p.az, lw: r }); if (g.tick % 12 < 6) g.fx.push('laser'); } // one beam: each rank makes it thicker and harder-hitting
     const Wv = lv(p, U.WAVE);
     if (Wv && firing && --p.waveT <= 0) { p.waveT = od ? 3 : 5; const rk = Wv >= 5 ? 2 : Wv >= 3 ? 1 : 0; // one wave: a stream of pulses riding a sine. Each rank winds the frequency tighter, swings it wider and hits harder
       g.shots.push({ kind: 3, x: p.x, y: p.y, z: p.z + 1, ox: p.x, oy: p.y, oz: p.z + 1, vx: 0, vy: 0, vz: 22, amp: [1.1, 1.7, 2.3][rk], fq: [0.55, 0.85, 1.2][rk], rk, ph: -g.tick * 0.07, t: 0, d: 0, dmg: [0.13, 0.25, 0.4][rk], r: [0.55, 0.65, 0.78][rk], life: 110, axis: v === 0 ? 'y' : 'x', dir: rules.arena ? [p.ax, p.az] : null }); if ((p.waveN = (p.waveN || 0) + 1) % 4 === 1) g.fx.push('wave'); }
     const Bo = lv(p, U.BOLT);
-    if (Bo && firing && --p.boltT <= 0) { p.boltT = (Bo >= 5 ? 26 : Bo >= 4 ? 40 : 64) * (od ? 0.6 : 1) | 0; const n = 1; for (let k = 0; k < n; k++) g.shots.push({ kind: 4, x: p.x, y: p.y, z: p.z + 1, vx: 0, vy: 0, vz: 0, t: 0, ph: g.rand() * 6.283 + k * 2.1, own: p.i, dmg: 5 + 3 * Bo, chain: Bo >= 4 ? Bo - 1 : Bo >= 2 ? 1 : 0, r: 0.5, life: 150, trail: [] }); g.fx.push('bolt'); }
+    if (Bo && firing && --p.boltT <= 0) { p.boltT = (Bo >= 5 ? 26 : Bo >= 4 ? 40 : 64) * (od ? 0.6 : 1) | 0; const n = 1; for (let k = 0; k < n; k++) g.shots.push({ kind: 4, x: p.x, y: p.y, z: p.z + 1, vx: 0, vy: 0, vz: 0, t: 0, ph: g.rand() * 6.283 + k * 2.1, own: p.i, dmg: 5 + 3 * Bo, chain: 0, r: 0.5, life: 150, trail: [] }); g.fx.push('bolt'); }
     const M = lv(p, U.MISSILE);
     if (M && firing && --p.missT <= 0) { p.missT = (od ? 0.6 : 1) * (104 - 10 * M) | 0; const rear = M >= 4 ? 2 : 0; for (let k = 0; k < 2 + rear && g.shots.length < 420; k++) { const back = k >= 2, j = back ? k - 2 : k, nn = back ? rear : 2, a = (j - (nn - 1) / 2) * 0.55, fw = back ? -7 : 6, hug = !rules.arena, dr = j % 2 ? -1 : 1, sideways = v === 3; g.shots.push({ x: p.x, y: p.y, z: p.z, hug, vx: hug ? (sideways ? dr * 13 : 0) : p.az * Math.sin(a) * 9 + p.ax * fw, vy: hug ? (sideways ? 0 : dr * 13) : 0, vz: hug ? (back ? -6 - (j >> 1) * 5 : 5) : -p.ax * Math.sin(a) * 9 + p.az * fw, dmg: 9 + 3 * M, r: 0.4, kind: 2, life: 150, aoe: 1.4 + 0.4 * M, split: M >= 5 }); } g.fx.push('missile'); }
     // drones
@@ -267,6 +272,7 @@ export function step(g, inputs) {
       else { let best = null, bd = 1e9; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e.z > 30 || e.z < 0 || e === s.skip) continue; const d = Math.hypot(e.x - s.x, e.y - s.y, e.z - s.z) - (e.type === 'boss' ? 6 : 0); if (d < bd) { bd = d; best = e; } }
         if (best) { const d = Math.hypot(best.x - s.x, best.y - s.y, best.z - s.z) || 1, sp = 46 * dt; if (d < sp + (best.hx ?? best.r)) { damage(g, best, s.dmg); explode(g, best.x, best.y, best.z, '#7df9ff', 8, 8); g.fx.push('zap'); if (s.chain > 0) { s.chain--; s.dmg *= 0.7; s.skip = best; s.x = best.x; s.y = best.y; s.z = best.z; } else s.life = 0; } else { s.x += (best.x - s.x) / d * sp; s.y += (best.y - s.y) / d * sp; s.z += (best.z - s.z) / d * sp; } }
         else { s.z += 30 * dt; if (s.z > 34) s.life = 0; } }
+      if (s.t >= 52) for (const o2 of g.obs) if (solid(o2, vw) && ov(s, o2, m)) { s.life = 1; if (o2.hp != null) { o2.hp -= s.dmg; o2.hit = 3; } break; }
       if (--s.life <= 0) s.life = 0; continue; }
     if (s.kind === 2 && s.hug) { // not a homing missile: it drops (or climbs) to the nearest surface and runs along it
       if (!s.on) { if (s.y <= 0.55 || s.y >= 9.15 || Math.abs(s.x) >= 8.4) { s.on = 1; s.y = clamp(s.y, 0.55, 9.15); s.x = clamp(s.x, -8.4, 8.4); s.vx = 0; s.vy = 0; s.vz = 5; } } else s.vz = Math.min(26, s.vz + 1.1);
@@ -285,6 +291,7 @@ export function step(g, inputs) {
     if (!o.rel) o.z -= dz; o.bx += o.vx * dt; o.by += o.vy * dt; o.z += o.vz * dt; if (o.hit > 0) o.hit--;
     if (o.wrap && Math.abs(o.bx) > o.wrap) o.bx = -Math.sign(o.bx) * o.wrap;
     if (o.osc) { const a = g.tick * 0.02 * o.osc.w + o.osc.ph; o.x = o.bx + o.osc.ax * Math.sin(a); o.y = o.by + o.osc.ay * Math.sin(a); } else { o.x = o.bx; o.y = o.by; }
+    if (o.drop != null && !o.dead) { if (o.z < o.drop) o.vy -= 0.3; if (o.by - o.hy <= 0.05) { o.dead = true; explode(g, o.x, 0.6, o.z, o.col, 14, 8); g.fx.push('boom'); g.shake = Math.max(g.shake, 3); } } // a rock in the cave roof lets go as you get near and smashes on the floor
     if (o.pulse) { const c = (g.tick + o.pulse[2]) % (o.pulse[0] + o.pulse[1]); o.idle = c >= o.pulse[0]; o.soon = o.idle && c > o.pulse[0] + o.pulse[1] - 45; if (!o.idle && c === 0 && o.z > 0 && o.z < 28) g.fx.push('zap'); }
     if (o.warm > 0) { if (--o.warm === 0) g.fx.push('zap'); } else if (o.life != null && --o.life <= 0) o.dead = true;
     if (o.hp != null && o.hp <= 0 && !o.dead) { o.dead = true; explode(g, clamp(o.x, -7, 7), clamp(o.y, 1, 8.5), o.z, o.col, o.kind === 'blob' ? 46 : 18, o.kind === 'blob' ? 13 : 9, o.kind === 'blob'); if (o.kind === 'blob') { g.shake = Math.max(g.shake, 7); g.fx.push('boom2'); } g.chain++; g.chainT = 190; addScore(g, o.score || 50, o.x, o.y, o.z); g.fx.push('boom'); if (o.pod) addPod(g, o.x, o.y, o.z); if (o.gem) addPod(g, o.x, o.y, o.z, 'gem'); }
