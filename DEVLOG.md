@@ -261,6 +261,11 @@ BDC's order: loop 2 significantly harder, loop 3 extremely difficult, loop 4 bor
 - **Shields fade.** On loop 3 one hit strips every layer. On loop 4 shields do nothing.
 - Past loop 4 the enemy just keeps getting tougher.
 
+### 18. The wave is a wave (r24)
+- **One wave, not several.** The wave weapon is now a single stream that snakes out of the ship along a sine curve, drawn as a glowing ribbon with a white-hot core and a trail of sparks.
+- **Upgrades wind it up.** Each rank tightens the frequency, swings it wider and hits harder, and the colour climbs from cyan to violet to hot pink. No extra waves above or below the ship.
+- It still passes through walls, and it ripples slowly so the curve never sits still.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

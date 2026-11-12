@@ -79,6 +79,9 @@ function addScore(g, base, x, y, z, col) {
   const mult = 1 + Math.min(9, g.chain / 5 | 0); g.score += base * mult;
   if (x != null) pop(g, mult > 1 ? base * mult + ' X' + mult : '' + base, x, y, z, col || '#ffe14a');
 }
+// where a wave pulse is after travelling d: forward, plus a sine swing that opens up as it leaves the ship
+export const WAVECOL = ['#7df9ff', '#b06bff', '#ff3df0'];
+export function waveAt(s, d) { const o = Math.sin(d * s.fq + s.ph) * s.amp * Math.min(1, d / 2.5); if (s.dir) return [s.ox + s.dir[0] * d + s.dir[1] * o, s.oy, s.oz + s.dir[1] * d - s.dir[0] * o]; return s.axis === 'x' ? [s.ox + o, s.oy, s.oz + d] : [s.ox, Math.max(0.3, Math.min(9.4, s.oy + o)), s.oz + d]; }
 function groupNext(gr, e) { gr.dead[e.gi] = 1; const n = Math.max(gr.n, e.gn || 0); gr.next = -1; for (let k = 1; k <= n; k++) { const i = (e.gi + k) % n; if (!gr.dead[i]) { gr.next = i; break; } } }
 function kill(g, e) {
   e.hp = -999; g.stats.kills++; g.chain++; g.chainT = 190; if (g.chain > g.bestChain) g.bestChain = g.chain;
@@ -192,7 +195,8 @@ export function step(g, inputs) {
     const L = lv(p, U.LASER);
     if (L && firing && --p.laserT <= 0) { p.laserT = (11 - L) * (od ? 0.6 : 1) | 0; const r = L >= 5 ? 3 : L >= 4 ? 2 : 1; beam(g, p.x + p.ax, p.y, p.z + p.az, 0.3 + 0.28 * r, [1.3, 3.2, 5.2][r - 1], '#3dffb0', { pierce: L >= 4, dx: p.ax, dz: p.az, lw: r }); if (g.tick % 12 < 6) g.fx.push('laser'); } // one beam: each rank makes it thicker and harder-hitting
     const Wv = lv(p, U.WAVE);
-    if (Wv && firing && --p.waveT <= 0) { p.waveT = (44 - 6 * Wv) * (od ? 0.6 : 1) | 0; const n = Wv >= 5 ? 3 : Wv >= 3 ? 2 : 1; for (let k = 0; k < n; k++) g.shots.push({ kind: 3, x: p.x, y: p.y, z: p.z + 1, ox: p.x, oy: p.y, oz: p.z, vx: 0, vy: 0, vz: 22, amp: 1.2 + 0.45 * Wv, ph: k * 6.283 / n, t: 0, d: 1, dmg: 0.2 + 0.07 * Wv, r: 0.7 + 0.12 * Wv, life: 110, axis: v === 0 ? 'y' : 'x', dir: rules.arena ? [p.ax, p.az] : null }); g.fx.push('wave'); }
+    if (Wv && firing && --p.waveT <= 0) { p.waveT = od ? 3 : 5; const rk = Wv >= 5 ? 2 : Wv >= 3 ? 1 : 0; // one wave: a stream of pulses riding a sine. Each rank winds the frequency tighter, swings it wider and hits harder
+      g.shots.push({ kind: 3, x: p.x, y: p.y, z: p.z + 1, ox: p.x, oy: p.y, oz: p.z + 1, vx: 0, vy: 0, vz: 22, amp: [1.1, 1.7, 2.3][rk], fq: [0.55, 0.85, 1.2][rk], rk, ph: -g.tick * 0.07, t: 0, d: 0, dmg: [0.13, 0.25, 0.4][rk], r: [0.55, 0.65, 0.78][rk], life: 110, axis: v === 0 ? 'y' : 'x', dir: rules.arena ? [p.ax, p.az] : null }); if ((p.waveN = (p.waveN || 0) + 1) % 4 === 1) g.fx.push('wave'); }
     const Bo = lv(p, U.BOLT);
     if (Bo && firing && --p.boltT <= 0) { p.boltT = (Bo >= 5 ? 26 : Bo >= 4 ? 40 : 64) * (od ? 0.6 : 1) | 0; const n = 1; for (let k = 0; k < n; k++) g.shots.push({ kind: 4, x: p.x, y: p.y, z: p.z + 1, vx: 0, vy: 0, vz: 0, t: 0, ph: g.rand() * 6.283 + k * 2.1, own: p.i, dmg: 5 + 3 * Bo, chain: Bo >= 4 ? Bo - 1 : Bo >= 2 ? 1 : 0, r: 0.5, life: 150, trail: [] }); g.fx.push('bolt'); }
     const M = lv(p, U.MISSILE);
@@ -250,7 +254,7 @@ export function step(g, inputs) {
   }
   // ----- shots -----
   for (const s of g.shots) {
-    if (s.kind === 3) { s.t++; const o = Math.sin(s.t * 0.14 + s.ph) * s.amp; if (s.dir) { s.d += s.vz * dt; s.x = s.ox + s.dir[0] * s.d + s.dir[1] * o; s.z = s.oz + s.dir[1] * s.d - s.dir[0] * o; } else { s.z += s.vz * dt; if (s.axis === 'x') { s.x = s.ox + o; } else { s.y = s.oy + o; } } if (--s.life <= 0 || s.z > 34 || s.z < -4 || Math.abs(s.x) > 13) { s.life = 0; continue; }
+    if (s.kind === 3) { s.t++; s.d += s.vz * dt; const w = waveAt(s, s.d); s.x = w[0]; s.y = w[1]; s.z = w[2]; if (s.t % 4 === 0 && g.parts.length < 500) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: (g.rand() - 0.5) * 2, vy: (g.rand() - 0.5) * 2, vz: 3, life: 10, max: 10, col: WAVECOL[s.rk] }); if (--s.life <= 0 || s.z > 34 || s.z < -4 || Math.abs(s.x) > 13) { s.life = 0; continue; }
       for (const e of g.enemies) if (e.hp > 0 && live(e, vw) && ov(s, e, m)) damage(g, e, s.dmg); for (const o2 of g.obs) if (o2.hp != null && solid(o2, vw) && ov(s, o2, m)) { o2.hp -= s.dmg; o2.hit = 2; } for (const b of g.ebul) if (Math.abs(b.z - s.z) < 0.8 && ov(s, b, m)) b.life = 0; continue; }
     if (s.kind === 4) { s.t++; s.trail.push(s.x, s.y, s.z); if (s.trail.length > 210) s.trail.splice(0, 3); const p = P[s.own || 0];
       if (s.t < 52) { const a = s.t * 0.19 + s.ph, R = 2 + s.t * 0.09; const tx = clamp(p.x + Math.cos(a) * R * 1.3, -7.5, 7.5), ty = clamp(p.y + Math.sin(a * 1.3) * R * 0.7, 0.6, 9), tz = p.z + 2 + s.t * 0.16 + Math.sin(a * 0.7) * 2; s.x += (tx - s.x) * 0.3; s.y += (ty - s.y) * 0.3; s.z += (tz - s.z) * 0.3; }
