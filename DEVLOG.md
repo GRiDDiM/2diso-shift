@@ -321,6 +321,9 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **More city on Earth.** Infill blocks and antenna masts in the opening stretch, extra towers and signs between the rows in the top-down section, and more on the skyways.
 - **Jupiter's cloud is a net.** Three layers of fine wavy mesh drift past underneath at different speeds, with one more overhead, and the cloud banks themselves have a soft net of threads across them.
 
+### 28. The boss health bar is back (r35)
+- When the bosses were moved further back in r29, the boss health bar and the weak-spot marker were still waiting for the boss at its old distance, so neither ever appeared. Both now show again and the bar drains as the boss takes damage.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
