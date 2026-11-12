@@ -6,7 +6,7 @@ const SIDE = 0, ISO = 1, CHASE = 2, TOP = 3;
 const FAR = 48;
 // ---------- builder kit ----------
 function kit(id) {
-  const ev = [], zones = [], checkpoints = []; let gid = 0;
+  const ev = [], zones = [], checkpoints = [], hills = []; let gid = 0; const hill = (z0, z1, h) => hills.push([z0, z1, h]);
   const at = (z, fn) => ev.push({ z: z - SPAWN_Z, fn });
   const far = (z, fn, ob) => ev.push({ z: z - FAR, lim: z - SPAWN_Z, fn, oz: ob ? z : null }); // scenery is placed well beyond the old horizon and fades in, so nothing pops up in your face
   const obs = (z, o) => far(z, g => addObs(g, { ...o, z: z - g.camZ }), true);
@@ -29,8 +29,8 @@ function kit(id) {
     obs(z, { x: hx, y: hy, hx: w, hy: h, hz: 0.5, ghost: true, kind: 'safe', osc: k.osc }); if (!o.noRing && !k.osc) ring(z, { x: hx, y: hy, r: 1.5 }); };
   const done = extra => { // nothing solid sits right around a change of view: you get a clear run to make the shift
     for (let i = ev.length - 1; i >= 0; i--) { const e = ev[i]; if (e.oz != null && zones.some((q, k) => k > 0 && e.oz > q.z0 - 30 && e.oz < q.z0 + 8)) ev.splice(i, 1); }
-    ev.sort((a, b) => a.z - b.z); return { id, events: ev, zones, checkpoints, len: extra.endZ || zones.find(q => q.z1 > 1e8)?.z0 || 0, ...extra }; };
-  return { at, obs, ring, en, ground, wing, zone, gate, warp, warp2, fill, checkpoints, done };
+    ev.sort((a, b) => a.z - b.z); return { id, events: ev, zones, checkpoints, hills, len: extra.endZ || zones.find(q => q.z1 > 1e8)?.z0 || 0, ...extra }; };
+  return { at, obs, ring, en, ground, wing, zone, gate, warp, warp2, fill, hill, checkpoints, done };
 }
 
 // ---------- boss engine: stages that are only open from one view, attacks that fill the screen in the wrong one ----------
@@ -136,6 +136,7 @@ function earth() {
   zone(1010, 1220, CHASE, 'HOVER TRAFFIC - SHIFT TO CHASE VIEW');
   for (let i = 0, z = 1048; z < 1210; z += 10, i++) { const y = [2.4, 5, 7.4][i % 3], d = i % 2 ? 4 : -4; car(z, -8 + (i * 5) % 16, y, d); car(z, 2 - (i * 3) % 10, y, d); car(z + 5, 6 - (i * 7) % 14, [5, 7.4, 2.4][i % 3], -d * 1.4, i % 3 === 0 ? 2.4 : 1.3); car(z + 2.5, -6 + (i * 4) % 13, [7.4, 2.4, 5][i % 3], d * 0.8); car(z + 7.5, 5 - (i * 6) % 12, [2.4, 5, 7.4][(i + 1) % 3], -d); if (i % 4 === 1) obs(z + 5, { x: ((i * 5) % 11) - 5, y: 4.75, hx: 0.7, hy: 4.75, hz: 0.7, col: C.pylon, kind: 'pylon' }); if (i % 6 === 3 && z < 900) slab(z + 5, false, { hz: 0.8 }); }
   K.warp(58, 3, 6.4); K.warp2(342, -3, 6);
+  K.hill(56, 86, 1.7); K.hill(636, 700, 1.5); K.hill(880, 940, 1.7); K.hill(1090, 1150, 1.4); // overpasses and embankments: the ground rises and the ship rides over
   wing(1062, 5, { ...dart, x: 0, y: 6, ax: 3, ay: 1 }); saucer(1094, { x: -2, y: 6.5 }); carrier(1126, { x: -4, y: 4 }); wing(1162, 6, { ...dart, x: 2, y: 3.5, ax: 4, ay: 1.5 }); carrier(1190, { x: 2, y: 6 });
   K.checkpoints.push(1224);
 
@@ -190,7 +191,7 @@ function mars() {
   // the Sun warp sits down inside a crater: nothing but TOP view can reach it
   zone(300, 520, SIDE, 'FIRE ARCS - SHIFT TO SIDE VIEW');
   for (let i = 0, z = 334; z < 420; z += 15, i++) arc(z, i % 2 ? 6.6 : 2.6, { osc: { ax: 0, ay: 1.5, w: 2, ph: i } });
-  K.warp(42, -3, 6); K.warp2(306, 3, 5); fall(424, 0); fall(446, 85); fall(468, 170); at(398, g => hint(g, 'LAVAFALLS - WAIT FOR THEM TO STOP', 200));
+  K.warp(42, -3, 6); K.warp2(306, 3, 5); K.hill(28, 52, 1.6); K.hill(62, 86, 2); K.hill(590, 642, 1.7); K.hill(798, 852, 1.4); /* dunes and ridges */ fall(424, 0); fall(446, 85); fall(468, 170); at(398, g => hint(g, 'LAVAFALLS - WAIT FOR THEM TO STOP', 200));
   for (let i = 0, z = 472; z < 512; z += 15, i++) arc(z, i % 2 ? 2.4 : 6.8, { osc: { ax: 0, ay: 1.6, w: 2.4, ph: i * 2 } });
   worm(350, 0); worm(388, 0, 7); wing(410, 5, { ...ember, y: 5, ay: 1.2 }); forge(436, { x: 0, y: 6.5, ax: 1 }); worm(486, 0, 7);
   K.checkpoints.push(523);
@@ -260,7 +261,7 @@ function jupiter() {
   // the Asteroid warp hangs outside the lane: only SIDE view, which ignores left and right, can touch it
   zone(300, 520, TOP, 'STORM WALLS - SHIFT TO TOP VIEW');
   for (let i = 0, z = 334; z < 410; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7.5]; xs.forEach((x, k) => k === i % 3 ? head(z, x) : vbolt(z, x, i * 31 + k * 45)); }
-  K.warp(48, 3.5, 3.4); K.warp2(306, -3, 6); funnel(420, -4, 0); funnel(434, 4, 2); funnel(448, 0, 4, 4.5); buoy(441, 6.5, 5); at(392, g => hint(g, 'TORNADOES - THEY WANDER', 180));
+  K.warp(48, 3.5, 3.4); K.warp2(306, -3, 6); K.hill(30, 62, 1.8); K.hill(128, 172, 1.6); K.hill(598, 652, 1.8); /* swells in the cloud deck */ funnel(420, -4, 0); funnel(434, 4, 2); funnel(448, 0, 4, 4.5); buoy(441, 6.5, 5); at(392, g => hint(g, 'TORNADOES - THEY WANDER', 180));
   for (let i = 0, z = 462; z < 512; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7.5]; xs.forEach((x, k) => k === (i + 1) % 3 ? head(z, x) : vbolt(z, x, i * 29 + k * 45)); }
   wing(350, 5, { ...spark, x: 0, ax: 5, y: 5 }); jelly(392, { x: 0, y: 5 }); wing(474, 6, { ...spark, x: 0, ax: 5, y: 4 });
   K.checkpoints.push(523);
@@ -317,7 +318,7 @@ function planetx() {
   // the Pluto warp is tucked into the roof here, and only exists in CHASE
   zone(285, 475, SIDE, 'MEMBRANES - SHIFT TO SIDE VIEW');
   for (let i = 0, z = 320; z < 466; z += 17, i++) { memb(z, i % 2 === 0, i); eye(z + 8, (i % 3 - 1) * 4, i % 2 === 1); if (i % 3 === 2) blob(z + 9, { hp: 10, gem: true }); }
-  K.warp(38, -3.5, 6.2); K.warp2(292, 3, 4);
+  K.warp(38, -3.5, 6.2); K.warp2(292, 3, 4); K.hill(28, 60, 1.8); K.hill(518, 572, 1.5); K.hill(606, 652, 1.3); /* mounds of tissue */
   wing(336, 8, { ...spore, y: 5, ay: 1 }, 1.4); spitter(372, { x: 0, y: 5, ay: 0.5 }); wing(430, 8, { ...spore, y: 4.5, ay: 1.2 }, 1.4);
   K.checkpoints.push(478);
 

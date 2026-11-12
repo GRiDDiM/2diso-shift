@@ -50,6 +50,8 @@ export function addEnemy(g, e) {
   o.max = o.hp; if (o.group) { const gr = g.groups[o.group] ||= { n: 0, k: 0, next: -1, ord: true, dead: [] }; o.gi = gr.n++; }
   g.enemies.push(o); return o;
 }
+// the ground is not flat: levels list hills (a rise, a top, a fall) and this gives the ground height at a spot z ahead of the camera
+export function groundAt(g, z) { const hs = g.level.hills; if (!hs) return 0; const wz = z + g.camZ; let y = 0; for (const h of hs) { if (wz <= h[0] || wz >= h[1]) continue; const u = (wz - h[0]) / (h[1] - h[0]), r = Math.min(1, u / 0.3, (1 - u) / 0.3); y = Math.max(y, h[2] * r * r * (3 - 2 * r)); } return y; }
 export function addObs(g, o) { const b = Object.assign({ x: 0, y: 4.7, z: SPAWN_Z, hx: 1, hy: 1, hz: 1, vx: 0, vy: 0, vz: 0, rel: false, col: '#2ee6ff', warm: 0, kind: 'box' }, o); b.bx = b.x; b.by = b.y; b.warm0 = b.warm; if (b.hp != null) b.hpMax = b.hp; g.obs.push(b); return b; }
 export function addRing(g, r) { const o = Object.assign({ x: 0, y: 4.5, z: SPAWN_Z, r: 1.6, kind: 'bonus', got: false }, r); g.rings.push(o); return o; }
 export function addPod(g, x, y, z, kind = 'pod') { g.pods.push({ x: clamp(x, -7, 7), y: clamp(y, 1, 8.5), z, kind, t: 0 }); }
@@ -191,7 +193,7 @@ export function step(g, inputs) {
       { const k = p.manual ? 0.6 : 0.4; p.ax += (tx - p.ax) * k; p.az += (tz - p.az) * k; } const n = Math.hypot(p.ax, p.az) || 1; p.ax /= n; p.az /= n; }
     else { if (v === 0) { p.z += ax * sp; p.y -= ay * sp; } else if (v === 3) { p.x += ax * sp; p.z -= ay * sp; } else { p.x += ax * sp; p.y -= ay * sp; }
       if (rules.wind) { const w = rules.wind(g); p.x += w[0] * DT; p.y += w[1] * DT; } if (pull) { p.x += pull[0] * DT; p.y += pull[1] * DT; p.z += pull[2] * DT; }
-      p.x = clamp(p.x, -B.x, B.x); p.y = clamp(p.y, B.y0, B.y1); p.z = clamp(p.z, B.z0, B.z1); }
+      p.x = clamp(p.x, -B.x, B.x); p.y = clamp(p.y, B.y0 + (rules.arena ? 0 : groundAt(g, p.z)), B.y1); p.z = clamp(p.z, B.z0, B.z1); } /* the ship rides up over hills */
     p.mvx += (clamp((p.x - ox) / sp, -1, 1) - p.mvx) * 0.22; p.mvy += (clamp((p.y - oy) / sp, -1, 1) - p.mvy) * 0.22; // the ship banks when it slides sideways and noses up or down when it climbs or dives
     p.hist.push(p.x, p.y, p.z); if (p.hist.length > 3 * 80) p.hist.splice(0, 3);
     if (p.inv > 0) p.inv--; if (p.over > 0) p.over--;
@@ -253,6 +255,7 @@ export function step(g, inputs) {
     e.t++; if (e.hit > 0) e.hit--; if (e.hbT > 0) e.hbT--; if (e.deflect > 0) e.deflect--;
     if (e.type === 'boss') { lvd.boss.update(g, e, dt); continue; }
     if (!e.rel) e.z -= dz;
+    if ((e.type === 'walker' || e.type === 'turret') && e.y0 < 4 && g.level.hills) e.y = e.y0 + groundAt(g, e.z); // ground troops stand on the slope
     if (e.type === 'walker') { e.x += e.vx * dt; if (Math.abs(e.x) > 7.2) { e.vx = -e.vx; e.x = clamp(e.x, -7.2, 7.2); } } // things that walk or drive along the floor or the ceiling
     else if (e.type === 'pop') { e.z += e.vz * dt; e.x = e.x0 + e.ax * Math.sin(e.t * 0.02 * e.w + e.ph); e.y = e.y0 + e.ay * Math.sin(e.t * 0.02 * e.w + e.ph + (e.ax ? 1.57 : 0)); if (e.zig) e.x = e.x0 + e.ax * (Math.abs(((e.t * 0.02 * e.w + e.ph) % 2) - 1) * 2 - 1); }
     else if (e.type === 'saucer') { if (e.t < e.dur) { e.z += (e.hold - e.z) * 0.03; e.x = e.x0 + e.ax * Math.sin(e.t * 0.025 + e.ph); e.y = e.y0 + e.ay * Math.sin(e.t * 0.031 + e.ph); } else { e.z -= 14 * dt; } }

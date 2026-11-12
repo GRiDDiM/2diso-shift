@@ -1,5 +1,5 @@
 // 2DISO SHIFT — neon vector renderer. Everything is glowing lines; four projections of the same 3D world.
-import { VIEWS, BAR, BARMAX, DRONE_MODES, GEARS, MASK, U, solid, WAVECOL, waveAt } from './game.js';
+import { VIEWS, BAR, BARMAX, DRONE_MODES, GEARS, MASK, U, solid, WAVECOL, waveAt, groundAt } from './game.js';
 import { text, textWidth } from './font.js';
 export const W = 960, H = 540;
 const TAU = Math.PI * 2;
@@ -144,11 +144,13 @@ function drawShip(g, p, t) {
 }
 
 // ---------- backdrop per planet ----------
-function backdrop(g, th, t) {
+let GHg = null; const GH = z => GHg ? groundAt(GHg, z) : 0; // ground height under a point, when the level has hills
+function backdrop(g, th, t) { GHg = g.level.hills && g.level.hills.length && !th.arena ? g : null;
   const gc = th.grid || '#2443c8', off = g.camZ % 3, base = Math.floor(g.camZ / 4), sky = th.sky, dim = vB === 0 ? 0.2 : 0.5;
   const gx = th.arena ? 13.5 : 9, gz1 = th.arena ? 36 : 30;
   if (!th.nofloor && sky === 'volcano') terrainFloor(g, gc, gx, gz1, th);
-  else if (!th.nofloor) { for (let k = 0; k < (th.arena ? 14 : 12); k++) { const z = -3 - off + k * 3; if (sky === 'sun' || th.trippy) { let lx = -9, ly = Math.sin(z * 0.5 + t * 0.05 - 9 * 0.6) * 0.3; for (let x = -6; x <= 9; x += 3) { const y = Math.sin(z * 0.5 + t * 0.05 + x * 0.6) * 0.3; seg(lx, ly + 0.3, z, x, y + 0.3, z, gc, 0.6); lx = x; ly = y; } } else seg(-gx, 0, z, gx, 0, z, gc, 0.55); } for (let x = -gx; x <= gx; x += th.arena ? 4.5 : 3) seg(x, 0, -3, x, 0, gz1, gc, 0.55); }
+  else if (!th.nofloor) { for (let k = 0; k < (th.arena ? 14 : 12); k++) { const z = -3 - off + k * 3; if (sky === 'sun' || th.trippy) { let lx = -9, ly = Math.sin(z * 0.5 + t * 0.05 - 9 * 0.6) * 0.3; for (let x = -6; x <= 9; x += 3) { const y = Math.sin(z * 0.5 + t * 0.05 + x * 0.6) * 0.3; seg(lx, ly + 0.3 + GH(z), z, x, y + 0.3 + GH(z), z, gc, 0.6); lx = x; ly = y; } } else seg(-gx, GH(z), z, gx, GH(z), z, gc, 0.55); } for (let x = -gx; x <= gx; x += th.arena ? 4.5 : 3) { if (!GHg) seg(x, 0, -3, x, 0, gz1, gc, 0.55); else for (let k = 0; k < 11; k++) { const z = -3 - off + k * 3; seg(x, GH(z), z, x, GH(z + 3), z + 3, gc, 0.55); } } }
+  if (GHg && vB === 0) { NG = true; for (let z = -3; z < 37; z += 0.75) { const a = GH(z), b2 = GH(z + 0.75); if (a > 0.02 || b2 > 0.02) { LW = 2.2; seg(0, a, z, 0, b2, z + 0.75, '#ffffff', 0.75); LW = 1; seg(0, 0, z, 0, a, z, gc, 0.5); } } NG = false; } // side on, a hill is a bright ridge line with hatching under it
   if (th.arena) { const c = th.arena, pu = 0.7 + 0.3 * Math.sin(t * 0.08); for (const y of [0.02, 4.5]) { const al = y < 1 ? 1 : 0.35 * pu; seg(-13.4, y, -0.4, 13.4, y, -0.4, c, al); seg(13.4, y, -0.4, 13.4, y, 34.2, c, al); seg(13.4, y, 34.2, -13.4, y, 34.2, c, al); seg(-13.4, y, 34.2, -13.4, y, -0.4, c, al); } for (const [x, z] of [[-13.4, -0.4], [13.4, -0.4], [13.4, 34.2], [-13.4, 34.2]]) seg(x, 0, z, x, 4.5, z, c, 0.8); circle(0, 0.02, 17, 3 + Math.sin(t * 0.04), c, 0.4, 24, 1, t * 0.01); circle(0, 0.02, 17, 8, c, 0.2, 30, 1, -t * 0.006); circle(0, 0.02, 17, 12.5, c, 0.12, 36, 1, t * 0.004);  arenaFloor(th.sky, c, t); }
   for (let k = -1; k < 9; k++) { const id = base + k, z = id * 4 - g.camZ + 2; for (const s of [-1, 1]) { const r1 = hash(id * 2 + s), r2 = hash(id + s * 9), x = s * (11 + hash(id * 3 + s) * 2);
     if (sky === 'city') { const h = 2 + r1 * 7; box({ x, y: h / 2, z, hx: 1 + r2 * 0.8, hy: h / 2, hz: 1.5 }, s > 0 ? '#7a2bd6' : '#2b56d6', dim, vB === 0 ? 0 : 2); }
@@ -169,8 +171,8 @@ function backdrop(g, th, t) {
 // Mars ground: cracked, uneven terrain. Jagged contour lines tied to the world, joined by cracks, strewn with rocks and craters
 function terrainFloor(g, gc, gx, gz1, th) { const step = 2.2, first = Math.floor((g.camZ - 3) / step), n = Math.ceil((gz1 + 3) / step) + 1; let prev = null;
   for (let k = 0; k < n; k++) { const id = first + k, z = id * step - g.camZ, row = []; for (let i = 0, x = -gx; x <= gx + 0.01; x += 1.5, i++) row.push([x + (hash(id * 5.3 + i) - 0.5) * 0.9, z + (hash(id * 13.1 + i * 7.7) - 0.5) * 1.7]);
-    for (let i = 1; i < row.length; i++) seg(row[i - 1][0], 0, row[i - 1][1], row[i][0], 0, row[i][1], gc, id % 2 ? 0.5 : 0.32);
-    if (prev) for (let i = 0; i < row.length; i++) if (hash(id * 3.7 + i * 11.3) > 0.62) seg(row[i][0], 0, row[i][1], prev[i][0], 0, prev[i][1], gc, 0.3);
+    for (let i = 1; i < row.length; i++) seg(row[i - 1][0], GH(row[i - 1][1]), row[i - 1][1], row[i][0], GH(row[i][1]), row[i][1], gc, id % 2 ? 0.5 : 0.32);
+    if (prev) for (let i = 0; i < row.length; i++) if (hash(id * 3.7 + i * 11.3) > 0.62) seg(row[i][0], GH(row[i][1]), row[i][1], prev[i][0], GH(prev[i][1]), prev[i][1], gc, 0.3);
     const rx = (hash(id * 9.1) - 0.5) * gx * 1.8, rr = 0.25 + hash(id * 2.3) * 0.55; if (hash(id * 4.9) > 0.45) circle(rx, 0.03, z + 0.6, rr, hash(id) > 0.7 ? '#ff8a2b' : '#c0532a', 0.5, 7, 1, id); if (hash(id * 6.1) > 0.8) { circle(-rx * 0.7, 0.03, z + 1.2, 1.1, gc, 0.45, 10, 1); circle(-rx * 0.7, 0.03, z + 1.2, 0.7, gc, 0.3, 8, 1); }
     if (vB === 0 && prev) seg(0, hash((id - 1) * 1.7) * 0.4, prev[0][1], 0, hash(id * 1.7) * 0.4, row[0][1], '#c0532a', 0.6); prev = row; } }
 // the cave on Mars: a jagged roof with teeth, and rough walls down both sides
@@ -179,7 +181,7 @@ function caveRoof(g, th, gc) { const step = 2.4, first = Math.floor((g.camZ - 3)
     for (const sx of [-9.5, 9.5]) { let wy = 0, wx = sx; for (let j = 1; j <= 5; j++) { const y = j * 1.95, x = sx + (hash(id * 2.9 + j + sx) - 0.5) * 0.9; seg(wx, wy, z, x, y, z, gc, 0.42); wx = x; wy = y; } } } }
 // Jupiter has no ground: layers of fine wavy net drift past underneath, each slower than the one above, and one more overhead
 function cloudNets(g, t) { const LY = HQ ? [[-0.4, 1, 1.5, '#c98a4a', 0.42], [-1.6, 0.6, 3, '#a85a2a', 0.3], [-3, 0.35, 3, '#7a4a1e', 0.24], [10.3, 0.8, 3, '#c98a4a', 0.22]] : [[-0.4, 1, 3, '#c98a4a', 0.4]]; NG = true;
-  for (const [y0, par, dzs, c, al] of LY) { const cw = g.camZ * par, zo = ((cw % dzs) + dzs) % dzs, f = (x, zw) => y0 + Math.sin(x * 0.55 + zw * 0.3 + t * 0.012) * 0.45 + Math.sin(zw * 0.7 - x * 0.25) * 0.22, rows = Math.ceil(36 / dzs);
+  for (const [y0, par, dzs, c, al] of LY) { const cw = g.camZ * par, zo = ((cw % dzs) + dzs) % dzs, top = y0 > -1 && y0 < 5, f = (x, zw) => y0 + (top ? GH(zw - cw) : 0) + Math.sin(x * 0.55 + zw * 0.3 + t * 0.012) * 0.45 + Math.sin(zw * 0.7 - x * 0.25) * 0.22, rows = Math.ceil(36 / dzs);
     for (let k = 0; k < rows; k++) { const z = -3 - zo + k * dzs; let lx = -10.5, ly = f(-10.5, cw + z); for (let x = -9; x <= 10.51; x += 1.5) { const y = f(x, cw + z); seg(lx, ly, z, x, y, z, c, al); lx = x; ly = y; } }
     for (let x = -10.5; x <= 10.51; x += 3) { let lz = -3 - zo, ly = f(x, cw + lz); for (let k = 1; k < rows; k++) { const z = -3 - zo + k * dzs, y = f(x, cw + z); seg(x, ly, lz, x, y, z, c, al * 0.7); lz = z; ly = y; } } } NG = false; }
 

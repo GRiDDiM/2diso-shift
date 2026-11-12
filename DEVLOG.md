@@ -331,6 +331,11 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **The lava tide rolls.** The rising lava and falling ash in THE COLOSSUS fight now have a proper wave running along the surface and through the layers beneath it.
 - **No more lava lines.** The flickering lines over the nearby volcanoes are gone. Far-off volcanoes now spit blobs of lava that arc up and fall back.
 
+### 30. The ground is not flat (r37)
+- **Hills, slopes and ramps.** Every planet now has stretches where the ground rises, levels off and falls away: overpasses and embankments on Earth, dunes and ridges on Mars (one runs through the cave), swells in Jupiter's cloud deck, mounds of tissue on Planet X.
+- **The ship rides over them.** A hill does not kill. It lifts the lowest height you can fly at, so there is less room under whatever is overhead. Ground troops stand on the slope.
+- **The floor follows the slope** in every view. Side on, a hill is a bright ridge line with hatching beneath it.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
