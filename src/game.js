@@ -110,9 +110,9 @@ function hurt(g, p) {
   if (p.inv > 0 || p.dead > 0) return; g.stats.hits++;
   if (p.shield > 0 && g.loop < 3) { p.shield = g.loop >= 2 ? 0 : p.shield - 1; p.inv = LOOP.inv[lp(g)]; /* loop 3: one hit strips every layer. loop 4: shields do nothing */ g.fx.push('shield'); explode(g, p.x, p.y, p.z, '#5ee7ff', 12, 7); g.shake = 6; return; }
   explode(g, p.x, p.y, p.z, '#ffffff', 46, 15); explode(g, p.x, p.y, p.z, '#ff3df0', 30, 10); g.fx.push('die'); g.shake = 14; g.flash = 10; g.chain = 0; g.stats.deaths++;
-  if (g.level.bonus) { p.dead = 1e9; g.state = 'over'; g.endT = 0; return; } // a bonus stage just ends; it never costs a ship
+  if (g.level.bonus && !g.mut.rush) { p.dead = 1e9; g.state = 'over'; g.endT = 0; return; } // a bonus stage just ends; it never costs a ship (in boss rush it costs one like anywhere else)
   p.lives--; p.dead = 70;
-  for (let k = 1; k <= 5; k++) p.up[k] = 0; g.players[0].cursor = -1; for (let k = 0, n = g.boss ? 4 : 2; k < n; k++) addPod(g, (k - (n - 1) / 2) * 2.6, 4.6, 13 + k * 2.5); // a few pods to start rebuilding with, more in a boss fight pop(g, 'WEAPONS LOST', p.x, p.y + 2, p.z + 2, '#ff4d6d', true); // a lost ship takes its weapons with it: drones stay, the guns start over
+  for (let k = 1; k <= 5; k++) p.up[k] = 0; g.players[0].cursor = -1; for (let k = 0, n = g.boss ? 4 : 2; k < n; k++) addPod(g, (k - (n - 1) / 2) * 2.6, 4.6, 13 + k * 2.5); /* a few pods to start rebuilding with, more in a boss fight */ pop(g, 'WEAPONS LOST', p.x, p.y + 2, p.z + 2, '#ff4d6d', true); // a lost ship takes its weapons with it: drones stay, the guns start over
 }
 function startGod(g, p) { p.god = 660; g.fx.push('god', 'say:god mode'); pop(g, 'GOD MODE!', p.x, p.y + 1, p.z + 2, '#ffffff', true); while (p.drones.length < 6) p.drones.push({ x: p.x, y: p.y, z: p.z, tmp: true }); }
 function buy(g, p) { // in co-op the upgrade bar is the team's: one cursor, one loadout, both ships get the goods
@@ -244,7 +244,7 @@ export function step(g, inputs) {
     if (!rules.heat) { const p = P[0]; let over = false; for (const o of g.obs) if (o.kind === 'lava' && Math.abs(p.z - o.z) < o.hz) { over = true; break; } // lava underfoot cooks the hull and drags the ship: shift up, or dash forward, to get across
       if (over && !g.overLava) { pop(g, 'LAVA - SPEED UP', p.x, p.y + 1.3, p.z + 2, '#ff8a2b', true); g.fx.push('gear'); } g.overLava = over; g.heat = clamp((g.heat || 0) + (over ? 0.46 : -0.4), 0, 100);
       if (g.heat >= 100 && p.dead <= 0) { g.heat = 45; g.cause = 'lava'; hurt(g, p); pop(g, 'OVERHEAT', p.x, p.y + 1, p.z, '#ff4d6d', true); } }
-    if (rules.heat && g.camZ > 26 && !g.mini) { /* no cooking during the miniboss: there is no shade left by then */ const p = P[0], m = MASK[g.view]; let shade = false; for (const o of g.obs) if (o.kind === 'shade' && ov({ x: p.x, y: p.y, z: p.z, r: 0.1 }, o, m)) { shade = true; break; }
+    if (rules.heat && g.camZ > 26 && !g.mini && !g.mut.rush) { /* no cooking during the miniboss: there is no shade left by then */ const p = P[0], m = MASK[g.view]; let shade = false; for (const o of g.obs) if (o.kind === 'shade' && ov({ x: p.x, y: p.y, z: p.z, r: 0.1 }, o, m)) { shade = true; break; }
       g.heat = clamp(g.heat + (shade ? -1.2 : 0.3), 0, 100); if (g.heat >= 100 && p.dead <= 0) { g.heat = 45; hurt(g, p); pop(g, 'OVERHEAT', p.x, p.y + 1, p.z, '#ff4d6d', true); } }
     if (lvd.tick) lvd.tick(g);
   }

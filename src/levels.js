@@ -438,13 +438,13 @@ function arena(of) {
   const edge = g => { const a = g.rand() * 6.283, x = Math.cos(a) * 18, z = 17 + Math.sin(a) * 22; return [Math.max(-13.5, Math.min(13.5, x)), Math.max(-0.5, Math.min(34.5, z))]; };
   const spawn = (g, spec, extra) => { const [x, z] = edge(g); return addEnemy(g, { type: 'seek', x, y: 4.5, z, r: 0.6, score: 100, ph: g.rand() * 6, ...spec, ...extra }); };
   const tick = g => {
-    const A = g.ar || (g.ar = { wave: 0, total: WAVES.length, t: 40, left: 0, name: T.name, q: [] }), alive = g.enemies.filter(e => e.hp > 0);
+    const A = g.ar || (g.ar = { wave: g.mut.rush ? WAVES.length : 0, total: WAVES.length, t: 40, left: 0, name: T.name, q: [] }), alive = g.enemies.filter(e => e.hp > 0);
     A.left = alive.length + A.q.length; const ph = alive.filter(e => e.phase === 1).length; g.recView = ph > alive.length - ph ? 1 : 3;
     if (A.q.length) { if (g.tick % 30 === 0) for (let i = 0; i < 2 && A.q.length; i++) { const [spec, extra] = A.q.shift(); spawn(g, spec, extra); } return; } // enemies pour in from the edges a few at a time
     runMini(g); if (alive.length) { A.t = 0; return; }
     if (++A.t < 75) return; A.t = 0;
     if (A.wave >= WAVES.length && !A.mini) { A.mini = true; const M = ARENA_MINI[of]; g.mini = addEnemy(g, { type: 'seek', sp: 0, keep: 1e6, mini: true, name: M.name, ai: M.ai, x: 0, y: 4.5, z: 30, hp: Math.round(M.hp * power(g)), hpMax: Math.round(M.hp * power(g)), r: M.r, col: M.col, shape: M.shape, score: 0, big: true }); hint(g, 'MINIBOSS // ' + M.name, 200); g.fx.push('charge', 'say:miniboss'); g.obs.length = 0; return; }
-    if (A.wave >= WAVES.length) { g.state = 'clear'; g.endT = 0; g.score += 15000; g.fx.push('clear', 'say:arena clear', 'toast:ALL WAVES CLEARED|+15000'); return; }
+    if (A.wave >= WAVES.length) { g.state = 'clear'; g.endT = 0; if (!g.mut.rush) { g.score += 15000; g.fx.push('clear', 'say:arena clear', 'toast:ALL WAVES CLEARED|+15000'); } return; }
     const w = WAVES[A.wave++], hpx = 1 + A.wave * 0.25; hint(g, 'WAVE ' + A.wave + ' / ' + WAVES.length + (A.wave === 3 ? '   WHITE ONES: SHIFT TO ISO' : ''), 150); g.fx.push('charge'); if (A.wave === 1) T.hazard(g);
     const add = (n, spec, extra) => { for (let i = 0; i < n; i++) A.q.push([spec, { ...extra, hp: Math.round((extra.hp || spec.hp) * hpx) }]); };
     add(w[0], T.grunt, { hp: T.grunt.hp * 4, score: 15 }); add(w[1], T.fast, { hp: T.fast.hp * 5, score: 25 }); add(w[3], T.grunt, { col: '#ffffff', phase: 1, hp: T.grunt.hp * 4, score: 30 });

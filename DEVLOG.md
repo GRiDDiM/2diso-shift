@@ -336,6 +336,12 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **The ship rides over them.** A hill does not kill. It lifts the lowest height you can fly at, so there is less room under whatever is overhead. Ground troops stand on the slope.
 - **The floor follows the slope** in every view. Side on, a hill is a bright ridge line with hatching beneath it.
 
+### 31. Boss rush (r38)
+- **A new mode in the PLAY menu.** Twelve fights back to back: each planet's boss, then its arena miniboss, then its warp-stage miniboss, from OVERSEER to FROST WARDEN. No results screens, no map and no story in between.
+- **How it starts each fight.** Planets begin at the checkpoint just before the boss, bonus stages just before their miniboss, and arenas skip their waves. You start with a modest loadout and five ships, and carry upgrades, ships and score from fight to fight. Here a hit in a bonus stage costs a ship like anywhere else, not the whole stage.
+- **Score and time.** A clock runs while you play and shows in the HUD with the fight number. The end screen gives fights won, time and score, and your best run is kept and shown in the PLAY menu. Beating all twelve unlocks a new achievement, GAUNTLET.
+- Also fixed: the WEAPONS LOST callout when you lose a ship had been silently switched off by a stray comment.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
