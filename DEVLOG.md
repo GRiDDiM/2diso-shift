@@ -217,6 +217,18 @@ Nine ideas went on the list and all nine went in, plus one more from Benjamin.
 - **Pods always pay.** Buying anything is worth 500 points, so pods still matter when everything is maxed.
 - **A lost ship takes its weapons with it.** Drones stay, the guns start over. It was too easy to max everything by the middle of the second planet and never look back.
 
+### 14. Seventh playtest: busier, wider, easier to read
+> "the levels should be really busy but with enough time to react to everything"
+
+- **Wider and taller.** The lane is a little wider and higher, and the camera sits further back again, in levels and in boss fights.
+- **Far backgrounds.** Every planet has a distant layer now: a lit skyline with searchlights on Earth, volcano ranges with smoke plumes on Mars, drifting cloud belts and a great storm on Jupiter, swaying stalks with eyes on Planet X. Plus a moon or neighbouring world in every sky.
+- **Earth looks like a city.** Buildings have lit windows and blinking masts. The skyways are truss bridges with running lights.
+- **More of everything.** More enemy flights on every planet, small things to blast in the gaps, and ground troops: tracked guns on Earth and Jupiter, legged crawlers on Mars and Planet X, on the floor and sometimes the ceiling.
+- **Missiles hug the walls.** They are no longer homing: one goes up and one goes down, then they run along the ceiling and the floor. In top view they run along the side walls. That makes them the answer to ground troops. The bolt is still the homing weapon.
+- **More time to shift.** The call to change view comes earlier, nothing solid sits around a change of view, and if the view you need is two rolls away a single press takes you straight there. The L or R that gets you there lights up.
+- **Boss walls fade in.** They start as a ghost and firm up gradually, and only blink in the last moment.
+- **Catching up.** Losing a ship drops a few pods (more in a boss fight), and bosses throw a pod now and then.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

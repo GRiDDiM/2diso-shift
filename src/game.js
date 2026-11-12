@@ -3,7 +3,7 @@
 // The four views flatten different axes, and what a view flattens does not exist for collisions.
 export const VIEWS = ['SIDE', 'ISO', 'CHASE', 'TOP'];
 export const MASK = [[0, 1, 1], [1, 1, 1], [1, 1, 1], [1, 0, 1]]; // which of x,y,z count in each view
-export const B = { x: 7.5, y0: 0.6, y1: 8.8, z0: 0.5, z1: 12 };
+export const B = { x: 8.2, y0: 0.6, y1: 9.1, z0: 0.5, z1: 12 };
 export const BAR = ['DRONE', 'MISSILE', 'LASER', 'WAVE', 'BOLT', 'SPREAD', 'SHIELD', '???'];
 export const BARMAX = [6, 3, 3, 3, 3, 3, 3, 99];
 const EFF = [0, 2, 4, 5]; // three ranks per weapon: the weak early ranks are skipped, rank 3 is still the full max effect
@@ -45,7 +45,7 @@ export function addEnemy(g, e) {
   o.max = o.hp; if (o.group) { (g.groups[o.group] ||= { n: 0, k: 0 }).n++; }
   g.enemies.push(o); return o;
 }
-export function addObs(g, o) { const b = Object.assign({ x: 0, y: 4.7, z: SPAWN_Z, hx: 1, hy: 1, hz: 1, vx: 0, vy: 0, vz: 0, rel: false, col: '#2ee6ff', warm: 0, kind: 'box' }, o); b.bx = b.x; b.by = b.y; if (b.hp != null) b.hpMax = b.hp; g.obs.push(b); return b; }
+export function addObs(g, o) { const b = Object.assign({ x: 0, y: 4.7, z: SPAWN_Z, hx: 1, hy: 1, hz: 1, vx: 0, vy: 0, vz: 0, rel: false, col: '#2ee6ff', warm: 0, kind: 'box' }, o); b.bx = b.x; b.by = b.y; b.warm0 = b.warm; if (b.hp != null) b.hpMax = b.hp; g.obs.push(b); return b; }
 export function addRing(g, r) { const o = Object.assign({ x: 0, y: 4.5, z: SPAWN_Z, r: 1.6, kind: 'bonus', got: false }, r); g.rings.push(o); return o; }
 export function addPod(g, x, y, z, kind = 'pod') { g.pods.push({ x: clamp(x, -7, 7), y: clamp(y, 1, 8.5), z, kind, t: 0 }); }
 export function bullet(g, x, y, z, vx, vy, vz, col = '#ff8a2b') { if (g.ebul.length < 260) g.ebul.push({ x, y, z, vx, vy, vz, r: 0.28, col, life: 420 }); }
@@ -97,7 +97,7 @@ function hurt(g, p) {
   explode(g, p.x, p.y, p.z, '#ffffff', 46, 15); explode(g, p.x, p.y, p.z, '#ff3df0', 30, 10); g.fx.push('die'); g.shake = 14; g.flash = 10; g.chain = 0; g.stats.deaths++;
   if (g.level.bonus) { p.dead = 1e9; g.state = 'over'; g.endT = 0; return; } // a bonus stage just ends; it never costs a ship
   p.lives--; p.dead = 70;
-  for (let k = 1; k <= 5; k++) p.up[k] = 0; g.players[0].cursor = -1; pop(g, 'WEAPONS LOST', p.x, p.y + 2, p.z + 2, '#ff4d6d', true); // a lost ship takes its weapons with it: drones stay, the guns start over
+  for (let k = 1; k <= 5; k++) p.up[k] = 0; g.players[0].cursor = -1; for (let k = 0, n = g.boss ? 4 : 2; k < n; k++) addPod(g, (k - (n - 1) / 2) * 2.6, 4.6, 13 + k * 2.5); // a few pods to start rebuilding with, more in a boss fight pop(g, 'WEAPONS LOST', p.x, p.y + 2, p.z + 2, '#ff4d6d', true); // a lost ship takes its weapons with it: drones stay, the guns start over
 }
 function startGod(g, p) { p.god = 660; g.fx.push('god', 'say:god mode'); pop(g, 'GOD MODE!', p.x, p.y + 1, p.z + 2, '#ffffff', true); while (p.drones.length < 6) p.drones.push({ x: p.x, y: p.y, z: p.z, tmp: true }); }
 function buy(g, p) { // in co-op the upgrade bar is the team's: one cursor, one loadout, both ships get the goods
@@ -160,7 +160,7 @@ export function step(g, inputs) {
     const inp = inputs[p.i] || {}, pv = p.prev, edge = k => inp[k] && !pv[k];
     if (p.dead > 0) { if (--p.dead === 0) { if (p.lives < 0) { p.dead = 1e9; p.out = true; if (P.every(q => q.out)) { g.state = 'over'; g.endT = 0; g.fx.push('over', 'say:game over'); } } else { p.x = g.coop ? (p.i ? 1.5 : -1.5) : 0; p.y = 4.5; p.z = rules.arena ? 11 : 3; p.inv = 190; } } p.prev = inp; continue; }
     const dir = edge('shiftR') ? 1 : edge('shiftL') ? -1 : 0;
-    if (dir && g.shiftCd <= 0 && !g.lockShift) doShift(g, rules.arena ? (g.view === 3 ? 1 : 3) : (g.view + dir + 4) % 4, dir, p);
+    if (dir && g.shiftCd <= 0 && !g.lockShift) doShift(g, rules.arena ? (g.view === 3 ? 1 : 3) : (g.recView - g.view + 4) % 4 === 2 ? g.recView : (g.view + dir + 4) % 4, dir, p); // when the view you need is two rolls away, one press goes straight to it
     if (edge('upgrade')) buy(g, p);
     if (edge('bomb')) nuke(g, p);
     if (edge('drone')) { p.dmode = (p.dmode + 1) % 4; pop(g, 'DRONES: ' + DRONE_MODES[p.dmode], p.x, p.y + 1, p.z, '#b06bff'); g.fx.push('blip'); }
@@ -190,7 +190,7 @@ export function step(g, inputs) {
     const Bo = lv(p, U.BOLT);
     if (Bo && firing && --p.boltT <= 0) { p.boltT = (Bo >= 5 ? 26 : Bo >= 4 ? 40 : 64) * (od ? 0.6 : 1) | 0; const n = 1; for (let k = 0; k < n; k++) g.shots.push({ kind: 4, x: p.x, y: p.y, z: p.z + 1, vx: 0, vy: 0, vz: 0, t: 0, ph: g.rand() * 6.283 + k * 2.1, own: p.i, dmg: 5 + 3 * Bo, chain: Bo >= 4 ? Bo - 1 : Bo >= 2 ? 1 : 0, r: 0.5, life: 150, trail: [] }); g.fx.push('bolt'); }
     const M = lv(p, U.MISSILE);
-    if (M && firing && --p.missT <= 0) { p.missT = (od ? 0.6 : 1) * (62 - 8 * M) | 0; const rear = M >= 5 ? 4 : M >= 4 ? 2 : 0; for (let k = 0; k < 2 + rear && g.shots.length < 420; k++) { const back = k >= 2, j = back ? k - 2 : k, nn = back ? rear : 2, a = (j - (nn - 1) / 2) * 0.55, fw = back ? -7 : 6; g.shots.push({ x: p.x, y: p.y, z: p.z, vx: p.az * Math.sin(a) * 9 + p.ax * fw, vy: rules.arena ? 0 : Math.cos(a * 2) * (back ? 3 : 5), vz: -p.ax * Math.sin(a) * 9 + p.az * fw, dmg: 6 + 2 * M, r: 0.45, kind: 2, life: 150, aoe: 1.4 + 0.4 * M, split: M >= 5 }); } g.fx.push('missile'); }
+    if (M && firing && --p.missT <= 0) { p.missT = (od ? 0.6 : 1) * (62 - 8 * M) | 0; const rear = M >= 5 ? 4 : M >= 4 ? 2 : 0; for (let k = 0; k < 2 + rear && g.shots.length < 420; k++) { const back = k >= 2, j = back ? k - 2 : k, nn = back ? rear : 2, a = (j - (nn - 1) / 2) * 0.55, fw = back ? -7 : 6, hug = !rules.arena, dr = j % 2 ? -1 : 1, sideways = v === 3; g.shots.push({ x: p.x, y: p.y, z: p.z, hug, vx: hug ? (sideways ? dr * 13 : 0) : p.az * Math.sin(a) * 9 + p.ax * fw, vy: hug ? (sideways ? 0 : dr * 13) : 0, vz: hug ? (back ? -6 - (j >> 1) * 5 : 5) : -p.ax * Math.sin(a) * 9 + p.az * fw, dmg: 6 + 2 * M, r: 0.45, kind: 2, life: 150, aoe: 1.4 + 0.4 * M, split: M >= 5 }); } g.fx.push('missile'); }
     // drones
     const n = p.drones.length, vw = g.view;
     for (let k = 0; k < n; k++) {
@@ -214,7 +214,7 @@ export function step(g, inputs) {
   if (playing) {
     g.camZ += dz;
     if (!g.boss) while (g.evi < lvd.events.length && lvd.events[g.evi].z <= g.camZ) { const e = lvd.events[g.evi++]; if ((e.lim ?? e.z) >= g.z0 - 0.01) e.fn(g); }
-    const zn = lvd.zones.find(z => g.camZ + 24 >= z.z0 && g.camZ + 24 < z.z1);
+    const zn = lvd.zones.find(z => g.camZ + 32 >= z.z0 && g.camZ + 32 < z.z1);
     if (zn && zn !== g.zone) { g.zone = zn; if (zn.msg) hint(g, zn.msg, 260); }
     if (!g.boss && g.zone) g.recView = g.zone.view;
     for (const c of lvd.checkpoints) if (g.camZ >= c && c > g.checkpoint) { g.checkpoint = c; g.cpSnap = snapshot(g); g.fx.push('blip', 'toast:CHECKPOINT|PROGRESS SAVED'); }
@@ -230,7 +230,8 @@ export function step(g, inputs) {
     e.t++; if (e.hit > 0) e.hit--; if (e.deflect > 0) e.deflect--;
     if (e.type === 'boss') { lvd.boss.update(g, e, dt); continue; }
     if (!e.rel) e.z -= dz;
-    if (e.type === 'pop') { e.z += e.vz * dt; e.x = e.x0 + e.ax * Math.sin(e.t * 0.02 * e.w + e.ph); e.y = e.y0 + e.ay * Math.sin(e.t * 0.02 * e.w + e.ph + (e.ax ? 1.57 : 0)); if (e.zig) e.x = e.x0 + e.ax * (Math.abs(((e.t * 0.02 * e.w + e.ph) % 2) - 1) * 2 - 1); }
+    if (e.type === 'walker') { e.x += e.vx * dt; if (Math.abs(e.x) > 7.2) { e.vx = -e.vx; e.x = clamp(e.x, -7.2, 7.2); } } // things that walk or drive along the floor or the ceiling
+    else if (e.type === 'pop') { e.z += e.vz * dt; e.x = e.x0 + e.ax * Math.sin(e.t * 0.02 * e.w + e.ph); e.y = e.y0 + e.ay * Math.sin(e.t * 0.02 * e.w + e.ph + (e.ax ? 1.57 : 0)); if (e.zig) e.x = e.x0 + e.ax * (Math.abs(((e.t * 0.02 * e.w + e.ph) % 2) - 1) * 2 - 1); }
     else if (e.type === 'saucer') { if (e.t < e.dur) { e.z += (e.hold - e.z) * 0.03; e.x = e.x0 + e.ax * Math.sin(e.t * 0.025 + e.ph); e.y = e.y0 + e.ay * Math.sin(e.t * 0.031 + e.ph); } else { e.z -= 14 * dt; } }
     else if (e.type === 'kami') { const p = near(g, e), s = 4.6 * dt; e.z += e.vz * dt; if (e.z > p.z) { e.x += clamp(p.x - e.x, -s, s) * m[0]; e.y += clamp(p.y - e.y, -s, s) * m[1]; } }
     else if (e.type === 'seek') { const p = near(g, e), dx = p.x - e.x, dzz = p.z - e.z, d = Math.hypot(dx, dzz) || 1, sp = (e.sp || 4) * dt, wv = Math.sin(e.t * 0.07 + e.ph) * (e.wob || 0) * dt; if (d > (e.keep || 0)) { e.x += dx / d * sp - dzz / d * wv; e.z += dzz / d * sp + dx / d * wv; } else { e.x += -dzz / d * sp * 0.6; e.z += dx / d * sp * 0.6; } e.y = 4.5; }
@@ -249,7 +250,10 @@ export function step(g, inputs) {
         if (best) { const d = Math.hypot(best.x - s.x, best.y - s.y, best.z - s.z) || 1, sp = 46 * dt; if (d < sp + (best.hx ?? best.r)) { damage(g, best, s.dmg); explode(g, best.x, best.y, best.z, '#7df9ff', 8, 8); g.fx.push('zap'); if (s.chain > 0) { s.chain--; s.dmg *= 0.7; s.skip = best; s.x = best.x; s.y = best.y; s.z = best.z; } else s.life = 0; } else { s.x += (best.x - s.x) / d * sp; s.y += (best.y - s.y) / d * sp; s.z += (best.z - s.z) / d * sp; } }
         else { s.z += 30 * dt; if (s.z > 34) s.life = 0; } }
       if (--s.life <= 0) s.life = 0; continue; }
-    if (s.kind === 2) { let best = null, bd = 1e9; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e.z > 30) continue; const d = Math.hypot((e.x - s.x) * m[0], (e.y - s.y) * m[1], e.z - s.z); if (d < bd) { bd = d; best = e; } }
+    if (s.kind === 2 && s.hug) { // not a homing missile: it drops (or climbs) to the nearest surface and runs along it
+      if (!s.on) { if (s.y <= 0.55 || s.y >= 9.15 || Math.abs(s.x) >= 8.4) { s.on = 1; s.y = clamp(s.y, 0.55, 9.15); s.x = clamp(s.x, -8.4, 8.4); s.vx = 0; s.vy = 0; s.vz = 5; } } else s.vz = Math.min(26, s.vz + 1.1);
+      if (g.tick % 2 === 0 && g.parts.length < 500) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: (g.rand() - 0.5) * 1.5, vy: (g.rand() - 0.5) * 1.5, vz: -4, life: 16, max: 16, col: g.tick % 4 ? '#ff8a2b' : '#ffe14a' }); }
+    else if (s.kind === 2) { let best = null, bd = 1e9; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e.z > 30) continue; const d = Math.hypot((e.x - s.x) * m[0], (e.y - s.y) * m[1], e.z - s.z); if (d < bd) { bd = d; best = e; } }
       if (best) { const d = bd || 1, a = 2.2; s.vx += (best.x - s.x) / d * a * m[0]; s.vy += (best.y - s.y) / d * a * m[1]; s.vz += (best.z - s.z) / d * a; } else s.vz += 1.2; const sp = Math.hypot(s.vx, s.vy, s.vz), mx = 30; if (sp > mx) { s.vx *= mx / sp; s.vy *= mx / sp; s.vz *= mx / sp; }
       if (g.tick % 2 === 0 && g.parts.length < 500) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: (g.rand() - 0.5) * 1.5, vy: (g.rand() - 0.5) * 1.5, vz: -4, life: 16, max: 16, col: g.tick % 4 ? '#ff8a2b' : '#ffe14a' }); }
     s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt; if (--s.life <= 0 || s.z > 36 || s.z < -3 || Math.abs(s.x) > 13 || s.y < -1 || s.y > 12) { s.life = 0; continue; }
