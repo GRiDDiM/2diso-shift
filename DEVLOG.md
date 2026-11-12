@@ -282,6 +282,10 @@ BDC's note: everything was dying in one shot before you even noticed it.
 - **The levels move slower,** and there are four speeds now: SLOW, CRUISE, FAST and TURBO. Slow is about a sixth slower than it was; turbo is the old top speed. Par times are longer to match.
 - **Changing speed is called out.** SHIFTING UP or SHIFTING DOWN shows over the ship with the new speed, and the announcer says it.
 
+### 22. Traffic from behind, and a building site (r28)
+- **Hover traffic is a CHASE section now.** BDC found it far more fun from behind the ship than from the isometric view, so the level calls for CHASE there.
+- **A construction zone takes the ISO slot on Earth.** Half-built girders at every height, crane loads swinging across the lane on their cables, crate stacks to shoot through for gems and pods, and turrets on the ground. It sits between the firewall gates and the traffic, so the level is a little longer and its par time went up to match.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

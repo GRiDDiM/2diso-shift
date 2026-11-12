@@ -117,27 +117,39 @@ function earth() {
   wing(588, 4, { ...dart, x: 0, y: 4.5, ax: 2, ay: 1 });
   K.checkpoints.push(804);
 
-  // the Moon warp hides up in the corner here, and only exists in ISO
-  zone(800, 1010, ISO, 'HOVER TRAFFIC - SHIFT TO ISO VIEW');
-  for (let i = 0, z = 838; z < 1000; z += 10, i++) { const y = [2.4, 5, 7.4][i % 3], d = i % 2 ? 4 : -4; car(z, -8 + (i * 5) % 16, y, d); car(z, 2 - (i * 3) % 10, y, d); car(z + 5, 6 - (i * 7) % 14, [5, 7.4, 2.4][i % 3], -d * 1.4, i % 3 === 0 ? 2.4 : 1.3); car(z + 2.5, -6 + (i * 4) % 13, [7.4, 2.4, 5][i % 3], d * 0.8); car(z + 7.5, 5 - (i * 6) % 12, [2.4, 5, 7.4][(i + 1) % 3], -d); if (i % 4 === 1) obs(z + 5, { x: ((i * 5) % 11) - 5, y: 4.75, hx: 0.7, hy: 4.75, hz: 0.7, col: C.pylon, kind: 'pylon' }); if (i % 6 === 3 && z < 900) slab(z + 5, false, { hz: 0.8 }); }
-  K.warp(58, 3, 6.4);
-  wing(852, 5, { ...dart, x: 0, y: 6, ax: 3, ay: 1 }); saucer(884, { x: -2, y: 6.5 }); carrier(916, { x: -4, y: 4 }); wing(952, 6, { ...dart, x: 2, y: 3.5, ax: 4, ay: 1.5 }); carrier(980, { x: 2, y: 6 });
+  // a tower going up: half-built girders at every height, crane loads swinging across the lane, crate stacks to shoot through. Only ISO shows it all
+  zone(800, 1010, ISO, 'CONSTRUCTION ZONE - SHIFT TO ISO VIEW');
+  const girder = (z, x, y, hx = 4.3) => obs(z, { x, y, hx, hy: 0.42, hz: 0.7, col: '#ffe14a', kind: 'slab' });
+  const crate = (z, x, y, o) => obs(z, { x, y, hx: 1, hy: 1, hz: 1, col: '#ff8a2b', kind: 'crate', hp: 7, score: 120, ...o });
+  const crane = (z, x, ph) => { obs(z, { x, y: 4.75, hx: 0.45, hy: 4.75, hz: 0.45, col: C.pylon, kind: 'pylon' }); obs(z, { x: x > 0 ? x - 4.6 : x + 4.6, y: 4.4, hx: 1.1, hy: 1, hz: 1.1, col: '#3dffb0', kind: 'elevator', osc: { ax: 3.3, ay: 0.5, w: 1.3, ph } }); };
+  for (let i = 0, z = 838; z < 1000; z += 13, i++) { const m = i % 4, sd = i % 8 < 4 ? 1 : -1;
+    if (m === 0) { girder(z, -4.3 * sd, 2.5); girder(z, 4.3 * sd, 6.9); }
+    else if (m === 1) crane(z, 7.4 * sd, i * 1.3);
+    else if (m === 2) { girder(z, 4.3 * sd, 3.4); girder(z, -4.3 * sd, 7.4); crate(z + 6, -2.4 * sd, 1, { gem: true }); crate(z + 6, -2.4 * sd, 3, { pod: i % 8 === 2 }); }
+    else { girder(z, 0, 5, 3); crate(z, -6 * sd, 1); crate(z, 6 * sd, 1); crate(z, 6 * sd, 3, { gem: true }); turret(z + 6, 3.5 * sd); } }
+  wing(850, 5, { ...dart, x: 0, y: 5, ax: 3, ay: 1.2 }); carrier(880, { x: -3, y: 6 }); kami(905, { x: 2, y: 4 }); wing(930, 6, { ...dart, x: -2, y: 4, ax: 4, ay: 1.4 }); saucer(958, { x: 2, y: 6.4 }); carrier(985, { x: 3, y: 4 });
   K.checkpoints.push(1014);
 
-  zone(1010, 1080, TOP, 'LOCKDOWN - TOP VIEW!');
-  for (let i = 0, z = 1044; z < 1076; z += 16, i++) { for (const x of i % 2 ? [-3.2, 3.2] : [-6.4, 0, 6.4]) tower(z, x, 9.5); turret(z + 8, i % 2 ? 0 : -3.2); }
-  zone(1080, 1150, SIDE, 'SIDE VIEW!'); for (let i = 0, z = 1112; z < 1146; z += 16, i++) slab(z, i % 2 === 1);
-  zone(1150, 1225, CHASE, 'CHASE VIEW!'); [[-3, 5], [3, 3.4], [0, 6]].forEach(([x, y], i) => gate(1180 + i * 19, x, y));
-  at(1030, g => addPod(g, 0, 5, SPAWN_Z, 'god')); wing(1034, 4, { ...dart, x: 0, y: 5, ax: 4 }); kami(1125, { x: 0, y: 6 }); carrier(1160, { x: -3, y: 5 }); carrier(1215, { x: 0, y: 6 });
-  K.checkpoints.push(1228);
+  zone(1010, 1220, CHASE, 'HOVER TRAFFIC - SHIFT TO CHASE VIEW');
+  for (let i = 0, z = 1048; z < 1210; z += 10, i++) { const y = [2.4, 5, 7.4][i % 3], d = i % 2 ? 4 : -4; car(z, -8 + (i * 5) % 16, y, d); car(z, 2 - (i * 3) % 10, y, d); car(z + 5, 6 - (i * 7) % 14, [5, 7.4, 2.4][i % 3], -d * 1.4, i % 3 === 0 ? 2.4 : 1.3); car(z + 2.5, -6 + (i * 4) % 13, [7.4, 2.4, 5][i % 3], d * 0.8); car(z + 7.5, 5 - (i * 6) % 12, [2.4, 5, 7.4][(i + 1) % 3], -d); if (i % 4 === 1) obs(z + 5, { x: ((i * 5) % 11) - 5, y: 4.75, hx: 0.7, hy: 4.75, hz: 0.7, col: C.pylon, kind: 'pylon' }); if (i % 6 === 3 && z < 900) slab(z + 5, false, { hz: 0.8 }); }
+  K.warp(58, 3, 6.4);
+  wing(1062, 5, { ...dart, x: 0, y: 6, ax: 3, ay: 1 }); saucer(1094, { x: -2, y: 6.5 }); carrier(1126, { x: -4, y: 4 }); wing(1162, 6, { ...dart, x: 2, y: 3.5, ax: 4, ay: 1.5 }); carrier(1190, { x: 2, y: 6 });
+  K.checkpoints.push(1224);
 
-  zone(1225, 1e9, SIDE, 'WARNING // OVERSEER CORE ONLINE');
-  spawnBoss(K, 1276, { name: 'OVERSEER', look: 'overseer', hp: 1100 });
+  zone(1220, 1290, TOP, 'LOCKDOWN - TOP VIEW!');
+  for (let i = 0, z = 1254; z < 1286; z += 16, i++) { for (const x of i % 2 ? [-3.2, 3.2] : [-6.4, 0, 6.4]) tower(z, x, 9.5); turret(z + 8, i % 2 ? 0 : -3.2); }
+  zone(1290, 1360, SIDE, 'SIDE VIEW!'); for (let i = 0, z = 1322; z < 1356; z += 16, i++) slab(z, i % 2 === 1);
+  zone(1360, 1435, CHASE, 'CHASE VIEW!'); [[-3, 5], [3, 3.4], [0, 6]].forEach(([x, y], i) => gate(1390 + i * 19, x, y));
+  at(1240, g => addPod(g, 0, 5, SPAWN_Z, 'god')); wing(1244, 4, { ...dart, x: 0, y: 5, ax: 4 }); kami(1335, { x: 0, y: 6 }); carrier(1370, { x: -3, y: 5 }); carrier(1425, { x: 0, y: 6 });
+  K.checkpoints.push(1438);
+
+  zone(1435, 1e9, SIDE, 'WARNING // OVERSEER CORE ONLINE');
+  spawnBoss(K, 1486, { name: 'OVERSEER', look: 'overseer', hp: 1100 });
   const B = boss({ name: 'OVERSEER', toast: 'EARTH DEFENDED', stages: [
     { name: 'FIREWALL', vuln: [SIDE], rec: SIDE, col: '#ff3df0', bob: 2, attack(g, b, t) { if (t % 330 === 40) sheetH(g, 2 + g.rand() * 5.2, 1.6, { warm: 150 }); if (t % 140 === 100) fan(g, b, 3, 6.5); } },
     { name: 'GRIDLOCK', vuln: [TOP], rec: TOP, col: '#2ee6ff', sway: 4, attack(g, b, t) { if (t % 330 === 40) sheetV(g, -5 + g.rand() * 10, 1.9, { warm: 150 }); if (t % 330 === 220) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'pop', x: -5 + i * 3.3, y: 4.6, z: b.z - 1, vz: -5, ax: 1.5, hp: 2, col: '#ff3df0', ph: i }); if (t % 165 === 120) for (let i = -2; i <= 2; i++) bullet(g, b.x, 4.6, b.z - 2, i * 2.2, 0, -6); } },
     { name: 'CORE BREACH', vuln: [CHASE, ISO], rec: CHASE, col: '#ffe14a', attack(g, b, t) { if (t % 270 === 30) throwGate(g, b, { vz: -5.5 }); if (t % 22 === 0 && t % 270 > 200) { const a = t * 0.09; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3, Math.sin(a) * 3, -6, '#ff3df0'); } } }] });
-  K.fill(dart, 125, 1190, 50, 'billboard');
+  K.fill(dart, 125, 1400, 50, 'billboard');
   return K.done({ name: 'EARTH', title: 'NEO TERRA', boss: B, warpName: 'THE MOON', theme: { sky: 'city', grid: '#2443c8' } });
 }
 
