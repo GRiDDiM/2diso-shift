@@ -240,6 +240,17 @@ Nine ideas went on the list and all nine went in, plus one more from Benjamin.
 - **Clearing every wave pays more:** 15,000, on top of 5,000 for the miniboss. Dying in an arena still only ends the arena.
 - **Hover traffic you can read.** On Earth the cars are colour-coded by height (green low, yellow middle, pink high), each one drops a line to a shadow on the ground, and the altitude meter shows the traffic ahead at its height. There are also about twice as many rows of it.
 
+### 16. An ending, a credit roll, a loop, achievements and target order (r22)
+BDC beat THE SHIFTER and nothing much happened. This revision gives the game an end, and a reason to keep going.
+
+- **A real ending.** Planet X folds shut, the worlds you saved come back one at a time and the ship flies home. Then something stirs past Pluto.
+- **Planet X now has its arena too.** THE HEART and the BROOD MOTHER come after THE SHIFTER, and the ending follows them.
+- **Movie credits.** They roll slowly up the screen while the ship and RIVET-9 swoop through in wide figure-eights. Hold the button to speed them up.
+- **Loop the game.** After the credits you can start again at Earth with every upgrade and your whole score. The save remembers which loop you are on.
+- **Achievements.** Thirty of them, with their own entry on the title menu. They are kept on your device, and idle mode never unlocks them.
+- **Target order.** Shoot one of a wave and the next one gets a target on it. Finish the whole wave in that order for a bonus of 300 a head.
+- **Calmer missiles.** Smaller rockets, about half as often, less smoke, and never more than two out of the back. Each one hits harder to make up for it.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

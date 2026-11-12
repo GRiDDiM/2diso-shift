@@ -13,7 +13,7 @@ function kit(id) {
   const ring = (z, r) => far(z, g => addRing(g, { ...r, z: z - g.camZ }));
   const en = (z, o) => at(z, g => addEnemy(g, o));
   const ground = (z, o) => far(z, g => addEnemy(g, { rel: false, z: z - g.camZ, y: 0.5, y0: 0.5, type: 'turret', ...o }));
-  const wing = (z, n, o, gap = 2.2) => { const gr = id + (++gid); for (let i = 0; i < n; i++) at(z + i * gap, g => addEnemy(g, { type: 'pop', group: gr, hp: 2, ph: i * 0.5, ...o })); };
+  const wing = (z, n, o, gap = 2.2) => { const gr = id + (++gid); for (let i = 0; i < n; i++) at(z + i * gap, g => addEnemy(g, { type: 'pop', group: gr, gn: n, hp: 2, ph: i * 0.5, ...o })); };
   const warp = (z, x, y) => ev.push({ z, fn: g => { if (g.flags.warp) return; addRing(g, { x, y, z: 10, r: 2, kind: 'warp', stay: true, t: 0, life: 900 }); hint(g, 'ANOMALY - SHIFT TO CHASE VIEW AND FLY INTO IT', 320); g.fx.push('ring'); } });
   // extra waves: every `step` units a flight of the level's own enemy, shaped for the view that stretch is played in, with divers in between
   const fill = (tmpl, from, to, step, clut = 'billboard', gshape = 'tank') => { for (let i = 0, z = from; z < to; z += step, i++) { const v = (zones.find(q => z >= q.z0 && z < q.z1) || {}).view, h = Math.abs(Math.sin(z * 12.9898)) % 1, h2 = Math.abs(Math.sin(z * 78.233)) % 1;
@@ -154,7 +154,7 @@ function mars() {
   const geyser = (z, x, ph) => obs(z, { x, y: 4.75, hx: 1.05, hy: 4.75, hz: 1.05, col: FIRE, kind: 'geyser', pulse: [80, 70, ph] });
   const spire = (z, x) => obs(z, { x, y: 4.75, hx: 0.9, hy: 4.75, hz: 0.9, col: STONE, kind: 'statue' });
   const arc = (z, y, o) => obs(z, { x: 0, y, hx: 8.6, hy: 0.55, hz: 0.9, col: FIRE, kind: 'firearc', ...o });
-  const worm = (z, x, n = 6) => { const gr = 'worm' + z; for (let i = 0; i < n; i++) at(z + i * 0.9, g => addEnemy(g, { type: 'pop', rel: false, z: 30 + i * 0.9, vz: 0, group: gr, x, y: 0, y0: 0.2, ay: 5.2, w: 1.6, ph: -i * 0.33, hp: 2, r: 0.6, col: i ? '#ff5a1f' : '#ffe14a', score: 80, shape: 'worm' })); };
+  const worm = (z, x, n = 6) => { const gr = 'worm' + z; for (let i = 0; i < n; i++) at(z + i * 0.9, g => addEnemy(g, { type: 'pop', rel: false, z: 30 + i * 0.9, vz: 0, group: gr, gn: n, x, y: 0, y0: 0.2, ay: 5.2, w: 1.6, ph: -i * 0.33, hp: 2, r: 0.6, col: i ? '#ff5a1f' : '#ffe14a', score: 80, shape: 'worm' })); };
   const river = (z, x, ph) => obs(z, { x, y: 0.7, hx: 1.25, hy: 0.7, hz: 3.4, col: FIRE, kind: 'lava', osc: { ax: 1.7, ay: 0, w: 0.7, ph } }); // a river of lava that wanders across the floor
   const fall = (z, ph) => obs(z, { x: 0, y: 4.75, hx: 8.6, hy: 4.75, hz: 1.05, col: FIRE, kind: 'lavafall', pulse: [70, 115, ph] }); // lavafalls that pour, stop, and pour again
   const boulder = (z, x, y, o) => obs(z, { x, y, hx: 1.1, hy: 1.1, hz: 1.1, col: ROCK, kind: 'boulder', hp: 7, score: 120, ...o }); // basalt you can blast apart

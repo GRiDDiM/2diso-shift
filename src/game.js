@@ -29,7 +29,7 @@ export function createGame({ seed = 1, level, start = null, players = 1, wing = 
   const g = { seed, rand: rng(seed), tick: 0, camZ: z0 - INTRO_RUN, level, evi: 0, view: 3, viewFrom: 3, shiftT: 0, shiftDir: 1, shiftCd: 0, intro: INTRO, gear: start?.gear ?? 0,
     players: [], enemies: [], shots: [], ebul: [], obs: [], rings: [], pods: [], parts: [], pops: [], beams: [], shocks: [], fx: [], groups: {},
     score: start?.score || 0, chain: 0, chainT: 0, bestChain: 0, state: 'play', boss: null, hint: null, hintT: 0, zone: null, recView: 0, heat: 0,
-    flags: { warp: !!start?.warp, warpNow: false }, stats: Object.assign({ kills: 0, shifts: 0, deaths: 0, hits: 0, perfect: 0, ticks: 0 }, start?.stats), coop: players > 1, mut: mut || {}, perfT: 0,
+    flags: { warp: !!start?.warp, warpNow: false }, stats: Object.assign({ kills: 0, shifts: 0, deaths: 0, hits: 0, perfect: 0, ticks: 0, order: 0 }, start?.stats), coop: players > 1, mut: mut || {}, perfT: 0,
     wing: wing && players === 1 ? makeWing() : null, shake: 0, flash: 0, endT: 0, speedMul: 3, checkpoint: z0, cpSnap: null };
   for (let i = 0; i < players; i++) { const p = newPlayer(i, start, players > 1); if (i) p.up = g.players[0].up; for (let k = 0; k < p.up[U.DRONE]; k++) p.drones.push({ x: p.x, y: p.y, z: p.z }); g.players.push(p); }
   g.z0 = z0; while (g.evi < level.events.length && level.events[g.evi].z < z0 - 20) g.evi++;
@@ -43,7 +43,7 @@ export function snapshot(g) { const p = g.players[0]; return { level: g.level.id
 // ---------- helpers the level scripts use ----------
 export function addEnemy(g, e) {
   const o = Object.assign({ type: 'pop', x: 0, y: 4.5, z: SPAWN_Z, vx: 0, vy: 0, vz: -8, hp: 2, r: 0.6, t: 0, col: '#ff3df0', score: 100, x0: e.x ?? 0, y0: e.y ?? 4.5, ax: 0, ay: 0, w: 2, ph: 0, fire: 0, rel: true }, e);
-  o.max = o.hp; if (o.group) { (g.groups[o.group] ||= { n: 0, k: 0 }).n++; }
+  o.max = o.hp; if (o.group) { const gr = g.groups[o.group] ||= { n: 0, k: 0, next: -1, ord: true, dead: [] }; o.gi = gr.n++; }
   g.enemies.push(o); return o;
 }
 export function addObs(g, o) { const b = Object.assign({ x: 0, y: 4.7, z: SPAWN_Z, hx: 1, hy: 1, hz: 1, vx: 0, vy: 0, vz: 0, rel: false, col: '#2ee6ff', warm: 0, kind: 'box' }, o); b.bx = b.x; b.by = b.y; b.warm0 = b.warm; if (b.hp != null) b.hpMax = b.hp; g.obs.push(b); return b; }
@@ -76,6 +76,7 @@ function addScore(g, base, x, y, z, col) {
   const mult = 1 + Math.min(9, g.chain / 5 | 0); g.score += base * mult;
   if (x != null) pop(g, mult > 1 ? base * mult + ' X' + mult : '' + base, x, y, z, col || '#ffe14a');
 }
+function groupNext(gr, e) { gr.dead[e.gi] = 1; const n = Math.max(gr.n, e.gn || 0); gr.next = -1; for (let k = 1; k <= n; k++) { const i = (e.gi + k) % n; if (!gr.dead[i]) { gr.next = i; break; } } }
 function kill(g, e) {
   e.hp = -999; g.stats.kills++; g.chain++; g.chainT = 190; if (g.chain > g.bestChain) g.bestChain = g.chain;
   if (g.chain === 10 || g.chain === 25 || g.chain === 50 || g.chain === 100) { g.fx.push('say:chain ' + g.chain, 'ring'); pop(g, 'CHAIN ' + g.chain + '!', e.x, e.y + 1.5, e.z, '#ffe14a', true); }
@@ -83,7 +84,8 @@ function kill(g, e) {
   if (e.burst) for (let i = 0; i < e.burst; i++) { const a = i / e.burst * 6.283; bullet(g, e.x, e.y, e.z, Math.cos(a) * 5, Math.sin(a) * 5, -3, e.col); }
   if (e.type === 'rock' && e.size > 1) for (let i = 0; i < 2 + (g.rand() < 0.4); i++) addEnemy(g, { type: 'rock', rel: false, size: e.size - 1, x: e.x, y: e.y, z: e.z, vx: (g.rand() - 0.5) * 6, vy: (g.rand() - 0.5) * 5, vz: (g.rand() - 0.3) * 4, hp: e.size === 3 ? 4 : 2, r: e.size === 3 ? 1 : 0.6, col: e.col, score: 30, shape: 'rock', pod: e.size === 2 && g.rand() < 0.22 });
   if (e.pod) addPod(g, e.x, e.y, e.z);
-  if (e.group) { const gr = g.groups[e.group]; if (++gr.k >= gr.n) { addPod(g, e.x, e.y, e.z); pop(g, 'WIPEOUT', e.x, e.y + 1, e.z, '#3dffb0'); } }
+  if (e.group) { const gr = g.groups[e.group]; if (gr.next >= 0 && e.gi !== gr.next) gr.ord = false; groupNext(gr, e); // the first kill starts the order; after that the marked one is next
+    if (++gr.k >= gr.n) { addPod(g, e.x, e.y, e.z); if (gr.ord && gr.n > 2) { const b = 300 * gr.n; g.score += b; g.stats.order++; pop(g, 'TARGET ORDER +' + b, e.x, e.y + 1.4, e.z, '#ffe14a', true); g.fx.push('ring'); } else pop(g, 'WIPEOUT', e.x, e.y + 1, e.z, '#3dffb0'); } }
   else if (!e.pod && g.rand() < 0.01) addPod(g, e.x, e.y, e.z, 'god');
   else if (!e.pod && g.rand() < 0.02) addPod(g, e.x, e.y, e.z, 'bomb');
 }
@@ -190,7 +192,7 @@ export function step(g, inputs) {
     const Bo = lv(p, U.BOLT);
     if (Bo && firing && --p.boltT <= 0) { p.boltT = (Bo >= 5 ? 26 : Bo >= 4 ? 40 : 64) * (od ? 0.6 : 1) | 0; const n = 1; for (let k = 0; k < n; k++) g.shots.push({ kind: 4, x: p.x, y: p.y, z: p.z + 1, vx: 0, vy: 0, vz: 0, t: 0, ph: g.rand() * 6.283 + k * 2.1, own: p.i, dmg: 5 + 3 * Bo, chain: Bo >= 4 ? Bo - 1 : Bo >= 2 ? 1 : 0, r: 0.5, life: 150, trail: [] }); g.fx.push('bolt'); }
     const M = lv(p, U.MISSILE);
-    if (M && firing && --p.missT <= 0) { p.missT = (od ? 0.6 : 1) * (62 - 8 * M) | 0; const rear = M >= 5 ? 4 : M >= 4 ? 2 : 0; for (let k = 0; k < 2 + rear && g.shots.length < 420; k++) { const back = k >= 2, j = back ? k - 2 : k, nn = back ? rear : 2, a = (j - (nn - 1) / 2) * 0.55, fw = back ? -7 : 6, hug = !rules.arena, dr = j % 2 ? -1 : 1, sideways = v === 3; g.shots.push({ x: p.x, y: p.y, z: p.z, hug, vx: hug ? (sideways ? dr * 13 : 0) : p.az * Math.sin(a) * 9 + p.ax * fw, vy: hug ? (sideways ? 0 : dr * 13) : 0, vz: hug ? (back ? -6 - (j >> 1) * 5 : 5) : -p.ax * Math.sin(a) * 9 + p.az * fw, dmg: 6 + 2 * M, r: 0.45, kind: 2, life: 150, aoe: 1.4 + 0.4 * M, split: M >= 5 }); } g.fx.push('missile'); }
+    if (M && firing && --p.missT <= 0) { p.missT = (od ? 0.6 : 1) * (104 - 10 * M) | 0; const rear = M >= 4 ? 2 : 0; for (let k = 0; k < 2 + rear && g.shots.length < 420; k++) { const back = k >= 2, j = back ? k - 2 : k, nn = back ? rear : 2, a = (j - (nn - 1) / 2) * 0.55, fw = back ? -7 : 6, hug = !rules.arena, dr = j % 2 ? -1 : 1, sideways = v === 3; g.shots.push({ x: p.x, y: p.y, z: p.z, hug, vx: hug ? (sideways ? dr * 13 : 0) : p.az * Math.sin(a) * 9 + p.ax * fw, vy: hug ? (sideways ? 0 : dr * 13) : 0, vz: hug ? (back ? -6 - (j >> 1) * 5 : 5) : -p.ax * Math.sin(a) * 9 + p.az * fw, dmg: 9 + 3 * M, r: 0.4, kind: 2, life: 150, aoe: 1.4 + 0.4 * M, split: M >= 5 }); } g.fx.push('missile'); }
     // drones
     const n = p.drones.length, vw = g.view;
     for (let k = 0; k < n; k++) {
@@ -238,7 +240,7 @@ export function step(g, inputs) {
     else if (e.type === 'bomb') { e.vy -= 7 * dt; e.x += e.vx * dt; e.y += e.vy * dt; e.z += e.vz * dt; if (e.y < 0.3) { explode(g, e.x, 0.3, e.z, e.col, 12, 7); e.hp = -999; g.fx.push('boom'); } }
     else if (e.type === 'rock') { e.x += e.vx * dt; e.y += e.vy * dt; e.z += e.vz * dt; if (Math.abs(e.x) > 8) e.vx *= -1; if (e.y < 0.8 || e.y > 9) e.vy *= -1; }
     if (playing && e.fire && e.z > 4 && e.z < 27 && e.y > 0 && (e.haunt || live(e, vw)) && (e.t + e.ph * 10 | 0) % e.fire === e.fire - 1) { if (e.lob) { const p = near(g, e), T = 1.5; addEnemy(g, { type: 'bomb', rel: false, x: e.x, y: e.y + 1, z: e.z, vx: (p.x - e.x) / T * m[0], vy: 7 + g.rand() * 2, vz: (p.z + 1 - e.z) / T + SCROLL * g.speedMul, hp: 1, r: 0.5, col: '#ff8a2b', score: 50, shape: 'bomb' }); g.fx.push('missile'); } else { const n = e.fan || (e.type === 'saucer' ? 3 : 1); for (let i = 0; i < n; i++) aimed(g, e, e.bs || 9, (i - (n - 1) / 2) * 0.22, e.bcol); g.fx.push('eshot'); } }
-    if (e.z < -4 && e.hp > 0) { e.hp = -999; if (e.group) g.groups[e.group].n = 1e9; }
+    if (e.z < -4 && e.hp > 0) { e.hp = -999; if (e.group) { const gr = g.groups[e.group]; gr.ord = false; if (gr.next === e.gi) groupNext(gr, e); else gr.dead[e.gi] = 1; gr.n = 1e9; } }
   }
   // ----- shots -----
   for (const s of g.shots) {
@@ -252,10 +254,10 @@ export function step(g, inputs) {
       if (--s.life <= 0) s.life = 0; continue; }
     if (s.kind === 2 && s.hug) { // not a homing missile: it drops (or climbs) to the nearest surface and runs along it
       if (!s.on) { if (s.y <= 0.55 || s.y >= 9.15 || Math.abs(s.x) >= 8.4) { s.on = 1; s.y = clamp(s.y, 0.55, 9.15); s.x = clamp(s.x, -8.4, 8.4); s.vx = 0; s.vy = 0; s.vz = 5; } } else s.vz = Math.min(26, s.vz + 1.1);
-      if (g.tick % 2 === 0 && g.parts.length < 500) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: (g.rand() - 0.5) * 1.5, vy: (g.rand() - 0.5) * 1.5, vz: -4, life: 16, max: 16, col: g.tick % 4 ? '#ff8a2b' : '#ffe14a' }); }
+      if (g.tick % 5 === 0 && g.parts.length < 500) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: (g.rand() - 0.5) * 1.5, vy: (g.rand() - 0.5) * 1.5, vz: -4, life: 9, max: 9, col: g.tick % 4 ? '#ff8a2b' : '#ffe14a' }); }
     else if (s.kind === 2) { let best = null, bd = 1e9; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e.z > 30) continue; const d = Math.hypot((e.x - s.x) * m[0], (e.y - s.y) * m[1], e.z - s.z); if (d < bd) { bd = d; best = e; } }
       if (best) { const d = bd || 1, a = 2.2; s.vx += (best.x - s.x) / d * a * m[0]; s.vy += (best.y - s.y) / d * a * m[1]; s.vz += (best.z - s.z) / d * a; } else s.vz += 1.2; const sp = Math.hypot(s.vx, s.vy, s.vz), mx = 30; if (sp > mx) { s.vx *= mx / sp; s.vy *= mx / sp; s.vz *= mx / sp; }
-      if (g.tick % 2 === 0 && g.parts.length < 500) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: (g.rand() - 0.5) * 1.5, vy: (g.rand() - 0.5) * 1.5, vz: -4, life: 16, max: 16, col: g.tick % 4 ? '#ff8a2b' : '#ffe14a' }); }
+      if (g.tick % 5 === 0 && g.parts.length < 500) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: (g.rand() - 0.5) * 1.5, vy: (g.rand() - 0.5) * 1.5, vz: -4, life: 9, max: 9, col: g.tick % 4 ? '#ff8a2b' : '#ffe14a' }); }
     s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt; if (--s.life <= 0 || s.z > 36 || s.z < -3 || Math.abs(s.x) > 13 || s.y < -1 || s.y > 12) { s.life = 0; continue; }
     for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e === s.last) continue; if (ov(s, e, m)) { damage(g, e, s.dmg); if (s.pierce > 0) { s.pierce--; s.last = e; } else s.life = 0;
       if (s.aoe) { explode(g, s.x, s.y, s.z, '#ff8a2b', 16, 9); explode(g, s.x, s.y, s.z, '#ffe14a', 8, 5); g.fx.push('boom'); g.shake = Math.max(g.shake, 2); for (const q of g.enemies) if (q !== e && q.hp > 0 && Math.hypot(q.x - s.x, q.y - s.y, q.z - s.z) < s.aoe + q.r) damage(g, q, s.dmg * 0.5); if (s.split) for (let i = 0; i < 3; i++) g.shots.push({ x: s.x, y: s.y, z: s.z, vx: Math.cos(i * 2.1) * 12, vy: Math.sin(i * 2.1) * 12, vz: 4, dmg: 3, r: 0.35, kind: 2, life: 60, aoe: 1.2 }); }
