@@ -266,6 +266,9 @@ BDC's order: loop 2 significantly harder, loop 3 extremely difficult, loop 4 bor
 - **Upgrades wind it up.** Each rank tightens the frequency, swings it wider and hits harder, and the colour climbs from cyan to violet to hot pink. No extra waves above or below the ship.
 - It still passes through walls, and it ripples slowly so the curve never sits still.
 
+### 19. Clean results screens (r25)
+- GAME OVER and the clear screens now hide the HUD, so nothing overlaps the results. The level keeps running behind them, a little brighter than before.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
