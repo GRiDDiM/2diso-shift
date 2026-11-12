@@ -97,6 +97,7 @@ function hurt(g, p) {
   explode(g, p.x, p.y, p.z, '#ffffff', 46, 15); explode(g, p.x, p.y, p.z, '#ff3df0', 30, 10); g.fx.push('die'); g.shake = 14; g.flash = 10; g.chain = 0; g.stats.deaths++;
   if (g.level.bonus) { p.dead = 1e9; g.state = 'over'; g.endT = 0; return; } // a bonus stage just ends; it never costs a ship
   p.lives--; p.dead = 70;
+  for (let k = 1; k <= 5; k++) p.up[k] = 0; g.players[0].cursor = -1; pop(g, 'WEAPONS LOST', p.x, p.y + 2, p.z + 2, '#ff4d6d', true); // a lost ship takes its weapons with it: drones stay, the guns start over
 }
 function startGod(g, p) { p.god = 660; g.fx.push('god', 'say:god mode'); pop(g, 'GOD MODE!', p.x, p.y + 1, p.z + 2, '#ffffff', true); while (p.drones.length < 6) p.drones.push({ x: p.x, y: p.y, z: p.z, tmp: true }); }
 function buy(g, p) { // in co-op the upgrade bar is the team's: one cursor, one loadout, both ships get the goods
@@ -107,7 +108,7 @@ function buy(g, p) { // in co-op the upgrade bar is the team's: one cursor, one 
   else if (c === U.WILD) { const r = g.rand(); if (r < 0.34) { nuke(g, p, false); pop(g, 'NUKE!', p.x, p.y + 1, p.z + 2, '#ff8a2b', true); g.fx.push('say:nuke'); } else if (r < 0.67) { p.over = 720; pop(g, 'OVERDRIVE!', p.x, p.y + 1, p.z + 2, '#ffe14a', true); g.fx.push('say:overdrive'); } else startGod(g, p); }
   else { o.up[c]++; if (c === U.DRONE) for (const q of g.players) { const t = q.drones.find(d => d.tmp); if (t) t.tmp = false; else if (q.drones.length < 6) q.drones.push({ x: q.x, y: q.y, z: q.z }); } }
   if (c !== U.WILD) { const l = c === U.SHIELD ? o.shield : o.up[c], nm = TIER[c]?.[l]; pop(g, (nm || BAR[c]) + (nm ? '' : ' ' + l), p.x, p.y + 1, p.z + 2, '#3dffb0', true); g.fx.push('say:' + (nm || BAR[c] + (l >= BARMAX[c] ? ' maxed' : ' level ' + l))); }
-  o.cursor = -1; g.fx.push('upgrade');
+  o.cursor = -1; g.fx.push('upgrade'); addScore(g, 500, p.x, p.y + 1.6, p.z, '#ffe14a'); // spending a pod always pays, so pods still matter once everything is maxed
 }
 function nuke(g, p, spend = true) {
   if (spend) { if (p.bombs <= 0) { g.fx.push('deny'); return; } p.bombs--; }

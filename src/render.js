@@ -51,7 +51,7 @@ function flush(ctx, glow, trip, L = 0) {
   ctx.globalAlpha = 1;
 }
 // ---------- optional solid look: shaded faces and ground shadows under the wireframe (painter-sorted, drawn before the lines) ----------
-let FILL = false, lastFilled = null; const rgbaCache = new Map();
+let FILL = false, STYLE = null, lastFilled = null; const rgbaCache = new Map();
 function rgba(hex, a) { const k = hex + (a * 50 | 0); let r = rgbaCache.get(k); if (r) return r; let c = hex.slice(1); if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2]; r = `rgba(${parseInt(c.slice(0, 2), 16)},${parseInt(c.slice(2, 4), 16)},${parseInt(c.slice(4, 6), 16)},${(a * 50 | 0) / 50})`; rgbaCache.set(k, r); return r; }
 function quad(p, col, a0, a1, key, dark = 0.93) { const q = []; for (let i = 0; i < 12; i += 3) { P(p[i], p[i + 1], p[i + 2]); if (!OK) return; q.push(X, Y); } if (Math.min(q[0], q[2], q[4], q[6]) > W + 100 || Math.max(q[0], q[2], q[4], q[6]) < -100) return; qlay[key === 1e6 ? 1 : LAY].push({ q, col, a0, a1, key, dark }); if (col && OCC) for (let i = 0; i < 12; i += 3) { const j = (i + 3) % 12; seg(p[i], p[i + 1], p[i + 2], p[j], p[j + 1], p[j + 2], col); } }
 function drawQuads(ctx, L) { const quads = qlay[L]; if (!quads.length) return; quads.sort((a, b) => b.key - a.key); ctx.globalCompositeOperation = 'source-over';
@@ -131,7 +131,7 @@ function drawShip(g, p, t) {
   mesh(SHIP_HULL, p.x, p.y, p.z, 1, yaw, pitch, roll, c1); mesh(SHIP_WING, p.x, p.y, p.z, 1, yaw, pitch, roll, c2); mesh(SHIP_FIN, p.x, p.y, p.z, 1, yaw, pitch, roll, c3);
   const fl = 0.35 + (g.speedMul - 0.7) * 1.1 + Math.random() * 0.3; for (const s of [-0.22, 0.22]) { const bx = p.x + fz * s - fx * 0.85, bz = p.z - fx * s - fz * 0.85; seg(bx, p.y, bz, bx - fx * fl, p.y, bz - fz * fl, '#ff8a2b'); seg(bx, p.y, bz, bx - fx * fl * 0.6 - fz * s * 0.6, p.y, bz - fz * fl * 0.6 + fx * s * 0.6, '#ffe14a', 0.7); }
   if (g.level.rules?.arena) seg(p.x + fx * 1.6, p.y, p.z + fz * 1.6, p.x + fx * (p.manual ? 5 : 3.2), p.y, p.z + fz * (p.manual ? 5 : 3.2), '#ffffff', p.manual ? 0.7 : 0.35);
-  if (p.shield > 0) for (let i = 0; i < p.shield; i++) circle(p.x, p.y, p.z, 1.2 + i * 0.22, '#5ee7ff', 0.5, 12, vB === 3 ? 1 : vB === 0 ? 2 : 0, t * 0.05 + i);
+  for (let i = 0; i < Math.min(3, p.shield); i++) { const sc = 1.4 + i * 0.3 + Math.sin(t * 0.12 + i) * 0.03; mesh(SHIP_HULL, p.x, p.y, p.z + 0.05 * i, sc, yaw, pitch, roll, '#5ee7ff', 0.85 - i * 0.2); mesh(SHIP_WING, p.x, p.y, p.z + 0.05 * i, sc, yaw, pitch, roll, '#5ee7ff', 0.5 - i * 0.12); } // the shield hugs the hull: one outline per layer
   if (vB === 1 || vB === 2 || mix < 1) { seg(p.x - 0.5, 0, p.z, p.x + 0.5, 0, p.z, '#2ee6ff', 0.4); seg(p.x, 0, p.z - 0.6, p.x, 0, p.z + 0.6, '#2ee6ff', 0.4); if (vB === 1) seg(p.x, 0, p.z, p.x, p.y, p.z, '#2ee6ff', 0.2); }
 }
 
@@ -176,6 +176,8 @@ function drawObs(g, b, t) {
   if (k === 'geyser') { circle(b.x, 0.05, b.z, b.hx, col, 0.9, 10, 1); if (b.warm > 0) { circle(b.x, 0.05, b.z, b.hx * (0.3 + 0.7 * (b.warm % 20) / 20), '#ffe14a', 0.9, 10, 1); seg(b.x - b.hx, 0.05, b.z - b.hz, b.x + b.hx, 0.05, b.z + b.hz, '#ffe14a', 0.8); seg(b.x + b.hx, 0.05, b.z - b.hz, b.x - b.hx, 0.05, b.z + b.hz, '#ffe14a', 0.8); }
     if (b.idle || b.warm > 0) { if ((b.soon || b.warm > 0 && b.warm < 50) && (t >> 2) % 2) box(b, col, 0.3); for (let i = 0; i < 2; i++) seg(b.x + (hash(i + (t >> 3)) - 0.5), 0, b.z, b.x + (hash(i + (t >> 3)) - 0.5), 0.5 + hash(i * 3 + (t >> 3)), b.z, '#ffe14a', 0.7); return; }
     fillBox(b, col, 1.3, false); box(b, col, 0.7); for (let i = 0; i < 4; i++) { const ox = (i % 2 ? 1 : -1) * b.hx * 0.5, oz = (i < 2 ? 1 : -1) * b.hz * 0.5; zig(b.x + ox, 0, b.z + oz, b.x + ox, 9.5, b.z + oz, i % 2 ? '#ffe14a' : '#ffffff', 1, 7, 0.7, i + (t >> 1)); } return; }
+  if (k === 'bolt' && !b.idle && mix >= 1 && ((vB === 0 && b.hx > b.hy) || (vB === 3 && b.hy > b.hx))) { // seen end-on, a chain would be a dot: give it a crackling burst so you can see it zap
+    const px = vB === 0 ? 0 : b.x, py = vB === 3 ? 4.8 : b.y; LW = 2.4; zig(px, py, b.z - 2.6, px, py, b.z + 2.6, '#ffffff', 1, 8, 0.5, t >> 1); LW = 1.5; for (let i = 0; i < 6; i++) { const an = i / 6 * TAU + (t >> 2), r = 1.2 + hash(i + (t >> 1)) * 1.1, dx = vB === 3 ? Math.cos(an) * r : 0, dy = vB === 0 ? Math.cos(an) * r : 0, dz = Math.sin(an) * r; zig(px, py, b.z, px + dx, py + dy, b.z + dz, col, 1, 4, 0.3, i + (t >> 1)); } LW = 1; circle(px, py, b.z, 1.6 + Math.sin(t * 0.5) * 0.3, col, 0.7, 10, vB === 3 ? 1 : 2); }
   if (k === 'bolt') { const hz = b.hx > b.hy, x0 = b.x - (hz ? b.hx : 0), x1 = b.x + (hz ? b.hx : 0), y0 = b.y - (hz ? 0 : b.hy), y1 = b.y + (hz ? 0 : b.hy); mesh(OCT, x0, Math.max(0.3, y0), b.z, 0.35, t * 0.1, 0, 0, col); mesh(OCT, x1, Math.min(9.3, y1), b.z, 0.35, -t * 0.1, 0, 0, col);
     if (b.idle) { if (b.soon) { if ((t >> 2) % 2) seg(x0, y0, b.z, x1, y1, b.z, col, 0.5); } else seg(x0, y0, b.z, x1, y1, b.z, col, 0.12); return; } zig(x0, y0, b.z, x1, y1, b.z, '#ffffff', 1, 12, 1, t >> 1); zig(x0, y0, b.z, x1, y1, b.z, col, 1, 9, 1.4, (t >> 1) + 50); return; }
   if (k === 'tide') { // a rising sea of lava, or a falling roof of ash: the wavy edge is the part that kills
@@ -218,16 +220,17 @@ function drawObs(g, b, t) {
   if (k === 'fog') { NG = true; for (let i = 0; i < 9; i++) { const y = b.y - b.hy + (i + 0.5) * b.hy * 2 / 9, z = b.z - b.hz + ((i * 5) % 9) / 9 * b.hz * 2; let lx = b.x - b.hx, ly = y; for (let j = 1; j <= 6; j++) { const px = b.x - b.hx + j * b.hx / 3, py = y + Math.sin(j * 1.7 + i * 2 + t * 0.03) * 0.45; seg(lx, ly, z, px, py, z, i % 3 ? col : '#ffffff', 0.4); lx = px; ly = py; } } NG = false; return; }
   if (k === 'funnel') { // a tornado: stacked rings that widen with height and lean as it wanders
     for (let i = 0; i < 8; i++) { const y = 0.3 + i * 1.3, r = 0.35 + i * 0.2, ox = Math.sin(t * 0.08 + i * 0.7) * 0.25 * i * 0.4; circle(b.x + ox, y, b.z, r * (b.hx / 1.1), i % 2 ? '#ffffff' : col, a, 10, 1, t * 0.15 + i); if (i) seg(b.x + ox, y, b.z, b.x + Math.sin(t * 0.08 + (i - 1) * 0.7) * 0.25 * (i - 1) * 0.4, y - 1.3, b.z, col, a * 0.5); } circle(b.x, 0.05, b.z, b.hx * 1.5, col, 0.5, 10, 1, -t * 0.1); return; }
-  if (k === 'beam') { // the boss looks at you: a thin line while it aims, then the real thing
-    const z0 = 0, z1 = b.z + b.hz, wide = b.hx > 5, tall = b.hy > 3;
-    if (b.warm > 0) { const fl = (t >> 1) % 2 ? 0.9 : 0.35; seg(wide ? -9 : b.x, tall ? 0.2 : b.y, z1, wide ? -9 : b.x, tall ? 0.2 : b.y, z0, col, fl); if (wide) { seg(9, b.y, z1, 9, b.y, z0, col, fl); for (let z = 1; z < z1; z += 3) seg(-9, b.y, z, 9, b.y, z, col, fl * 0.6); } if (tall) { seg(b.x, 9.4, z1, b.x, 9.4, z0, col, fl); for (let z = 1; z < z1; z += 3) seg(b.x, 0.2, z, b.x, 9.4, z, col, fl * 0.6); } if (!wide && !tall) circle(b.x, b.y, 3, 0.9 + b.warm / 40, col, fl, 12); return; }
-    fillBox(b, col, 1.6, false); const xs = wide ? [-9, -4.5, 0, 4.5, 9] : [b.x], ys = tall ? [0.3, 2.5, 4.8, 7, 9.3] : [b.y]; for (const x of xs) for (const y of ys) { LW = 3; zig(x, y, z1, x, y, z0, '#ffffff', 1, 9, 0.5, t >> 1); LW = 1.6; zig(x, y, z1, x, y, z0, col, 1, 7, 0.9, (t >> 1) + 9); } LW = 1; return; }
+  if (k === 'beam') { // one big beam straight out of the boss's eye: a thin sight line while it turns to follow you, solid when it locks, then the blast
+    const z1 = b.z + b.hz + 1.2, z0 = -2, pl = vB === 3 ? 1 : vB === 0 ? 2 : 0;
+    if (b.warm > 0) { const lock = b.warm < 27, f = b.warm / 115; LW = lock ? 2.2 : 1; seg(b.x, b.y, z1, b.x, b.y, z0, lock ? '#ffffff' : col, lock ? 1 : (t >> 1) % 2 ? 0.8 : 0.3); LW = 1; for (let i = 0; i < 3; i++) circle(b.x, b.y, z1 - 0.5, 0.5 + ((f * 3 + i) % 3) * 1.1, col, 0.8, 12, pl, t * 0.1); if (lock) for (let z = 2; z < z1; z += 4) circle(b.x, b.y, z, b.hy * 1.2, '#ffffff', 0.7, 10, pl); return; }
+    const pu = 0.75 + 0.25 * Math.sin(t * 0.9); LW = 16 * pu; seg(b.x, b.y, z1, b.x, b.y, z0, col, 0.45); LW = 9 * pu; seg(b.x, b.y, z1, b.x, b.y, z0, '#ffffff', 1); LW = 1.6; for (let z = z1 - ((t * 0.6) % 3); z > z0; z -= 3) circle(b.x, b.y, z, b.hy * (1.5 + 0.3 * Math.sin(z + t * 0.3)), col, 0.9, 10, pl, z); zig(b.x, b.y + 0.5, z1, b.x, b.y - 0.5, z0, col, 0.9, 9, 0.9, t >> 1); LW = 1; return; }
   if (k === 'strike') { if (b.warm > 0) { const f = b.warm / 70; circle(b.x, 0.05, b.z, b.hx * (0.4 + f * 1.4), col, 0.9, 10, 1); circle(b.x, 9.5, b.z, b.hx * (0.4 + f * 1.4), col, 0.6, 10, 1); if ((t >> 1) % 2) seg(b.x, 0, b.z, b.x, 9.6, b.z, col, 0.35); return; }
     fillBox(b, col, 1.5, false); LW = 3; zig(b.x, 9.6, b.z, b.x, 0, b.z, '#ffffff', 1, 8, 0.8, t >> 1); LW = 1.6; zig(b.x - 0.3, 9.6, b.z, b.x + 0.3, 0, b.z, col, 1, 7, 1.3, (t >> 1) + 5); LW = 1; circle(b.x, 0.05, b.z, b.hx * 1.4, '#ffffff', 1, 10, 1); return; }
   if (k === 'slam') { // a row of tentacles bursting out of the ground along a whole lane
     const z0 = b.z - b.hz, z1 = b.z + b.hz; if (b.warm > 0) { const fl = (t >> 2) % 2 ? 0.9 : 0.4; seg(b.x - b.hx, 0.05, z0, b.x - b.hx, 0.05, z1, col, fl); seg(b.x + b.hx, 0.05, z0, b.x + b.hx, 0.05, z1, col, fl); for (let z = z0; z < z1; z += 1.8) { seg(b.x - b.hx, 0.05, z, b.x, 0.05, z + 0.9, col, fl * 0.7); seg(b.x + b.hx, 0.05, z, b.x, 0.05, z + 0.9, col, fl * 0.7); } return; }
     fillBox(b, col, 1.3, false); for (let z = z0 + 0.6; z < z1; z += 1.7) for (const s of [-0.4, 0.4]) { let lx = b.x + s, ly = 0; for (let i = 1; i <= 6; i++) { const py = i * 1.6, px = b.x + s + Math.sin(i * 0.9 + t * 0.2 + z) * 0.4; seg(lx, ly, z, px, py, z, s > 0 ? col : '#ff3df0', 1); lx = px; ly = py; } } return; }
   if (k === 'elevator') { fillBox(b, col, 1.2); box(b, col, a); hatch(b, col, a * 0.4, 4); seg(b.x, b.y + b.hy, b.z, b.x, 9.6, b.z, col, a * 0.4); seg(b.x, b.y - b.hy, b.z, b.x, 0, b.z, col, a * 0.25); return; }
+  if (STYLE && !ghost && k !== 'car') { organic(b, col, a, STYLE, t); return; }
   if (!ghost) fillBox(b, b.col, k === 'car' ? 1.3 : 1);
   box(b, col, a, k === 'tower' || k === 'thunderhead' || k === 'rockwall' ? Math.min(5, b.hy | 0) : 0);
   if (k === 'gate') hatch(b, col, a * 0.4, 6); else if (k === 'slab' || k === 'arch' || k === 'clouddeck' || k === 'membrane') hatch(b, col, a * 0.35, 10);
@@ -240,13 +243,13 @@ export function drawWorld(ctx, g, o = {}) {
   const t = g.tick, p0 = g.players[0], th = g.level.theme || {};
   vA = g.viewFrom; vB = g.view; mix = g.shiftT > 0 ? ease(1 - g.shiftT) : 1; rollA = g.shiftT > 0 ? g.shiftDir * mix * TAU : 0; wob = th.trippy ? Math.sin(t * 0.013) * 0.05 : 0;
   { const al = g.players.filter(q => q.dead <= 0), n = al.length || 1, cx = al.length ? al.reduce((a, q) => a + q.x, 0) / n : p0.x, cy = al.length ? al.reduce((a, q) => a + q.y, 0) / n : p0.y, cz = al.length ? Math.min(...al.map(q => q.z)) : p0.z; cam.x = cx * 0.55; cam.y = cy * 0.55 + 1.9; cam.z = cz - 7.5; } const tags = [];
-  HQ = !(o.q >= 1); { const bz = g.boss && !g.boss.dying && g.boss.z < 30 ? 0.8 : 1; ZK += (bz - ZK) * 0.04; if (Math.abs(ZK - bz) < 0.002) ZK = bz; } // the camera pulls back for a boss so there is room to move
+  HQ = !(o.q >= 1); { const bz = g.level.rules?.arena ? 1 : g.boss && !g.boss.dying && g.boss.z < 30 ? 0.68 : 0.86; ZK += (bz - ZK) * 0.04; if (Math.abs(ZK - bz) < 0.002) ZK = bz; } // the camera pulls back for a boss so there is room to move
   ctx.save();
   if (g.shake > 0.5 && o.shake !== false) ctx.translate((Math.random() - 0.5) * g.shake, (Math.random() - 0.5) * g.shake);
   ctx.globalCompositeOperation = 'lighter';
   const warp = Math.max(0, g.speedMul - 1.75) * 30; ctx.strokeStyle = '#8fa8ff'; ctx.fillStyle = '#8fa8ff'; ctx.lineWidth = 1;
   for (let i = 0; i < 70; i++) { const sp = 0.3 + hash(i) * 1.5, x = ((hash(i + 50) * W - g.camZ * sp * (vB === 0 ? 6 : 2)) % W + W) % W, y = ((hash(i + 99) * H + (vB === 3 ? g.camZ * sp * 6 : 0)) % H + H) % H; ctx.globalAlpha = 0.25 + hash(i + 7) * 0.5; if (warp > 1) { const dx = x - 480, dy = y - 270, d = Math.hypot(dx, dy) || 1; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx / d * warp * sp, y + dy / d * warp * sp); ctx.stroke(); } else ctx.fillRect(x, y, sp > 1.2 ? 2 : 1, sp > 1.2 ? 2 : 1); } ctx.globalAlpha = 1;
-  FILL = !!o.fill; vOcc = mix < 0.5 ? vA : vB; OCC = FILL && (vOcc === 1 || vOcc === 2); depth0(); backdrop(g, th, t); LAY = 2; buckets = layers[2]; // layer 0 = floor and skyline, 1 = ground shadows, 2+ = everything else, far to near
+  STYLE = { volcano: 'rock', cloud: 'cloud', bio: 'flesh', moon: 'rock', sun: 'rock' }[th.sky] || null; FILL = !!o.fill; vOcc = mix < 0.5 ? vA : vB; OCC = FILL && (vOcc === 1 || vOcc === 2); depth0(); backdrop(g, th, t); LAY = 2; buckets = layers[2]; // layer 0 = floor and skyline, 1 = ground shadows, 2+ = everything else, far to near
   for (const b of g.obs) drawObs(g, b, t);
   if (FILL) for (const e of g.enemies) if (e.type === 'boss' && e.z < 30) { const hs = e.look === 'colossus' ? 3.3 : 0; if (hs) fillBox({ x: e.x, y: Math.max(hs, e.y - 0.2), z: e.z, hx: hs * 0.52, hy: hs, hz: hs * 0.45 }, e.col, 0.9); }
   for (const r of g.rings) { if (r.got) continue; depth(r.x, r.z);
@@ -300,8 +303,31 @@ function weak(x, y, z, r, open, t) {
   LW = 1; circle(x, y, z, R * (1.5 + 0.25 * Math.sin(t * 0.25)), '#ffffff', 0.6, 18, pl, t * 0.04);
   for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + t * 0.03, c = Math.cos(a), s = Math.sin(a); LW = 2; ln(c * R * 1.9, s * R * 1.9, c * R * 2.5, s * R * 2.5, '#ffe14a', 1); } LW = 1;
 }
+// rock, cloud and flesh: the same collision box, drawn as a ragged outcrop, a scalloped cloud bank or a quivering slab of tissue instead of a crate
+function organic(b, col, a, st, t) {
+  fillBox(b, col, st === 'cloud' ? 0.8 : 1.1);
+  const x0 = Math.max(-10.5, b.x - b.hx), x1 = Math.min(10.5, b.x + b.hx), y0 = Math.max(0, b.y - b.hy), y1 = Math.min(9.6, b.y + b.hy), z0 = b.z - b.hz, z1 = b.z + b.hz, sd = (b.bx ?? b.x) * 7.3 + b.hy * 3.1 + b.hx * 1.7, amp = st === 'rock' ? 0.42 : st === 'cloud' ? 0.55 : 0.36, gnd = y0 < 0.05;
+  const ring = (pts, nrm, c2, al, ks) => { let fx, fy, fz, lx, ly, lz, n = 0; for (let e = 0; e < 4; e++) { const A = pts[e], B = pts[(e + 1) % 4], len = Math.hypot(B[0] - A[0], B[1] - A[1], B[2] - A[2]), m = Math.max(2, Math.min(7, Math.round(len / 0.95))), N = nrm[e];
+      for (let i = 0; i < m; i++) { const f = i / m, k = ks + e * 13 + i; let d = !N ? 0 : st === 'rock' ? (hash(sd + k) - 0.3) * amp * 1.5 : st === 'cloud' ? Math.abs(Math.sin(f * Math.PI * Math.max(1, Math.round(len / 1.5)))) * amp + 0.05 : Math.sin(f * 6.283 * Math.max(1, Math.round(len / 2.2)) + t * 0.07 + sd) * amp * 0.7 + Math.sin(t * 0.05 + k) * 0.08;
+        const px = A[0] + (B[0] - A[0]) * f + (N ? N[0] * d : 0), py = A[1] + (B[1] - A[1]) * f + (N ? N[1] * d : 0), pz = A[2] + (B[2] - A[2]) * f + (N ? N[2] * d : 0); if (n++) seg(lx, ly, lz, px, py, pz, c2, al); else { fx = px; fy = py; fz = pz; } lx = px; ly = py; lz = pz; } } seg(lx, ly, lz, fx, fy, fz, c2, al); };
+  const c2 = st === 'cloud' ? '#ffffff' : st === 'flesh' ? '#b6ff3d' : '#ffb070', dn = gnd ? null : [0, -1, 0];
+  ring([[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]], [dn, [1, 0, 0], [0, 1, 0], [-1, 0, 0]], col, a, 0);
+  ring([[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]], [[0, 1, 0], [1, 0, 0], [0, 1, 0], [-1, 0, 0]], col, a * 0.8, 60);
+  if (b.hz > 0.9 || vB === 0) { ring([[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]], [dn, [0, 0, 1], [0, 1, 0], [0, 0, -1]], col, a * 0.7, 120); ring([[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]], [dn, [0, 0, 1], [0, 1, 0], [0, 0, -1]], col, a * 0.7, 180); }
+  const cx = (x0 + x1) / 2, cyy = (y0 + y1) / 2, w = (x1 - x0) / 2, h = (y1 - y0) / 2, zf = vB === 0 ? b.z : z0, pl = vB === 3 ? 1 : vB === 0 ? 2 : 0;
+  if (st === 'rock') { zig(cx - w * 0.6, y1 - 0.1, zf, cx - w * 0.1, y0 + h * 0.5, zf, c2, a * 0.6, 4, 0.3, sd); zig(cx + w * 0.5, y1 - 0.1, zf, cx + w * 0.2, y0 + 0.2, zf, c2, a * 0.45, 4, 0.3, sd + 3); if (vB === 0) { zig(b.x, y1 - 0.2, z0 + 0.2, b.x, y0 + 0.3, b.z, c2, a * 0.5, 4, 0.25, sd + 5); } }
+  else if (st === 'cloud') { for (let i = 0; i < 3; i++) circle(cx + (hash(sd + i) - 0.5) * w * 1.2, vB === 3 ? y1 : cyy + (hash(sd + i * 3) - 0.5) * h, vB === 3 ? b.z + (hash(sd + i * 5) - 0.5) * b.hz : zf, Math.min(1.1, 0.35 + Math.min(w, h, 1.4) * 0.5), c2, a * 0.35, 7, pl, t * 0.02 + i); }
+  else { for (let i = 0; i < 2; i++) { const vx = cx + (i ? 0.45 : -0.45) * w; let ly = y0, lx = vx; for (let j = 1; j <= 5; j++) { const py = y0 + (y1 - y0) * j / 5, px = vx + Math.sin(j * 1.9 + sd + i + t * 0.05) * Math.min(0.5, w * 0.4); seg(lx, ly, zf, px, py, zf, c2, a * 0.55); lx = px; ly = py; } } circle(cx, cyy, zf, Math.min(w, h, 1.2) * (0.45 + 0.1 * Math.sin(t * 0.1 + sd)), '#ff3df0', a * 0.6, 8, pl); }
+}
+// a camera-facing shaded disc, bright at the centre: gives a boss body some weight behind its wireframe
+function disc(x, y, z, r, col, a0 = 0.5, a1 = 0.1, n = 10) { if (!FILL) return; const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0, U = pl === 2 ? [0, 0, 1] : [1, 0, 0], V = pl === 1 ? [0, 0, 1] : [0, 1, 0]; depth(x, z);
+  for (let i = 0; i < n; i++) { const a = i / n * TAU, b2 = (i + 1) / n * TAU, c = Math.cos(a) * r, s = Math.sin(a) * r, c3 = Math.cos(b2) * r, s3 = Math.sin(b2) * r; const sv = OCC; OCC = false; quad([x, y, z, x, y, z, x + U[0] * c3 + V[0] * s3, y + U[1] * c3 + V[1] * s3, z + U[2] * c3 + V[2] * s3, x + U[0] * c + V[0] * s, y + U[1] * c + V[1] * s, z + U[2] * c + V[2] * s], col, a0, a1, z + 0.01 * i); OCC = sv; } }
 function drawBoss(g, b, t) {
   const open = (b.vuln || []).includes(g.view), col = b.hit > 0 ? '#ffffff' : b.col, s = b.dying ? 1 + Math.sin(t) * 0.1 : 1, core = open ? '#ffffff' : '#ff4d6d', L = b.look;
+  if (!b.dying) { if (L === 'colossus') { const hs = 3.3, cy = Math.max(hs, b.y - 0.2); fillBox({ x: b.x, y: cy, z: b.z, hx: 0.55 * hs, hy: hs, hz: 0.5 * hs }, col, 1.5); fillBox({ x: b.x, y: 0.5, z: b.z, hx: 1.5 * hs, hy: 0.5, hz: 1.4 }, col, 1.1); }
+    else if (L === 'eye') { disc(b.x, b.y, b.z, 3.3, col, 0.55, 0.12, 12); disc(b.x, b.y, b.z - 0.6, 1.9, '#ffffff', 0.5, 0.15); disc(b.x, b.y, b.z - 1, 0.9, '#02010a', 0, 0); }
+    else if (L === 'bloom') { disc(b.x, b.y, b.z, 2.7, col, 0.6, 0.12, 12); disc(b.x, b.y, b.z - 0.5, 1.5, '#3dffb0', 0.5, 0.12); }
+    else { fillBox({ x: b.x, y: b.y, z: b.z, hx: b.hx ?? 2.6, hy: (b.hy ?? 2.8) * 0.8, hz: 1.2 }, col, 1.5); disc(b.x, b.y, b.z - 1.3, 1.6, col, 0.6, 0.15); } }
   if (L === 'colossus') { // a colossal alien stone head rising out of the ground, eyes burning, rune stones circling it
     const hs = 3.3 * s, cy = Math.max(hs, b.y - 0.2), eye = open ? '#ffffff' : '#ff4d6d', yaw = Math.max(-0.5, Math.min(0.5, (b.x - g.players[0].x) * 0.07));
     mesh(HEAD, b.x, cy, b.z, hs, yaw, 0, 0, col); mesh(EYES, b.x, cy, b.z, hs, yaw, 0, 0, eye); mesh(EYES, b.x, cy + 0.12, b.z, hs, yaw, 0, 0, eye, 0.6);

@@ -203,6 +203,19 @@ Nine ideas went on the list and all nine went in, plus one more from Benjamin.
   - SPREAD covers your tail with two rear shots at max rank.
   - BOLT fires one bolt at a time, faster with each rank.
 
+### 13. Sixth playtest
+> "those box looking obstacles dont really make any sense in any level except the first one. you need to improvise different shapes and landscapes for the other levels"
+
+- **No more crates off Earth.** The same obstacles are now drawn as ragged rock outcrops on Mars, scalloped cloud banks on Jupiter and quivering slabs of tissue on Planet X. Earth keeps its buildings.
+- **More to shoot.** Every planet has roughly half again as many enemy waves, with divers between the flights.
+- **A wider view.** The whole game is zoomed out a notch, and bosses pull the camera back further still.
+- **The Eye's beam makes sense now.** It turns to follow you, holds still for a moment, then fires one big beam straight out of its pupil.
+- **Lightning chains read in every view.** Seen end-on in the flat views they used to be a dot. Now they crackle.
+- **Solid bosses.** Each boss has a shaded body behind its wireframe.
+- **The shield hugs the hull.** One outline around the ship per layer, up to three.
+- **Pods always pay.** Buying anything is worth 500 points, so pods still matter when everything is maxed.
+- **A lost ship takes its weapons with it.** Drones stay, the guns start over. It was too easy to max everything by the middle of the second planet and never look back.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
