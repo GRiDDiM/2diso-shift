@@ -128,6 +128,8 @@ export function mountShift(root, host = {}) {
   function setAssist(v) { opt.assist = v; saveOpt(); rec = null; ghost = null; if (v) assisted = true; if (g && scene === 'play' && !coop) g.wing = v ? makeWing(g.view) : null; }
   function mapMenu(after, at) { const m = push({ title: 'SOLAR MAP', kind: 'map', sel: Math.max(0, NODES.findIndex(n => n.id === (at || levelId))), after, items: after ? [{ label: 'CONTINUE', act: () => { popMenu(); after(); } }] : [{ label: 'PLAY THIS LEVEL (TEST)', act: () => { const id = NODES[m.sel].id, L = LEVELS[id]; testRun = true; returnTo = null; startLevel(id, { up: L.kit || undefined }); } }, { label: 'PLAY ITS ARENA (TEST)', act: () => { let id = NODES[m.sel].id; if (LEVELS[id].isBonus) id = LEVELS[id].of; testRun = true; returnTo = null; startLevel('arena-' + id, { up: LEVELS['arena-' + id].kit }); } }, { label: 'BACK', act: popMenu }] }); return m; }
   function scoresMenu() { const m = { title: 'HIGH SCORES', kind: 'scores', rows: LS.get('scores', []), items: [{ label: 'BACK', act: popMenu }] }; push(m); if (host.leaderboard) { m.rows = null; Promise.resolve(host.leaderboard()).then(r => { m.rows = Array.isArray(r) ? r : []; }).catch(() => { m.rows = LS.get('scores', []); }); } }
+  // the map before every hop: the ship flies from where you are to where you are going, then hyperspace
+  function travel(from, to, after) { menus.length = 0; const m = mapMenu(after, to); m.locked = true; m.travel = { from, to, t0: performance.now() }; audio.sfx('whoosh'); return m; }
   function titleMenu() { menus.length = 0;
     const play = () => { const items = [], sv = LS.get('save', null);
       if (sv && LEVELS[sv.level]) items.push({ label: 'CONTINUE  ' + LEVELS[sv.level].name, act: () => { testRun = false; returnTo = null; coop = false; daily = null; assisted = true; startLevel(sv.level, sv); } });
@@ -145,7 +147,8 @@ export function mountShift(root, host = {}) {
     const m = top(), was = { ...upF }; for (const k in upF) upF[k] = i[k] ? 0 : Math.min(99, upF[k] + 1);
     const e = k => i[k] && !prevM[k] && (was[k] == null || was[k] >= 5); if (!m) return;
     if (tap) { for (const h of hits) if (tap.x >= h.x && tap.x <= h.x + h.w && tap.y >= h.y && tap.y <= h.y + h.h) { if (h.fn) h.fn(tap); else { m.i = h.i; const it = m.items[h.i]; audio.sfx('ok'); if (it.act) it.act(); else it.adj?.(1); } break; } tap = null; prevM = i; return; }
-    if (m.kind === 'map') { const n = NODES.length; if (e('left')) { m.sel = (m.sel + n - 1) % n; audio.sfx('move'); } if (e('right')) { m.sel = (m.sel + 1) % n; audio.sfx('move'); } }
+    if (m.travel && !m.travel.done && performance.now() - m.travel.t0 > 3000) { m.travel.done = true; m.items[0].act(); return; }
+    if (m.kind === 'map' && !m.locked) { const n = NODES.length; if (e('left')) { m.sel = (m.sel + n - 1) % n; audio.sfx('move'); } if (e('right')) { m.sel = (m.sel + 1) % n; audio.sfx('move'); } }
     if (m.kind === 'scroll') { if (i.up) m.off = Math.max(0, m.off - 6); if (i.down) m.off += 6; }
     else { if (e('up')) { m.i = (m.i + m.items.length - 1) % m.items.length; audio.sfx('move'); } if (e('down')) { m.i = (m.i + 1) % m.items.length; audio.sfx('move'); } }
     const it = m.items[m.i];
@@ -185,9 +188,9 @@ export function mountShift(root, host = {}) {
       if (!opt.idle) { const all = LS.get('medals', {}); if (bits(m) > bits(all[levelId] || 0)) { all[levelId] = m; LS.set('medals', all); endInfo.newRank = true; }
         if (rec && rec.runs.length < 40000) { const gain = g.score - (rec.start.score || 0), old = LS.get('ghost.' + levelId, null); if (!old || old.v !== VER || gain > old.gain) { LS.set('ghost.' + levelId, { ...rec, gain }); endInfo.newGhost = true; } } } }
     rec = null; ghost = null;
-    const goNext = (from, c) => { const nx = LEVELS[from].next; startStory(BRIEF[nx] || [], () => { scene = 'play'; mapMenu(() => startLevel(nx, c), nx).locked = true; }); };
+    const goNext = (from, c) => { const nx = LEVELS[from].next; startStory(BRIEF[nx] || [], () => { scene = 'play'; travel(from, nx, () => startLevel(nx, c)); }); };
     if (L.isArena) items = [{ label: 'CONTINUE', act: () => { if (testRun || !LEVELS[L.of].next) showTitle(); else goNext(L.of, carry({ lives: Math.min(6, g.players[0].lives + 1) })); } }];
-    else if (L.isBonus) { const back = returnTo; items = [{ label: 'CONTINUE', act: () => { if (back) { returnTo = null; startLevel(back.level, { ...back, ...carry({ lives: back.lives, warp: true }), z: back.z }); } else showTitle(); } }]; }
+    else if (L.isBonus) { const back = returnTo; items = [{ label: 'CONTINUE', act: () => { if (back) { returnTo = null; const st = { ...back, ...carry({ lives: back.lives, warp: true }), z: back.z }; travel(levelId, back.level, () => startLevel(back.level, st)); } else showTitle(); } }]; }
     else if (cleared) { if (!testRun && !daily) { if (g.level.final) LS.del('save'); else LS.set('save', { ...carry(), level: L.next, z: 0 }); } if (g.level.final) finish(true);
       items = [{ label: 'CONTINUE', act: () => { const nx = L.next; if (!nx) { startStory(ENDING, () => { scene = 'title'; showTitle(); scrollMenu('CREDITS', CREDITS); }); return; } if (testRun) { showTitle(); return; } startLevel('arena-' + levelId, carry()); } }]; }
     else { finish(false); items = daily ? [{ label: 'QUIT TO TITLE', act: showTitle }] : [{ label: 'RETRY FROM CHECKPOINT', act: () => { assisted = true; startLevel(levelId, { ...g.cpSnap, lives: 3 }); } }, { label: 'QUIT TO TITLE', act: showTitle }]; }
@@ -212,7 +215,7 @@ export function mountShift(root, host = {}) {
       if (f === 'bossin') audio.music('boss'); if (f === 'die' || f === 'bomb' || f === 'boom2' || f === 'perfect') window.ArcadeGridzPad?.rumble?.(f === 'boom2' ? 160 : 260, 0.8); }
     if (!hiShown && !assisted && g.score > LS.get('best', 0) && LS.get('best', 0) > 0) { hiShown = true; toast('NEW HIGH SCORE', 'KEEP IT ROLLING'); audio.sfx('ring'); audio.say('new high score'); }
     // a warp ring: jump to the bonus stage, and come back to this spot afterwards
-    if (g.flags.warpNow && g.state === 'play') { if (++warpT > 80) { const L = LEVELS[levelId], w = LS.get('warps', {}); w[levelId] = 1; LS.set('warps', w); g.flags.warpNow = false; if (L.bonus) { returnTo = { ...snapshot(g), level: levelId, z: g.camZ + 4, warp: true, stats: { ...g.stats } }; startLevel(L.bonus, carry()); return; } } }
+    if (g.flags.warpNow && g.state === 'play') { if (++warpT > 80) { const L = LEVELS[levelId], w = LS.get('warps', {}); w[levelId] = 1; LS.set('warps', w); g.flags.warpNow = false; if (L.bonus) { returnTo = { ...snapshot(g), level: levelId, z: g.camZ + 4, warp: true, stats: { ...g.stats } }; const c = carry(); travel(levelId, L.bonus, () => startLevel(L.bonus, c)); return; } } }
     if (g.state !== 'play' && g.endT > (g.state === 'clear' ? 100 : 70) && !menus.length) endMenu(g.state === 'clear');
   }
   function panel(x, y, w, h, col = '#2ee6ff') { ctx.fillStyle = 'rgba(4,5,22,.88)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.globalAlpha = 0.12; ctx.lineWidth = 12; ctx.strokeRect(x, y, w, h); ctx.globalAlpha = 0.3; ctx.lineWidth = 6; ctx.strokeRect(x, y, w, h); ctx.globalAlpha = 1; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); }
@@ -230,7 +233,13 @@ export function mountShift(root, host = {}) {
       if (on) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(p.x, y, p.r + 8 + 2 * Math.sin(t * 5), 0, TAU); ctx.stroke(); }
       text(ctx, L.isBonus ? (warp[L.of] ? L.name : '?') : L.name, p.x, L.isBonus && p.id !== 'sun' ? y - p.r - 16 : y + p.r + 16, L.isBonus ? 7 : 9, on ? '#ffffff' : col, { align: 'center', glow: on });
       hits.push({ x: p.x - Math.max(18, p.r + 6), y: y - Math.max(18, p.r + 6), w: Math.max(36, p.r * 2 + 12), h: Math.max(36, p.r * 2 + 12), fn: () => { m.sel = k; audio.sfx('move'); } }); });
-    if ((t * 2 | 0) % 2) { const cur = NODES.find(n => n.id === (g ? levelId : 'earth')); if (cur) text(ctx, 'YOU', cur.x, (cur.up && cur.id !== 'sun' ? sy - 46 : sy) - cur.r - (cur.up ? 30 : 58), 8, '#ffe14a', { align: 'center' }); }
+    if (m.travel) { const P = id => { const n = NODES.find(q => q.id === id) || NODES[0]; return [n.x, n.id === 'sun' ? sy : n.up ? sy - 46 : sy, n.r]; }, a = P(m.travel.from), b = P(m.travel.to), u = Math.min(1, (performance.now() - m.travel.t0) / 2000), f = u * u * (3 - 2 * u), lift = Math.min(70, Math.abs(b[0] - a[0]) * 0.3 + 18);
+      const at = q => [a[0] + (b[0] - a[0]) * q, a[1] + (b[1] - a[1]) * q - Math.sin(Math.PI * q) * lift], c = at(f), d = at(Math.min(1, f + 0.02)), ang = Math.atan2(d[1] - c[1], d[0] - c[0] || 0.001);
+      ctx.strokeStyle = '#ffe14a'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 5]); ctx.beginPath(); for (let q = 0; q <= 20; q++) { const pt = at(f * q / 20); q ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]); } ctx.stroke(); ctx.setLineDash([]);
+      ctx.save(); ctx.translate(c[0], c[1]); ctx.rotate(f >= 1 ? 0 : ang); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(-7, -6); ctx.lineTo(-3, 0); ctx.lineTo(-7, 6); ctx.closePath(); ctx.stroke(); if (f < 1) { ctx.strokeStyle = '#2ee6ff'; ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(-12 - 5 * Math.sin(t * 40), 0); ctx.stroke(); } ctx.restore();
+      if (f >= 1) { ctx.strokeStyle = '#ffe14a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(b[0], b[1], b[2] + 10 + ((t * 30) % 14), 0, TAU); ctx.stroke(); }
+      text(ctx, f >= 1 ? 'ARRIVED - HYPERSPACE' : 'EN ROUTE', 480, 96, 9, '#ffe14a', { align: 'center' }); }
+    else if ((t * 2 | 0) % 2) { const cur = NODES.find(n => n.id === (g ? levelId : 'earth')); if (cur) text(ctx, 'YOU', cur.x, (cur.up && cur.id !== 'sun' ? sy - 46 : sy) - cur.r - (cur.up ? 30 : 58), 8, '#ffe14a', { align: 'center' }); }
     ctx.globalCompositeOperation = 'source-over';
     const p = NODES[m.sel], L = LEVELS[p.id]; panel(150, 364, 660, 92, p.col);
     text(ctx, (L.isBonus ? 'BONUS // ' : 'LEVEL ' + L.n + ' // ') + L.name + ' - ' + L.sub, 170, 376, 13, '#ffffff'); text(ctx, L.info, 170, 400, 8, '#9fb0ff', { glow: false });

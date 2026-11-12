@@ -188,6 +188,7 @@ Nine ideas went on the list and all nine went in, plus one more from Benjamin.
 - **Planet X:** blob walls to burst, spore pods that pop into rings of acid, long tentacles that whip right across the forest.
 - **Upgrade bar:** MISSILE and SPREAD swapped places, so the screen does not fill with spread shots early.
 - **A shorter title menu.** PLAY, OPTIONS, HIGH SCORES, DEVLOG, EXIT GAME. Continue, New Game and Co-op live under PLAY. The solar map is still in the pause menu. The Daily Run is shelved.
+- **The map before every hop.** Going to the next planet, into a bonus stage or back out of one, the solar map comes up first and the ship flies from where you are to where you are going. Then hyperspace.
 - **Speed.** Jupiter and Planet X were dropping frames. Faint lines, sparks and smoke no longer get the expensive glow passes, and the game now steps its own quality down if frames run long.
 
 ## Still to do
