@@ -119,7 +119,7 @@ function earth() {
 
   // the Moon warp hides up in the corner here, and only exists in ISO
   zone(800, 1010, ISO, 'HOVER TRAFFIC - SHIFT TO ISO VIEW');
-  for (let i = 0, z = 838; z < 1000; z += 10, i++) { const y = [2.4, 5, 7.4][i % 3], d = i % 2 ? 4 : -4; car(z, -8 + (i * 5) % 16, y, d); car(z, 2 - (i * 3) % 10, y, d); car(z + 5, 6 - (i * 7) % 14, [5, 7.4, 2.4][i % 3], -d * 1.4, i % 3 === 0 ? 2.4 : 1.3); if (i % 4 === 1) obs(z + 5, { x: ((i * 5) % 11) - 5, y: 4.75, hx: 0.7, hy: 4.75, hz: 0.7, col: C.pylon, kind: 'pylon' }); if (i % 6 === 3 && z < 900) slab(z + 5, false, { hz: 0.8 }); }
+  for (let i = 0, z = 838; z < 1000; z += 10, i++) { const y = [2.4, 5, 7.4][i % 3], d = i % 2 ? 4 : -4; car(z, -8 + (i * 5) % 16, y, d); car(z, 2 - (i * 3) % 10, y, d); car(z + 5, 6 - (i * 7) % 14, [5, 7.4, 2.4][i % 3], -d * 1.4, i % 3 === 0 ? 2.4 : 1.3); car(z + 2.5, -6 + (i * 4) % 13, [7.4, 2.4, 5][i % 3], d * 0.8); car(z + 7.5, 5 - (i * 6) % 12, [2.4, 5, 7.4][(i + 1) % 3], -d); if (i % 4 === 1) obs(z + 5, { x: ((i * 5) % 11) - 5, y: 4.75, hx: 0.7, hy: 4.75, hz: 0.7, col: C.pylon, kind: 'pylon' }); if (i % 6 === 3 && z < 900) slab(z + 5, false, { hz: 0.8 }); }
   K.warp(58, 3, 6.4);
   wing(852, 5, { ...dart, x: 0, y: 6, ax: 3, ay: 1 }); saucer(884, { x: -2, y: 6.5 }); carrier(916, { x: -4, y: 4 }); wing(952, 6, { ...dart, x: 2, y: 3.5, ax: 4, ay: 1.5 }); carrier(980, { x: 2, y: 6 });
   K.checkpoints.push(1014);
@@ -326,7 +326,8 @@ function moon() { // low gravity trench run: the ship drifts, nothing shoots bac
   for (let i = 0; i < 34; i++) { const z = 40 + i * 8.4; ring(z, { x: Math.sin(i * 0.55) * 4, y: 3.5 + Math.sin(i * 0.4) * 2.2, r: 1.5 }); }
   for (let i = 0; i < 7; i++) { const z = 62 + i * 40; obs(z, { x: 0, y: 7.6, hx: 8.6, hy: 1.9, hz: 1, col: GREY, kind: 'arch' }); obs(z + 18, { x: (i % 2 ? 3.4 : -3.4), y: 1.4, hx: 1.2, hy: 1.4, hz: 1.2, col: '#7df9ff', kind: 'ice', hp: 4, gem: true, score: 150 }); }
   for (let i = 0; i < 8; i++) en(50 + i * 36, { type: 'pop', x: (i % 2 ? 4 : -4), y: 6, ax: 2, ay: 1, vz: -5, hp: 3, r: 0.8, col: '#ffe14a', score: 300, shape: 'sat', pod: i % 3 === 1 });
-  return K.done({ name: 'THE MOON', title: 'SEA OF QUIET', bonus: true, endZ: 345, endBonus: 10000, rules: { inertia: true }, theme: { sky: 'moon', grid: '#5a6480' } });
+  const tick = stageMini(K, 'moon', 322);
+  return K.done({ name: 'THE MOON', title: 'SEA OF QUIET', bonus: true, tick, endZ: 345, endBonus: 10000, rules: { inertia: true }, theme: { sky: 'moon', grid: '#5a6480' } });
 }
 function sun() { // surf the flares: stay in the shadow lane or cook
   const K = kit('sun'), { at, obs, en, zone } = K, HOT = '#ffb02e';
@@ -335,13 +336,15 @@ function sun() { // surf the flares: stay in the shadow lane or cook
   zone(175, 1e9, SIDE, 'SHADOW LANE DIVES - SHIFT TO SIDE VIEW');
   for (let i = 0; i < 12; i++) { const z = 186 + i * 12; obs(z, { x: 0, y: 4.7 + Math.sin(i * 0.9) * 2.6, hx: 8.6, hy: 1.5, hz: 6.2, col: '#2ee6ff', kind: 'shade', ghost: true }); }
   for (let i = 0; i < 9; i++) en(46 + i * 32, { type: 'pop', x: (i % 3 - 1) * 4, y: 3 + (i % 4) * 1.5, ax: 2, ay: 1.5, vz: -5, hp: 3, r: 0.8, col: HOT, score: 250, shape: 'plasma', pod: i % 3 === 0 });
-  return K.done({ name: 'THE SUN', title: 'CORONA', bonus: true, endZ: 345, endBonus: 12000, rules: { heat: true }, theme: { sky: 'sun', grid: '#a8480c' } });
+  const tick = stageMini(K, 'sun', 322);
+  return K.done({ name: 'THE SUN', title: 'CORONA', bonus: true, tick, endZ: 345, endBonus: 12000, rules: { heat: true }, theme: { sky: 'sun', grid: '#a8480c' } });
 }
 function asteroids() { // rock-busting frenzy: rocks split, and some carry pods
   const K = kit('belt'), { at, zone } = K, ROCK = '#c8a070';
   zone(-99, 1e9, TOP, 'BONUS // ASTEROID BELT - BREAK EVERYTHING');
   for (let i = 0; i < 46; i++) { const z = 34 + i * 6.6, big = i % 3 === 0; at(z, g => addEnemy(g, { type: 'rock', rel: false, size: big ? 3 : 2, x: -6.5 + g.rand() * 13, y: 1.5 + g.rand() * 6.5, z: SPAWN_Z, vx: (g.rand() - 0.5) * 4, vy: (g.rand() - 0.5) * 2, vz: -g.rand() * 2, hp: big ? 7 : 4, r: big ? 1.5 : 1, col: ROCK, score: big ? 80 : 50, shape: 'rock', pod: i % 7 === 3 })); }
-  return K.done({ name: 'ASTEROID BELT', title: 'THE RUBBLE', bonus: true, endZ: 350, endBonus: 10000, theme: { sky: 'space', grid: '#3a3a5a', nofloor: true } });
+  const tick = stageMini(K, 'belt', 327);
+  return K.done({ name: 'ASTEROID BELT', title: 'THE RUBBLE', bonus: true, tick, endZ: 350, endBonus: 10000, theme: { sky: 'space', grid: '#3a3a5a', nofloor: true } });
 }
 function pluto() { // ice field: shatter a path, thread the spires
   const K = kit('pluto'), { at, obs, en, zone } = K, ICE = '#9fe9ff', DEEP = '#5ea0ff';
@@ -350,45 +353,73 @@ function pluto() { // ice field: shatter a path, thread the spires
   zone(180, 1e9, TOP, 'CRYSTAL SPIRES - SHIFT TO TOP VIEW');
   for (let i = 0; i < 11; i++) { const z = 196 + i * 13; (i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7.5, -7.5]).forEach((x, k) => (i + k) % 3 === 0 ? obs(z, { x, y: 4.75, hx: 1, hy: 4.75, hz: 1, col: ICE, kind: 'ice', hp: 7, gem: true, score: 120 }) : obs(z, { x, y: 4.75, hx: 0.8, hy: 4.75, hz: 0.8, col: DEEP, kind: 'spire' })); }
   for (let i = 0; i < 8; i++) en(50 + i * 36, { type: 'kami', x: (i % 3 - 1) * 4, y: 3 + (i % 3) * 2, vz: -7, hp: 2, r: 0.55, col: '#ffffff', score: 150, shape: 'shard', pod: i % 3 === 2 });
-  return K.done({ name: 'PLUTO', title: 'THE COLD EDGE', bonus: true, endZ: 345, endBonus: 12000, theme: { sky: 'ice', grid: '#2a5a9a' } });
+  const tick = stageMini(K, 'pluto', 322);
+  return K.done({ name: 'PLUTO', title: 'THE COLD EDGE', bonus: true, tick, endZ: 345, endBonus: 12000, theme: { sky: 'ice', grid: '#2a5a9a' } });
 }
 
 // =====================================================================================
 // ARENAS — after each boss, before the jump: a walled arena in that planet's colours. Free flight, guns track
 // the nearest target, clear five waves. L / R flips between TOP and ISO: white "phase" enemies only exist in ISO.
 // =====================================================================================
+// ---------- minibosses: one closes every bonus arena and every warp stage ----------
+// a miniboss is an ordinary enemy carrying its own little brain (e.ai), run once a tick by the level
+const power = g => 0.5 + 0.25 * g.players[0].up.slice(1, 6).reduce((a, b) => a + b, 0); // minibosses are as tough as your guns are strong
+const runMini = g => { const e = g.mini; if (!e) return; if (e.hp > 0) { e.mt = (e.mt || 0) + 1; e.ai(g, e, e.mt); } else if (!e.fin) { e.fin = true; g.score += 5000; g.shake = 14; g.flash = 12; g.fx.push('boom2', 'say:miniboss destroyed', 'toast:' + e.name + ' DESTROYED|+5000'); for (let i = 0; i < 3; i++) addPod(g, e.x + (i - 1) * 2, e.y, e.z + (i - 1)); for (let i = 0; i < 4; i++) explode(g, e.x + (g.rand() - 0.5) * 3, e.y + (g.rand() - 0.5) * 2, e.z, i % 2 ? '#ffffff' : e.col, 30, 13); g.ebul.length = 0; } };
+const ring2 = (g, e, n, sp, col, off = 0) => { for (let i = 0; i < n; i++) { const a = i / n * 6.283 + off; bullet(g, e.x, e.y, e.z, Math.cos(a) * sp, 0, Math.sin(a) * sp, col); } g.fx.push('eshot'); }; // a flat ring, for the arenas
+const ARENA_MINI = {
+  // GRID WARDEN: patrols a square circuit, sweeping four rotating streams, and launches chasers
+  earth: { name: 'GRID WARDEN', shape: 'carrier', col: '#ffe14a', hp: 340, r: 2, ai(g, e, t) { const c = (t * 0.006) % 4, k = c | 0, f = c - k, P = [[-8, 8], [8, 8], [8, 26], [-8, 26]], a = P[k], b = P[(k + 1) % 4]; e.x = a[0] + (b[0] - a[0]) * f; e.z = a[1] + (b[1] - a[1]) * f;
+      if (t % 7 === 0 && t % 300 < 200) for (let i = 0; i < 4; i++) { const an = t * 0.02 + i * 1.5708; bullet(g, e.x, 4.5, e.z, Math.cos(an) * 5.5, 0, Math.sin(an) * 5.5, '#ffe14a'); } if (t % 300 === 240) for (let i = 0; i < 3; i++) addEnemy(g, { type: 'seek', x: e.x + (i - 1) * 1.5, y: 4.5, z: e.z, sp: 6.5, hp: 2, r: 0.55, col: '#ff4d6d', shape: 'kami', score: 50 }); } },
+  // STONE ELDER: marks where you stand, leaps there, and lands in a ring of fire
+  mars: { name: 'STONE ELDER', shape: 'head', col: '#d98a5a', hp: 360, r: 2.3, ai(g, e, t) { const c = t % 200, p = near(g, e); if (c === 20) { e.jx = p.x; e.jz = p.z; e.sx = e.x; e.sz = e.z; addObs(g, { rel: true, kind: 'strike', x: e.jx, y: 4.75, z: e.jz, hx: 2.4, hy: 4.75, hz: 2.4, warm: 75, life: 14, col: '#ff5a1f' }); g.fx.push('charge'); }
+      if (c > 50 && c <= 95) { const f = (c - 50) / 45, s = f * f * (3 - 2 * f); e.x = e.sx + (e.jx - e.sx) * s; e.z = e.sz + (e.jz - e.sz) * s; e.y = 4.5 + Math.sin(f * 3.1416) * 3.5; } if (c === 96) { e.y = 4.5; ring2(g, e, 14, 5, '#ff5a1f', t); g.shake = Math.max(g.shake, 9); g.fx.push('slam'); } if (c === 150) ring2(g, e, 8, 3.5, '#ffe14a', 0.4); } },
+  // THUNDER BLOOM: drifts after you trailing two spiral arms, and calls lightning down where you are
+  jupiter: { name: 'THUNDER BLOOM', shape: 'jelly', col: '#b06bff', hp: 340, r: 2.1, ai(g, e, t) { const p = near(g, e), d = Math.hypot(p.x - e.x, p.z - e.z) || 1; if (d > 5) { e.x += (p.x - e.x) / d * 1.6 * DT; e.z += (p.z - e.z) / d * 1.6 * DT; }
+      if (t % 8 === 0 && t % 360 < 240) for (const k of [0, 3.1416]) { const an = t * 0.05 + k; bullet(g, e.x, 4.5, e.z, Math.cos(an) * 4.6, 0, Math.sin(an) * 4.6, k ? '#b06bff' : '#7df9ff'); } if (t % 120 === 90) { strike(g, p.x, p.z, { y: 4.75 }); strike(g, p.x + (g.rand() - 0.5) * 7, p.z + (g.rand() - 0.5) * 7); g.fx.push('charge'); } } },
+  // BROOD MOTHER: squats in the middle hatching spores and spitting fans of acid, faster as she weakens
+  x: { name: 'BROOD MOTHER', shape: 'spitter', col: '#ff3df0', hp: 360, r: 2.3, ai(g, e, t) { const p = near(g, e), rage = e.hp < e.hpMax / 2 ? 0.6 : 1; e.x = Math.sin(t * 0.008) * 4; e.z = 17 + Math.cos(t * 0.006) * 5;
+      if (t % (150 * rage | 0) === 40) for (let i = 0; i < 5; i++) addEnemy(g, { type: 'seek', x: e.x + Math.cos(i * 1.26) * 2.4, y: 4.5, z: e.z + Math.sin(i * 1.26) * 2.4, sp: 4.4, wob: 5, hp: 2, r: 0.45, col: '#b6ff3d', shape: 'spore', score: 40, ph: i });
+      if (t % (90 * rage | 0) === 10) { const a0 = Math.atan2(p.z - e.z, p.x - e.x); for (let i = -2; i <= 2; i++) bullet(g, e.x, 4.5, e.z, Math.cos(a0 + i * 0.22) * 6.5, 0, Math.sin(a0 + i * 0.22) * 6.5, '#b6ff3d'); g.fx.push('eshot'); } } } };
+// the warp stages: the miniboss flies in at the very end and the stage only clears when it is gone
+const STAGE_MINI = {
+  moon: { name: 'LUNAR SENTINEL', shape: 'sat', col: '#2ee6ff', hp: 150, r: 1.8, ai(g, e, t) { if (t % 110 === 60) { for (const s of [-0.25, 0, 0.25]) aimed(g, e, 6, s, '#2ee6ff'); g.fx.push('eshot'); } if (t % 330 === 250) fireRing(g, e, '#ffffff', 10, 1.8, 3); } },
+  sun: { name: 'SOLAR FLARE', shape: 'plasma', col: '#ffe14a', hp: 170, r: 2, ai(g, e, t) { if (t % 150 === 60) fireRing(g, e, '#ff8a2b', 14, 2.4, 4); if (t % 150 === 135) fireRing(g, e, '#ffe14a', 10, 1.4, 3); } },
+  belt: { name: 'THE MOTHER ROCK', shape: 'rock', col: '#b0b0d0', hp: 190, r: 2.4, ai(g, e, t) { if (t % 100 === 50) addEnemy(g, { type: 'rock', x: e.x + (g.rand() - 0.5) * 4, y: e.y + (g.rand() - 0.5) * 3, z: e.z - 1, vz: -5.5, vx: (g.rand() - 0.5) * 2, vy: (g.rand() - 0.5) * 2, hp: 3, r: 0.9, col: '#8a8ab0', shape: 'rock', score: 60, size: 2 }); if (t % 200 === 150) { for (const s of [-0.2, 0.2]) aimed(g, e, 6, s, '#ffffff'); g.fx.push('eshot'); } } },
+  pluto: { name: 'FROST WARDEN', shape: 'shard', col: '#7df9ff', hp: 180, r: 2, ai(g, e, t) { if (t % 170 === 60) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'kami', x: e.x + (i - 1.5) * 2.2, y: e.y + (i % 2 ? 1.4 : -1.4), z: e.z - 1, vz: -6, hp: 1, r: 0.45, col: '#ffffff', shape: 'shard', score: 60 }); if (t % 170 === 140) { for (const s of [-0.3, 0, 0.3]) aimed(g, e, 6.5, s, '#7df9ff'); g.fx.push('eshot'); } } } };
+function stageMini(K, id, z) { const M = STAGE_MINI[id]; K.at(z, g => { g.mini = addEnemy(g, { type: 'pop', mini: true, name: M.name, ai: M.ai, x: 0, x0: 0, y: 4.8, y0: 4.8, ax: 3, ay: 1.6, w: 0.6, z: 31, vz: -5, hp: Math.round(M.hp * power(g)), hpMax: Math.round(M.hp * power(g)), r: M.r, col: M.col, shape: M.shape, score: 0, big: true, hold: 17 }); hint(g, 'MINIBOSS // ' + M.name, 200); g.fx.push('charge', 'say:miniboss'); }); return g => { const e = g.mini; if (e && e.hp > 0 && e.z <= 17) { e.vz = 0; } runMini(g); }; }
 const ARENAS = {
   earth: { name: 'GRID ZERO', title: 'NEO TERRA ARENA', theme: { sky: 'city', grid: '#2443c8' }, col: '#2ee6ff',
     grunt: { col: '#ff3df0', sp: 4.2, hp: 2 }, fast: { col: '#ff4d6d', sp: 6.2, hp: 1, shape: 'kami' }, gun: { col: '#3dffb0', hp: 6, shape: 'saucer', fire: 120, fan: 3 }, champ: { col: '#ffe14a', shape: 'carrier', name: 'GRID WARDEN' },
-    hazard(g) { for (let i = 0; i < 4; i++) addObs(g, { rel: true, kind: 'car', x: -9 + i * 5, y: 4.5, z: 4 + i * 5.5, hx: 1.3, hy: 0.45, hz: 0.7, vx: i % 2 ? 3.2 : -3.2, wrap: 10, col: '#ff8a2b' }); } },
+    hazard(g) { for (let i = 0; i < 4; i++) addObs(g, { rel: true, kind: 'car', x: -9 + i * 5, y: 4.5, z: 5 + i * 8, hx: 1.3, hy: 0.45, hz: 0.7, vx: i % 2 ? 3.6 : -3.6, wrap: 14.5, col: '#ff8a2b' }); } },
   mars: { name: 'THE CRUCIBLE', title: 'FORGE ARENA', theme: { sky: 'volcano', grid: '#8a2a12' }, col: '#ff5a1f',
     grunt: { col: '#ff8a2b', sp: 4, hp: 2, shape: 'ember' }, fast: { col: '#ffe14a', sp: 6, hp: 1, shape: 'ember' }, gun: { col: '#d98a5a', hp: 8, shape: 'head', fire: 130, fan: 2, r: 0.95 }, champ: { col: '#d98a5a', shape: 'head', name: 'STONE ELDER' },
-    hazard(g) { [[-5, 5], [5, 9], [-4, 15], [4.5, 19]].forEach(([x, z], i) => addObs(g, { rel: true, kind: 'geyser', x, y: 4.75, z, hx: 1.05, hy: 4.75, hz: 1.05, col: '#ff5a1f', pulse: [70, 110, i * 45] })); } },
+    hazard(g) { [[-7, 6], [7, 12], [-6, 21], [6.5, 28], [0, 17]].forEach(([x, z], i) => addObs(g, { rel: true, kind: 'geyser', x, y: 4.75, z, hx: 1.05, hy: 4.75, hz: 1.05, col: '#ff5a1f', pulse: [70, 110, i * 45] })); } },
   jupiter: { name: 'EYE OF THE STORM', title: 'STORM ARENA', theme: { sky: 'cloud', grid: '#7a4a1e' }, col: '#7df9ff',
     grunt: { col: '#7df9ff', sp: 4.6, hp: 2, shape: 'spark', wob: 5 }, fast: { col: '#ffffff', sp: 6.8, hp: 1, shape: 'spark', wob: 8 }, gun: { col: '#b06bff', hp: 6, shape: 'jelly', burst: 8, fire: 150 }, champ: { col: '#b06bff', shape: 'jelly', name: 'THUNDER BLOOM' },
-    hazard(g) { [6, 12, 18].forEach((z, i) => addObs(g, { rel: true, kind: 'bolt', x: 0, y: 4.5, z, hx: 8.8, hy: 0.4, hz: 0.45, col: '#7df9ff', pulse: [55, 125, i * 60] })); } },
+    hazard(g) { [7, 17, 27].forEach((z, i) => addObs(g, { rel: true, kind: 'bolt', x: 0, y: 4.5, z, hx: 13, hy: 0.4, hz: 0.45, col: '#7df9ff', pulse: [55, 125, i * 60] })); } },
   x: { name: 'THE HEART', title: 'BLOOM ARENA', theme: { sky: 'bio', grid: '#6a1e8a', trippy: true, splat: true }, col: '#3dffb0',
     grunt: { col: '#b6ff3d', sp: 3.6, hp: 1, shape: 'spore', r: 0.42, wob: 4 }, fast: { col: '#ff3df0', sp: 5.8, hp: 1, shape: 'spore', r: 0.42, wob: 7 }, gun: { col: '#ff3df0', hp: 8, shape: 'spitter', fire: 125, fan: 4, bcol: '#b6ff3d', bs: 7 }, champ: { col: '#ff3df0', shape: 'spitter', name: 'BROOD MOTHER' },
-    hazard(g) { [[-5, 6], [5, 11], [-3, 17]].forEach(([x, z], i) => addObs(g, { rel: true, kind: 'tentacle', x, y: 4.75, z, hx: 0.75, hy: 4.75, hz: 0.75, col: '#3dffb0', osc: { ax: 1.6, ay: 0, w: 1.2, ph: i * 2 } })); } } };
+    hazard(g) { [[-7, 7], [7, 14], [-4, 23], [6, 29]].forEach(([x, z], i) => addObs(g, { rel: true, kind: 'tentacle', x, y: 4.75, z, hx: 0.75, hy: 4.75, hz: 0.75, col: '#3dffb0', osc: { ax: 1.6, ay: 0, w: 1.2, ph: i * 2 } })); } } };
 // each wave: [grunts, fast, gunners, phase grunts]; wave 5 adds the champion
-const WAVES = [[10, 0, 0, 0], [10, 6, 1, 0], [8, 6, 2, 6], [12, 8, 3, 8], [10, 10, 2, 8]];
+const WAVES = [[14, 0, 0, 0], [14, 8, 2, 0], [12, 8, 3, 8], [16, 10, 4, 10], [14, 14, 4, 10]];
 function arena(of) {
   const T = ARENAS[of], K = kit('arena-' + of); K.zone(-99, 1e9, TOP, 'BONUS ARENA // ' + T.name);
-  const edge = g => { const a = g.rand() * 6.283, x = Math.cos(a) * 12, z = 11.5 + Math.sin(a) * 15; return [Math.max(-9, Math.min(9, x)), Math.max(-1.5, Math.min(25, z))]; };
+  const edge = g => { const a = g.rand() * 6.283, x = Math.cos(a) * 18, z = 17 + Math.sin(a) * 22; return [Math.max(-13.5, Math.min(13.5, x)), Math.max(-0.5, Math.min(34.5, z))]; };
   const spawn = (g, spec, extra) => { const [x, z] = edge(g); return addEnemy(g, { type: 'seek', x, y: 4.5, z, r: 0.6, score: 100, ph: g.rand() * 6, ...spec, ...extra }); };
   const tick = g => {
     const A = g.ar || (g.ar = { wave: 0, total: WAVES.length, t: 40, left: 0, name: T.name, q: [] }), alive = g.enemies.filter(e => e.hp > 0);
     A.left = alive.length + A.q.length; const ph = alive.filter(e => e.phase === 1).length; g.recView = ph > alive.length - ph ? 1 : 3;
     if (A.q.length) { if (g.tick % 30 === 0) for (let i = 0; i < 2 && A.q.length; i++) { const [spec, extra] = A.q.shift(); spawn(g, spec, extra); } return; } // enemies pour in from the edges a few at a time
-    if (alive.length) { A.t = 0; return; }
+    runMini(g); if (alive.length) { A.t = 0; return; }
     if (++A.t < 75) return; A.t = 0;
-    if (A.wave >= WAVES.length) { g.state = 'clear'; g.endT = 0; g.score += 8000; g.fx.push('clear', 'say:arena clear', 'toast:ARENA CLEAR|+8000'); return; }
+    if (A.wave >= WAVES.length && !A.mini) { A.mini = true; const M = ARENA_MINI[of]; g.mini = addEnemy(g, { type: 'seek', sp: 0, keep: 1e6, mini: true, name: M.name, ai: M.ai, x: 0, y: 4.5, z: 30, hp: Math.round(M.hp * power(g)), hpMax: Math.round(M.hp * power(g)), r: M.r, col: M.col, shape: M.shape, score: 0, big: true }); hint(g, 'MINIBOSS // ' + M.name, 200); g.fx.push('charge', 'say:miniboss'); g.obs.length = 0; return; }
+    if (A.wave >= WAVES.length) { g.state = 'clear'; g.endT = 0; g.score += 15000; g.fx.push('clear', 'say:arena clear', 'toast:ALL WAVES CLEARED|+15000'); return; }
     const w = WAVES[A.wave++], hpx = 1 + A.wave * 0.25; hint(g, 'WAVE ' + A.wave + ' / ' + WAVES.length + (A.wave === 3 ? '   WHITE ONES: SHIFT TO ISO' : ''), 150); g.fx.push('charge'); if (A.wave === 1) T.hazard(g);
     const add = (n, spec, extra) => { for (let i = 0; i < n; i++) A.q.push([spec, { ...extra, hp: Math.round((extra.hp || spec.hp) * hpx) }]); };
     add(w[0], T.grunt, { hp: T.grunt.hp * 4, score: 15 }); add(w[1], T.fast, { hp: T.fast.hp * 5, score: 25 }); add(w[3], T.grunt, { col: '#ffffff', phase: 1, hp: T.grunt.hp * 4, score: 30 });
     for (let i = 0; i < w[2]; i++) A.q.push([T.gun, { sp: 2, keep: 7, hp: Math.round(T.gun.hp * 4 * hpx), score: 80, r: T.gun.r || 0.9, pod: i === 0 && A.wave % 2 === 0 }]);
     for (let i = A.q.length - 1; i > 0; i--) { const j = g.rand() * (i + 1) | 0; [A.q[i], A.q[j]] = [A.q[j], A.q[i]]; }
-    if (A.wave === WAVES.length) { A.q.push([T.champ, { sp: 1.6, keep: 6, hp: 650, r: 1.7, score: 1500, fire: 70, fan: 5, big: true, pod: true }]); hint(g, 'FINAL WAVE // ' + T.champ.name, 170); }
+    if (A.wave === WAVES.length) hint(g, 'FINAL WAVE', 150);
   };
   return K.done({ name: T.name, title: T.title, bonus: true, arena: true, tick, rules: { arena: true }, theme: { ...T.theme, arena: T.col } });
 }

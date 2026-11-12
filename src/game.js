@@ -3,6 +3,7 @@
 // The four views flatten different axes, and what a view flattens does not exist for collisions.
 export const VIEWS = ['SIDE', 'ISO', 'CHASE', 'TOP'];
 export const MASK = [[0, 1, 1], [1, 1, 1], [1, 1, 1], [1, 0, 1]]; // which of x,y,z count in each view
+export const AR = { x: 12.5, z0: 0.8, z1: 33 }; // the bonus arena floor
 export const B = { x: 8.2, y0: 0.6, y1: 9.1, z0: 0.5, z1: 12 };
 export const BAR = ['DRONE', 'MISSILE', 'LASER', 'WAVE', 'BOLT', 'SPREAD', 'SHIELD', '???'];
 export const BARMAX = [6, 3, 3, 3, 3, 3, 3, 99];
@@ -32,7 +33,7 @@ export function createGame({ seed = 1, level, start = null, players = 1, wing = 
     wing: wing && players === 1 ? makeWing() : null, shake: 0, flash: 0, endT: 0, speedMul: 3, checkpoint: z0, cpSnap: null };
   for (let i = 0; i < players; i++) { const p = newPlayer(i, start, players > 1); if (i) p.up = g.players[0].up; for (let k = 0; k < p.up[U.DRONE]; k++) p.drones.push({ x: p.x, y: p.y, z: p.z }); g.players.push(p); }
   g.z0 = z0; while (g.evi < level.events.length && level.events[g.evi].z < z0 - 20) g.evi++;
-  if (level.rules?.arena) { g.intro = 70; g.camZ = 0; for (const p of g.players) { p.y = 4.5; p.z = 11; p.shield = Math.max(p.shield, 2); } }
+  if (level.rules?.arena) { g.intro = 70; g.camZ = 0; for (const p of g.players) { p.y = 4.5; p.z = 16; p.shield = Math.max(p.shield, 2); } }
   g.cpSnap = snapshot(g);
   return g;
 }
@@ -158,7 +159,7 @@ export function step(g, inputs) {
   // ----- players: shift, move, shoot -----
   if (playing) for (const p of P) {
     const inp = inputs[p.i] || {}, pv = p.prev, edge = k => inp[k] && !pv[k];
-    if (p.dead > 0) { if (--p.dead === 0) { if (p.lives < 0) { p.dead = 1e9; p.out = true; if (P.every(q => q.out)) { g.state = 'over'; g.endT = 0; g.fx.push('over', 'say:game over'); } } else { p.x = g.coop ? (p.i ? 1.5 : -1.5) : 0; p.y = 4.5; p.z = rules.arena ? 11 : 3; p.inv = 190; } } p.prev = inp; continue; }
+    if (p.dead > 0) { if (--p.dead === 0) { if (p.lives < 0) { p.dead = 1e9; p.out = true; if (P.every(q => q.out)) { g.state = 'over'; g.endT = 0; g.fx.push('over', 'say:game over'); } } else { p.x = g.coop ? (p.i ? 1.5 : -1.5) : 0; p.y = 4.5; p.z = rules.arena ? 16 : 3; p.inv = 190; } } p.prev = inp; continue; }
     const dir = edge('shiftR') ? 1 : edge('shiftL') ? -1 : 0;
     if (dir && g.shiftCd <= 0 && !g.lockShift) doShift(g, rules.arena ? (g.view === 3 ? 1 : 3) : (g.recView - g.view + 4) % 4 === 2 ? g.recView : (g.view + dir + 4) % 4, dir, p); // when the view you need is two rolls away, one press goes straight to it
     if (edge('upgrade')) buy(g, p);
@@ -167,11 +168,10 @@ export function step(g, inputs) {
     if (edge('gear')) { g.gear = (g.gear + 1) % 3; pop(g, GEARS[g.gear], p.x, p.y + 1, p.z, '#ffe14a'); g.fx.push('gear'); }
     const sp = (8.5 + g.gear * 1.2) * DT, mx = clamp(inp.mx || 0, -1, 1), my = clamp(inp.my || 0, -1, 1), v = g.view, ox = p.x, oy = p.y;
     let ax = mx, ay = my; if (rules.inertia) { p.ivx += (mx - p.ivx) * 0.045; p.ivy += (my - p.ivy) * 0.045; ax = p.ivx; ay = p.ivy; }
-    if (rules.arena) { // free flight over a fixed arena; the guns track the nearest target on their own
-      p.x = clamp(p.x + ax * sp, -8.3, 8.3); p.z = clamp(p.z - ay * sp, 0.8, 23); p.y = 4.5;
-      let best = null, bd = 1e9; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, v)) continue; const d = Math.hypot(e.x - p.x, e.z - p.z); if (d < bd) { bd = d; best = e; } }
-      let tx = p.ax, tz = p.az; p.manual = false; if (inp.aim && Math.hypot(inp.aim[0], inp.aim[1]) > 0.3) { const d = Math.hypot(inp.aim[0], inp.aim[1]); tx = inp.aim[0] / d; tz = inp.aim[1] / d; p.manual = true; } else if (best && bd > 0.1) { tx = (best.x - p.x) / bd; tz = (best.z - p.z) / bd; } else if (mx || my) { const d = Math.hypot(mx, my); tx = mx / d; tz = -my / d; }
-      { const k = p.manual ? 0.6 : 0.3; p.ax += (tx - p.ax) * k; p.az += (tz - p.az) * k; } const n = Math.hypot(p.ax, p.az) || 1; p.ax /= n; p.az /= n; }
+    if (rules.arena) { // free flight over a fixed arena; the guns fire the way the ship is facing, and it faces the way it moves
+      p.x = clamp(p.x + ax * sp, -AR.x, AR.x); p.z = clamp(p.z - ay * sp, AR.z0, AR.z1); p.y = 4.5;
+      let tx = p.ax, tz = p.az; p.manual = false; if (inp.aim && Math.hypot(inp.aim[0], inp.aim[1]) > 0.3) { const d = Math.hypot(inp.aim[0], inp.aim[1]); tx = inp.aim[0] / d; tz = inp.aim[1] / d; p.manual = true; } else if (Math.hypot(mx, my) > 0.25) { const d = Math.hypot(mx, my); tx = mx / d; tz = -my / d; }
+      { const k = p.manual ? 0.6 : 0.4; p.ax += (tx - p.ax) * k; p.az += (tz - p.az) * k; } const n = Math.hypot(p.ax, p.az) || 1; p.ax /= n; p.az /= n; }
     else { if (v === 0) { p.z += ax * sp; p.y -= ay * sp; } else if (v === 3) { p.x += ax * sp; p.z -= ay * sp; } else { p.x += ax * sp; p.y -= ay * sp; }
       if (rules.wind) { const w = rules.wind(g); p.x += w[0] * DT; p.y += w[1] * DT; } if (pull) { p.x += pull[0] * DT; p.y += pull[1] * DT; p.z += pull[2] * DT; }
       p.x = clamp(p.x, -B.x, B.x); p.y = clamp(p.y, B.y0, B.y1); p.z = clamp(p.z, B.z0, B.z1); }
@@ -218,7 +218,7 @@ export function step(g, inputs) {
     if (zn && zn !== g.zone) { g.zone = zn; if (zn.msg) hint(g, zn.msg, 260); }
     if (!g.boss && g.zone) g.recView = g.zone.view;
     for (const c of lvd.checkpoints) if (g.camZ >= c && c > g.checkpoint) { g.checkpoint = c; g.cpSnap = snapshot(g); g.fx.push('blip', 'toast:CHECKPOINT|PROGRESS SAVED'); }
-    if (lvd.endZ && g.camZ >= lvd.endZ && !g.boss) { g.state = 'clear'; g.endT = 0; g.score += lvd.endBonus || 0; g.fx.push('clear', 'toast:BONUS COMPLETE|+' + (lvd.endBonus || 0)); }
+    if (lvd.endZ && g.camZ >= lvd.endZ && !g.boss && !(g.mini && g.mini.hp > 0)) { g.state = 'clear'; g.endT = 0; g.score += lvd.endBonus || 0; g.fx.push('clear', 'toast:BONUS COMPLETE|+' + (lvd.endBonus || 0)); }
     if (rules.heat && g.camZ > 26) { const p = P[0], m = MASK[g.view]; let shade = false; for (const o of g.obs) if (o.kind === 'shade' && ov({ x: p.x, y: p.y, z: p.z, r: 0.1 }, o, m)) { shade = true; break; }
       g.heat = clamp(g.heat + (shade ? -1.2 : 0.3), 0, 100); if (g.heat >= 100 && p.dead <= 0) { g.heat = 45; hurt(g, p); pop(g, 'OVERHEAT', p.x, p.y + 1, p.z, '#ff4d6d', true); } }
     if (lvd.tick) lvd.tick(g);
@@ -273,7 +273,7 @@ export function step(g, inputs) {
     if (o.z + o.hz < -5) o.dead = true;
   }
   // ----- enemy bullets -----
-  for (const b of g.ebul) { b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; if (--b.life <= 0 || b.z < -3 || b.z > 36 || Math.abs(b.x) > 12 || b.y < -1 || b.y > 11) b.life = 0; }
+  for (const b of g.ebul) { b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; if (--b.life <= 0 || b.z < -3 || b.z > 36 || Math.abs(b.x) > (rules.arena ? 15 : 12) || b.y < -1 || b.y > 11) b.life = 0; }
   // ----- pods + rings -----
   for (const q of g.pods) { q.t++; q.z -= dz * 0.75; if (q.z < -3) q.dead = true; for (const p of P) { if (p.dead > 0) continue; const dx = (p.x - q.x) * m[0], dy = (p.y - q.y) * m[1], dzz = p.z - q.z, d = Math.hypot(dx, dy, dzz); if (d < 5) { q.x += dx / (d + 0.01) * 9 * dt; q.y += dy / (d + 0.01) * 9 * dt; q.z += dzz / (d + 0.01) * 9 * dt; }
     if (d < 1.2 && !q.dead) { q.dead = true; if (q.kind === 'pod') { const o = P[0]; let c = o.cursor; for (let k = 0; k < BAR.length; k++) { c = (c + 1) % BAR.length; if ((c === U.SHIELD ? o.shield : o.up[c]) < BARMAX[c]) break; } o.cursor = c; /* maxed slots are skipped */ g.fx.push('pod'); addScore(g, 50); } else if (q.kind === 'god') startGod(g, p); else if (q.kind === 'bomb') { p.bombs = Math.min(9, p.bombs + 1); pop(g, '+BOMB', p.x, p.y + 1, p.z, '#ff8a2b'); g.fx.push('pod'); } else if (q.kind === 'gem') { g.chain++; g.chainT = 190; addScore(g, 200, q.x, q.y, q.z, '#7df9ff'); g.fx.push('ring'); } } } }
@@ -340,7 +340,7 @@ export function autopilot(g, i = 0) {
   if (g.view !== want && g.shiftCd <= 0 && !g.lockShift) { const d = (want - g.view + 4) % 4; if (d === 3 && !g.level.rules?.arena) out.shiftL = !pv.shiftL; else out.shiftR = !pv.shiftR; }
   const v = g.view, m = MASK[v], rules = g.level.rules || {}, sc = rules.arena ? 0 : SCROLL * g.speedMul;
   const arena = !!rules.arena; let A = v === 0 ? 'z' : 'x', Bx = v === 3 ? 'z' : 'y'; if (arena) { A = 'x'; Bx = 'z'; }
-  const ra = A === 'z' ? [1, 2.5, 4, 5.5, 7, 9] : [-7, -5.25, -3.5, -1.75, 0, 1.75, 3.5, 5.25, 7], rb = arena ? [2, 4.5, 7, 9.5, 12, 14.5, 17, 19.5, 22] : Bx === 'z' ? [1, 2.5, 4, 5.5, 7, 9] : [1, 2.1, 3.2, 4.3, 5.4, 6.5, 7.6, 8.5];
+  const ra = A === 'z' ? [1, 2.5, 4, 5.5, 7, 9] : arena ? [-11, -8.25, -5.5, -2.75, 0, 2.75, 5.5, 8.25, 11] : [-7, -5.25, -3.5, -1.75, 0, 1.75, 3.5, 5.25, 7], rb = arena ? [2, 5.5, 9, 12.5, 16, 19.5, 23, 26.5, 30] : Bx === 'z' ? [1, 2.5, 4, 5.5, 7, 9] : [1, 2.1, 3.2, 4.3, 5.4, 6.5, 7.6, 8.5];
   const spd = (8.5 + g.gear * 1.2) * (rules.inertia ? 0.6 : 1);
   let best = null, bc = 1e9; const c = { x: p.x, y: p.y, z: p.z, hx: 0.75, hy: 0.6, hz: 0.9 }, t = { x: 0, y: 0, z: 0, hx: 0, hy: 0, hz: 0 };
   let tgt = null, td = 1e9; for (const e of g.enemies) if (e.hp > 0 && live(e, v) && e.z > p.z + 2 && e.z < 26) { const d = e.z + (e.type === 'boss' ? -50 : 0); if (d < td) { td = d; tgt = e; } }
@@ -369,5 +369,6 @@ export function autopilot(g, i = 0) {
   if (best) { p.ap = { v, a: best.a, b: best.b }; const da = best.a - p[A], db = best.b - p[Bx]; out.mx = Math.abs(da) > 0.15 ? Math.sign(da) : 0; out.my = -(Math.abs(db) > 0.15 ? Math.sign(db) : 0); }
   if (bc > 150 && p.bombs > 0 && !pv.bomb && p.inv <= 0) out.bomb = true;
   const cu = p.cursor; if (cu >= 0 && !pv.upgrade) { const lo = Math.min(p.up[1], p.up[2], p.up[3], p.up[4], p.up[5]); if (cu === 7 || cu === 0 && p.up[0] <= lo * 2 + 1 && p.up[0] < 6 || cu >= 1 && cu <= 5 && p.up[cu] <= lo && p.up[cu] < 3 || cu === 6 && p.shield < 2) out.upgrade = true; }
+  if (arena) { let bd = 1e9, be = null; for (const e of g.enemies) if (e.hp > 0 && live(e, v)) { const d = Math.hypot(e.x - p.x, e.z - p.z); if (d < bd) { bd = d; be = e; } } if (be) out.aim = [be.x - p.x, be.z - p.z]; } // the autopilot points its guns by hand, like a right stick
   return out;
 }

@@ -229,6 +229,17 @@ Nine ideas went on the list and all nine went in, plus one more from Benjamin.
 - **Boss walls fade in.** They start as a ghost and firm up gradually, and only blink in the last moment.
 - **Catching up.** Losing a ship drops a few pods (more in a boss fight), and bosses throw a pod now and then.
 
+### 15. Arenas and minibosses
+> "the in between level bonus arena can be zoomed out quite a bit more and the arena made larger and instead of autoaiming it should shoot the direction you are facing as you move around"
+
+- **A bigger arena, seen from further back.** The floor is about twice the area and the camera pulls well back. The waves are bigger to match.
+- **You aim by flying.** The guns fire the way the ship faces, and it faces the way it moves. A right stick or the mouse still aims on its own if you have one.
+- **A miniboss ends every arena.** GRID WARDEN patrols a square circuit sweeping four rotating streams. STONE ELDER marks where you stand, leaps there and lands in a ring of fire. THUNDER BLOOM drifts after you trailing spiral arms and calls lightning down. BROOD MOTHER hatches spores and spits fans of acid, faster as she weakens.
+- **A miniboss ends every warp stage too.** LUNAR SENTINEL, SOLAR FLARE, THE MOTHER ROCK and FROST WARDEN. The stage only clears once it is gone.
+- **Minibosses scale with you.** They are as tough as your guns are strong.
+- **Clearing every wave pays more:** 15,000, on top of 5,000 for the miniboss. Dying in an arena still only ends the arena.
+- **Hover traffic you can read.** On Earth the cars are colour-coded by height (green low, yellow middle, pink high), each one drops a line to a shadow on the ground, and the altitude meter shows the traffic ahead at its height. There are also about twice as many rows of it.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
