@@ -28,7 +28,7 @@ export function createGame({ seed = 1, level, start = null, players = 1, wing = 
   const g = { seed, rand: rng(seed), tick: 0, camZ: z0 - INTRO_RUN, level, evi: 0, view: 3, viewFrom: 3, shiftT: 0, shiftDir: 1, shiftCd: 0, intro: INTRO, gear: start?.gear ?? 0,
     players: [], enemies: [], shots: [], ebul: [], obs: [], rings: [], pods: [], parts: [], pops: [], beams: [], shocks: [], fx: [], groups: {},
     score: start?.score || 0, chain: 0, chainT: 0, bestChain: 0, state: 'play', boss: null, hint: null, hintT: 0, zone: null, recView: 0, heat: 0,
-    flags: { warp: !!start?.warp, warpNow: false }, stats: Object.assign({ kills: 0, shifts: 0, deaths: 0, hits: 0, perfect: 0 }, start?.stats), coop: players > 1, mut: mut || {}, perfT: 0,
+    flags: { warp: !!start?.warp, warpNow: false }, stats: Object.assign({ kills: 0, shifts: 0, deaths: 0, hits: 0, perfect: 0, ticks: 0 }, start?.stats), coop: players > 1, mut: mut || {}, perfT: 0,
     wing: wing && players === 1 ? makeWing() : null, shake: 0, flash: 0, endT: 0, speedMul: 3, checkpoint: z0, cpSnap: null };
   for (let i = 0; i < players; i++) { const p = newPlayer(i, start, players > 1); if (i) p.up = g.players[0].up; for (let k = 0; k < p.up[U.DRONE]; k++) p.drones.push({ x: p.x, y: p.y, z: p.z }); g.players.push(p); }
   g.z0 = z0; while (g.evi < level.events.length && level.events[g.evi].z < z0 - 20) g.evi++;
@@ -122,18 +122,19 @@ function beam(g, x, y, z, w, dmg, col, o = {}) {
     for (const e of g.enemies) { if (e.hp <= 0 || !live(e, g.view)) continue; const ex = e.x - x, ez = e.z - z, t = ex * dx + ez * dz; if (t < 0 || t > len) continue; if (Math.abs(ex * dz - ez * dx) < (e.hx ?? e.r) + w) { damage(g, e, dmg); if (o.hyper) explode(g, e.x, e.y, e.z, '#ffffff', 8, 9); } }
     for (const b of g.obs) if (b.hp != null && solid(b, g.view)) { const ex = b.x - x, ez = b.z - z, t = ex * dx + ez * dz; if (t > 0 && t < len && Math.abs(ex * dz - ez * dx) < b.hx + w) b.hp -= dmg; }
     if (o.eat) for (const b of g.ebul) { const ex = b.x - x, ez = b.z - z, t = ex * dx + ez * dz; if (t > 0 && t < len && Math.abs(ex * dz - ez * dx) < w + 0.3) b.life = 0; }
-    g.beams.push({ x, y, z0: z, z1: z + dz * len, ex: x + dx * len, life: o.life || 5, max: o.life || 5, col, w: o.hyper ? w : 0 }); return; }
+    g.beams.push({ x, y, z0: z, z1: z + dz * len, ex: x + dx * len, life: o.life || 5, max: o.life || 5, col, w: o.hyper ? w : 0, lw: o.lw || 0 }); return; }
   if (!o.pierce) { let blk = null; for (const b of g.obs) { if (!solid(b, g.view)) continue; if (b.z - b.hz > z && (!m[0] || Math.abs(b.x - x) < b.hx + w) && (!m[1] || Math.abs(b.y - y) < b.hy + w) && b.z - b.hz < zEnd) { zEnd = b.z - b.hz; blk = b; } } if (blk && blk.hp != null) { blk.hp -= dmg; blk.hit = 2; } }
   else for (const b of g.obs) if (b.hp != null && solid(b, g.view) && b.z > z && (!m[0] || Math.abs(b.x - x) < b.hx + w) && (!m[1] || Math.abs(b.y - y) < b.hy + w)) b.hp -= dmg;
   for (const e of g.enemies) { if (e.hp <= 0 || !live(e, g.view) || e.z < z || e.z > zEnd + 1) continue; if ((!m[0] || Math.abs(e.x - x) < (e.hx ?? e.r) + w) && (!m[1] || Math.abs(e.y - y) < (e.hy ?? e.r) + w)) { damage(g, e, dmg); if (o.hyper) explode(g, e.x, e.y, e.z, '#ffffff', 8, 9); } }
   if (o.eat) for (const b of g.ebul) if (b.z > z && (!m[0] || Math.abs(b.x - x) < w + 0.3) && (!m[1] || Math.abs(b.y - y) < w + 0.3)) b.life = 0;
-  g.beams.push({ x, y, z0: z, z1: zEnd, life: o.life || 5, max: o.life || 5, col, w: o.hyper ? w : 0 });
+  g.beams.push({ x, y, z0: z, z1: zEnd, life: o.life || 5, max: o.life || 5, col, w: o.hyper ? w : 0, lw: o.lw || 0 });
 }
 function fire(g, p) { // everything is fired relative to where the ship points: f = forward, r = right (straight ahead outside the arena)
   const v = g.view, sp = lv(p, U.SPREAD), od = p.over > 0 || p.god > 0, fx = p.ax, fz = p.az, rx = fz, rz = -fx, side = v === 0 && !g.level.rules?.arena;
   const S = (off, fwd, lat, vy, dmg) => { if (g.shots.length < 420) g.shots.push({ x: p.x + rx * off + fx * fwd, y: p.y, z: p.z + rz * off + fz * fwd, vx: fx * 40 + rx * lat, vy, vz: fz * 40 + rz * lat, dmg, r: 0.3, kind: 0, life: 60, pierce: sp >= 4 ? 1 : 0 }); };
   S(-0.26, 0.8, 0, 0, 1.15); S(0.26, 0.8, 0, 0, 1.15);
   for (let k = 1; k <= sp; k++) { const a = Math.sin(k * 0.13) * 40; if (side) { S(0, 0.6, 0, a, 0.8); S(0, 0.6, 0, -a, 0.8); } else { S(0, 0.6, a, 0, 0.8); S(0, 0.6, -a, 0, 0.8); if (k >= 3 && v !== 3 && !g.level.rules?.arena) { const b = Math.sin((k - 2) * 0.13) * 40; S(0, 0.6, 0, b, 0.8); S(0, 0.6, 0, -b, 0.8); } } }
+  if (sp >= 5) for (const a of [-7, 7]) if (g.shots.length < 420) g.shots.push({ x: p.x - fx * 0.7, y: p.y, z: p.z - fz * 0.7, vx: -fx * 40 + (side ? 0 : rx * a), vy: side ? a : 0, vz: -fz * 40 + (side ? 0 : rz * a), dmg: 0.8, r: 0.3, kind: 0, life: 60, pierce: 1 }); // max rank covers your tail
   p.fireT = Math.max(6, 13 - sp) * (od ? 0.6 : 1) | 0; g.fx.push('shot');
 }
 
@@ -151,7 +152,7 @@ export function step(g, inputs) {
     g.camZ += INTRO_RUN / INTRO; g.speedMul = 1 + 2 * g.intro / INTRO; for (const p of P) { p.inv = Math.max(p.inv, 100); p.prev = inputs[p.i] || {}; }
     for (const q of g.parts) q.life--; if (g.intro === 0) { g.speedMul = GEARMUL[g.gear]; g.fx.push('go'); } if (g.wing) wingStep(g, DT, false); return g;
   }
-  const dt = DT * (g.boss?.dying ? 0.3 : g.shiftT > 0 ? 0.4 : 1); // the world slows while you roll, so there is time to line up
+  const dt = DT * (g.boss?.dying ? 0.3 : g.shiftT > 0 ? 0.4 : 1); if (g.state === 'play' && !g.boss?.dying) g.stats.ticks++; // the world slows while you roll, so there is time to line up
 
   // ----- players: shift, move, shoot -----
   if (playing) for (const p of P) {
@@ -163,7 +164,7 @@ export function step(g, inputs) {
     if (edge('bomb')) nuke(g, p);
     if (edge('drone')) { p.dmode = (p.dmode + 1) % 4; pop(g, 'DRONES: ' + DRONE_MODES[p.dmode], p.x, p.y + 1, p.z, '#b06bff'); g.fx.push('blip'); }
     if (edge('gear')) { g.gear = (g.gear + 1) % 3; pop(g, GEARS[g.gear], p.x, p.y + 1, p.z, '#ffe14a'); g.fx.push('gear'); }
-    const sp = (8.5 + g.gear * 1.2) * DT, mx = clamp(inp.mx || 0, -1, 1), my = clamp(inp.my || 0, -1, 1), v = g.view;
+    const sp = (8.5 + g.gear * 1.2) * DT, mx = clamp(inp.mx || 0, -1, 1), my = clamp(inp.my || 0, -1, 1), v = g.view, ox = p.x, oy = p.y;
     let ax = mx, ay = my; if (rules.inertia) { p.ivx += (mx - p.ivx) * 0.045; p.ivy += (my - p.ivy) * 0.045; ax = p.ivx; ay = p.ivy; }
     if (rules.arena) { // free flight over a fixed arena; the guns track the nearest target on their own
       p.x = clamp(p.x + ax * sp, -8.3, 8.3); p.z = clamp(p.z - ay * sp, 0.8, 23); p.y = 4.5;
@@ -173,7 +174,7 @@ export function step(g, inputs) {
     else { if (v === 0) { p.z += ax * sp; p.y -= ay * sp; } else if (v === 3) { p.x += ax * sp; p.z -= ay * sp; } else { p.x += ax * sp; p.y -= ay * sp; }
       if (rules.wind) { const w = rules.wind(g); p.x += w[0] * DT; p.y += w[1] * DT; } if (pull) { p.x += pull[0] * DT; p.y += pull[1] * DT; p.z += pull[2] * DT; }
       p.x = clamp(p.x, -B.x, B.x); p.y = clamp(p.y, B.y0, B.y1); p.z = clamp(p.z, B.z0, B.z1); }
-    p.mvx += (mx - p.mvx) * 0.2; p.mvy += (my - p.mvy) * 0.2;
+    p.mvx += (clamp((p.x - ox) / sp, -1, 1) - p.mvx) * 0.22; p.mvy += (clamp((p.y - oy) / sp, -1, 1) - p.mvy) * 0.22; // the ship banks when it slides sideways and noses up or down when it climbs or dives
     p.hist.push(p.x, p.y, p.z); if (p.hist.length > 3 * 80) p.hist.splice(0, 3);
     if (p.inv > 0) p.inv--; if (p.over > 0) p.over--;
     if (p.god > 0) { p.god--; p.inv = Math.max(p.inv, 2); if (p.god === 0) { p.drones = p.drones.filter(d => !d.tmp); p.inv = 90; pop(g, 'GOD MODE OVER', p.x, p.y + 1, p.z, '#9fb0ff'); } }
@@ -182,14 +183,13 @@ export function step(g, inputs) {
     if (firing && p.fireT <= 0) fire(g, p);
     if (p.god > 0 && p.god % 16 === 0) { beam(g, p.x + p.ax, p.y, p.z + p.az, 1.9, 20, '#ffffff', { pierce: true, eat: true, hyper: true, life: 11, dx: p.ax, dz: p.az }); g.fx.push('hyper'); g.shake = Math.max(g.shake, 6); explode(g, p.x + p.ax * 1.6, p.y, p.z + p.az * 1.6, '#ffffff', 12, 9); for (let i = 1; i < 4; i++) g.shocks.push({ x: p.x + p.ax * i * 6, y: p.y, z: p.z + p.az * i * 6, r: 0.6, vr: 12, life: 14, max: 14, col: i % 2 ? '#ffffff' : '#ffe14a' }); }
     const L = lv(p, U.LASER);
-    if (L && firing && --p.laserT <= 0) { p.laserT = (11 - L) * (od ? 0.6 : 1) | 0; const d = 0.7 + 0.3 * L, w = 0.3 + 0.08 * L, lat = v === 0 ? 'y' : 'x'; beam(g, p.x + p.ax, p.y, p.z + p.az, w, d, '#3dffb0', { pierce: L >= 4, dx: p.ax, dz: p.az });
-      const offs = L >= 5 ? [1.3, -1.3, 2.6, -2.6] : L >= 3 ? [1.3, -1.3] : []; for (const o of offs) { if (rules.arena) beam(g, p.x + p.az * o, p.y, p.z - p.ax * o, w * 0.7, d * 0.6, '#3dffb0', { dx: p.ax, dz: p.az }); else beam(g, p.x + (lat === 'x' ? o : 0), p.y + (lat === 'y' ? o : 0), p.z + 0.6, w * 0.7, d * 0.6, '#3dffb0'); } if (g.tick % 12 < 6) g.fx.push('laser'); }
+    if (L && firing && --p.laserT <= 0) { p.laserT = (11 - L) * (od ? 0.6 : 1) | 0; const r = L >= 5 ? 3 : L >= 4 ? 2 : 1; beam(g, p.x + p.ax, p.y, p.z + p.az, 0.3 + 0.28 * r, [1.3, 3.2, 5.2][r - 1], '#3dffb0', { pierce: L >= 4, dx: p.ax, dz: p.az, lw: r }); if (g.tick % 12 < 6) g.fx.push('laser'); } // one beam: each rank makes it thicker and harder-hitting
     const Wv = lv(p, U.WAVE);
     if (Wv && firing && --p.waveT <= 0) { p.waveT = (44 - 6 * Wv) * (od ? 0.6 : 1) | 0; const n = Wv >= 5 ? 3 : Wv >= 3 ? 2 : 1; for (let k = 0; k < n; k++) g.shots.push({ kind: 3, x: p.x, y: p.y, z: p.z + 1, ox: p.x, oy: p.y, oz: p.z, vx: 0, vy: 0, vz: 22, amp: 1.2 + 0.45 * Wv, ph: k * 6.283 / n, t: 0, d: 1, dmg: 0.2 + 0.07 * Wv, r: 0.7 + 0.12 * Wv, life: 110, axis: v === 0 ? 'y' : 'x', dir: rules.arena ? [p.ax, p.az] : null }); g.fx.push('wave'); }
     const Bo = lv(p, U.BOLT);
-    if (Bo && firing && --p.boltT <= 0) { p.boltT = (96 - 11 * Bo) * (od ? 0.6 : 1) | 0; const n = Bo >= 5 ? 3 : Bo >= 3 ? 2 : 1; for (let k = 0; k < n; k++) g.shots.push({ kind: 4, x: p.x, y: p.y, z: p.z + 1, vx: 0, vy: 0, vz: 0, t: 0, ph: g.rand() * 6.283 + k * 2.1, own: p.i, dmg: 5 + 3 * Bo, chain: Bo >= 4 ? Bo - 1 : Bo >= 2 ? 1 : 0, r: 0.5, life: 190, trail: [] }); g.fx.push('bolt'); }
+    if (Bo && firing && --p.boltT <= 0) { p.boltT = (Bo >= 5 ? 26 : Bo >= 4 ? 40 : 64) * (od ? 0.6 : 1) | 0; const n = 1; for (let k = 0; k < n; k++) g.shots.push({ kind: 4, x: p.x, y: p.y, z: p.z + 1, vx: 0, vy: 0, vz: 0, t: 0, ph: g.rand() * 6.283 + k * 2.1, own: p.i, dmg: 5 + 3 * Bo, chain: Bo >= 4 ? Bo - 1 : Bo >= 2 ? 1 : 0, r: 0.5, life: 150, trail: [] }); g.fx.push('bolt'); }
     const M = lv(p, U.MISSILE);
-    if (M && firing && --p.missT <= 0) { p.missT = (od ? 0.6 : 1) * (62 - 8 * M) | 0; for (let k = 0; k < M + 1 && g.shots.length < 420; k++) { const a = (k - M / 2) * 0.5; g.shots.push({ x: p.x, y: p.y, z: p.z, vx: p.az * Math.sin(a) * 9 + p.ax * 6, vy: rules.arena ? 0 : Math.cos(a * 2) * 5, vz: -p.ax * Math.sin(a) * 9 + p.az * 6, dmg: 6 + 2 * M, r: 0.45, kind: 2, life: 150, aoe: 1.4 + 0.4 * M, split: M >= 5 }); } g.fx.push('missile'); }
+    if (M && firing && --p.missT <= 0) { p.missT = (od ? 0.6 : 1) * (62 - 8 * M) | 0; const rear = M >= 5 ? 4 : M >= 4 ? 2 : 0; for (let k = 0; k < 2 + rear && g.shots.length < 420; k++) { const back = k >= 2, j = back ? k - 2 : k, nn = back ? rear : 2, a = (j - (nn - 1) / 2) * 0.55, fw = back ? -7 : 6; g.shots.push({ x: p.x, y: p.y, z: p.z, vx: p.az * Math.sin(a) * 9 + p.ax * fw, vy: rules.arena ? 0 : Math.cos(a * 2) * (back ? 3 : 5), vz: -p.ax * Math.sin(a) * 9 + p.az * fw, dmg: 6 + 2 * M, r: 0.45, kind: 2, life: 150, aoe: 1.4 + 0.4 * M, split: M >= 5 }); } g.fx.push('missile'); }
     // drones
     const n = p.drones.length, vw = g.view;
     for (let k = 0; k < n; k++) {

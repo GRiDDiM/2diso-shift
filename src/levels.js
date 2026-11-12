@@ -20,7 +20,7 @@ function kit(id) {
     obs(z, { x: (-X + hx - w) / 2, y: 4.75, hx: (hx - w + X) / 2, hy: 7.75, ...k }); obs(z, { x: (X + hx + w) / 2, y: 4.75, hx: (X - hx - w) / 2, hy: 7.75, ...k });
     obs(z, { x: hx, y: (T + hy + h) / 2, hx: w, hy: (T - hy - h) / 2, ...k }); obs(z, { x: hx, y: (hy - h + Bm) / 2, hx: w, hy: (hy - h - Bm) / 2, ...k });
     obs(z, { x: hx, y: hy, hx: w, hy: h, hz: 0.5, ghost: true, kind: 'safe', osc: k.osc }); if (!o.noRing && !k.osc) ring(z, { x: hx, y: hy, r: 1.5 }); };
-  const done = extra => { ev.sort((a, b) => a.z - b.z); return { id, events: ev, zones, checkpoints, ...extra }; };
+  const done = extra => { ev.sort((a, b) => a.z - b.z); return { id, events: ev, zones, checkpoints, len: extra.endZ || zones.find(q => q.z1 > 1e8)?.z0 || 0, ...extra }; };
   return { at, obs, ring, en, ground, wing, zone, gate, warp, checkpoints, done };
 }
 

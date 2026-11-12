@@ -191,6 +191,18 @@ Nine ideas went on the list and all nine went in, plus one more from Benjamin.
 - **The map before every hop.** Going to the next planet, into a bonus stage or back out of one, the solar map comes up first and the ship flies from where you are to where you are going. Then hyperspace.
 - **Speed.** Jupiter and Planet X were dropping frames. Faint lines, sparks and smoke no longer get the expensive glow passes, and the game now steps its own quality down if frames run long.
 
+### 12. Fifth playtest
+> "add a bonus that affects rank based on how fast you beat it because maybe sometimes people are changing their speed"
+
+- **Time counts.** Every planet has a par time. Beat it for a FAST CLEAR medal (a seventh medal, so the top rank is now SSS), and the faster you finish the bigger the time bonus. Flying the whole level at slow speed will not make par.
+- **Progress bar.** A bar under the view tabs shows how far through the level you are, with the checkpoints marked.
+- **The ship leans.** It banks when it slides sideways and noses up or down when it climbs or dives.
+- **Weapons grow differently.**
+  - LASER is one beam that gets thicker and hits harder with each rank, instead of extra rows.
+  - MISSILE keeps two up front and adds rockets out of the back: two at rank 2, four at rank 3.
+  - SPREAD covers your tail with two rear shots at max rank.
+  - BOLT fires one bolt at a time, faster with each rank.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
