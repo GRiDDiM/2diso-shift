@@ -345,9 +345,9 @@ function sun() { // surf the flares: stay in the shadow lane or cook
   const K = kit('sun'), { at, obs, en, zone } = K, HOT = '#ffb02e';
   zone(-99, 175, TOP, 'BONUS // THE SUN - STAY IN THE SHADE OF THE SOLAR SATELLITES');
   for (let i = 0; i < 12; i++) { const z = 34 + i * 12; obs(z, { x: Math.sin(i * 0.8) * 4.6, y: 4.75, hx: 2.3, hy: 4.75, hz: 6.2, col: '#2ee6ff', kind: 'shade', ghost: true }); if (i % 3 === 1) obs(z, { x: Math.sin(i * 0.8) * 4.6, y: 4.5, hx: 0.7, hy: 0.7, hz: 0.7, col: '#7df9ff', kind: 'ice', hp: 3, gem: true, score: 150 }); }
-  for (let i = 0; i < 5; i++) obs(54 + i * 26, { x: 0, y: 4.75, hx: 0.8, hy: 4.75, hz: 2.6, col: HOT, kind: 'flare', osc: { ax: 6.6, ay: 0, w: 0.75 + (i % 2) * 0.25, ph: i * 1.7 } }); // prominences whipping across the lane
+  for (let i = 0; i < 5; i++) obs(54 + i * 26, { x: 0, y: 4.75, hx: 1.2, hy: 4.75, hz: 3.2, col: HOT, kind: 'flare', osc: { ax: 6.4, ay: 0, w: 0.6 + (i % 2) * 0.15, ph: i * 1.7 } }); // prominences whipping across the lane
   zone(175, 1e9, SIDE, 'SHADOW LANE DIVES - SHIFT TO SIDE VIEW');
-  for (let i = 0; i < 4; i++) obs(206 + i * 27, { x: 0, y: 4.75, hx: 8.6, hy: 0.7, hz: 2.6, col: HOT, kind: 'flare', osc: { ax: 0, ay: 3.7, w: 0.85, ph: i * 2.1 } });
+  for (let i = 0; i < 4; i++) obs(206 + i * 27, { x: 0, y: 4.75, hx: 8.6, hy: 0.7, hz: 2.7, col: HOT, kind: 'flare', osc: { ax: 0, ay: 3.7, w: 0.85, ph: i * 2.1 } });
   for (let i = 0; i < 12; i++) { const z = 186 + i * 12; obs(z, { x: 0, y: 4.7 + Math.sin(i * 0.9) * 2.6, hx: 8.6, hy: 1.5, hz: 6.2, col: '#2ee6ff', kind: 'shade', ghost: true }); }
   for (let i = 0; i < 9; i++) en(46 + i * 32, { type: 'pop', x: (i % 3 - 1) * 4, y: 3 + (i % 4) * 1.5, ax: 2, ay: 1.5, vz: -5, hp: 3, r: 0.8, col: HOT, score: 250, shape: 'plasma', pod: i % 3 === 0 });
   const tick = stageMini(K, 'sun', 322);

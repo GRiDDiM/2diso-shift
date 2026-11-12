@@ -295,6 +295,14 @@ BDC's note: everything was dying in one shot before you even noticed it.
 - **Solar flares.** Big bright prominences loop up off the surface and whip across the lane, five in the first half and four in the second.
 - **A fix on the Sun.** The heat kept climbing during the miniboss, after the last shade had gone, so the stage could end there through no fault of yours. The heat now stops once the miniboss arrives.
 
+### 24. Nothing off Earth is a box (r30)
+The second half of BDC's note from r29: smoother, more organic shapes on the other worlds.
+
+- **Mars, Jupiter and Planet X.** Every plain obstacle is now drawn as a rounded body with a flat foot where it meets the ground or the roof: chamfered boulders with facet lines on Mars, scalloped cloud banks on Jupiter, bulging tissue that breathes on Planet X. Seen from above they are rounded outlines with an inner contour, not rectangles.
+- **Asteroids and boulders** use a new lumpy twelve-point rock in place of the old diamond, and Mars boulders lost the square behind them.
+- **Ice is cut stone.** Small ice blocks are irregular gems with facets, the Pluto shelf is a jagged sheet with cracks, and Pluto's spires are six-sided crystal shafts drawn to a point.
+- **Bigger solar flares.** Wider strands, thicker glow, a slower sweep and a bigger hitbox to match in the first half of the Sun stage.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
