@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r24';
+const VER = 'r26';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -256,7 +256,7 @@ export function mountShift(root, host = {}) {
     if (menus.length) { if (top().kind === 'end' && endInfo) { endInfo.t++; step(g, [{}]); } menuInput(i); return; }
     if (i.pause && !prevIn.pause) { pauseMenu(); prevIn = i; return; }
     let ins; if (opt.idle) { assisted = true; rec = null; ins = g.players.map((_, k) => autopilot(g, k)); } else if (coop) ins = [i.p1 || i, i.p2 || {}];
-    else { let a = i; if (g.level.rules?.arena && !i.aim && lastDev === 'kb' && performance.now() - mouse.t < 5000) { const p = g.players[0]; let wx, wz; const ux = 480 + (mouse.x - 480) / 0.6, uy = 285 + (mouse.y - 285) / 0.6; /* undo the arena zoom */ if (g.view === 3) { wx = (ux - 480) / 40; wz = (480 - uy) / 19; } else { wx = (uy - 319 + 11 / 26 * (ux - 150)) / 15.923; wz = (ux - 150 - 14 * wx) / 26; } i.aim = [wx - p.x, wz - p.z]; if (mouse.down) i.fire = true; }
+    else { let a = i; if (g.level.rules?.arena && !i.aim && lastDev === 'kb' && performance.now() - mouse.t < 5000) { const p = g.players[0]; let wx, wz; const ux = 480 + (mouse.x - 480) / 0.52, uy = 285 + (mouse.y - 285) / 0.52; /* undo the arena zoom */ if (g.view === 3) { wx = (ux - 480) / 40; wz = (480 - uy) / 19; } else { wx = (uy - 319 + 11 / 26 * (ux - 150)) / 15.923; wz = (ux - 150 - 14 * wx) / 26; } i.aim = [wx - p.x, wz - p.z]; if (mouse.down) i.fire = true; }
       if (rec) { const c = enc(i), r = rec.runs, n = r.length; if (n && r[n - 2] === c) r[n - 1]++; else r.push(c, 1); a = dec(c); } ins = [a]; }
     step(g, ins); prevIn = i; if (!opt.idle && g.tick % 30 === 0) achTick();
     if (ghost) { if (ghost.g.state === 'play' && ghost.k < ghost.runs.length) { step(ghost.g, [dec(ghost.runs[ghost.k])]); if (++ghost.n >= ghost.runs[ghost.k + 1]) { ghost.k += 2; ghost.n = 0; } } else ghost = null; }

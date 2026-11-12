@@ -269,6 +269,14 @@ BDC's order: loop 2 significantly harder, loop 3 extremely difficult, loop 4 bor
 ### 19. Clean results screens (r25)
 - GAME OVER and the clear screens now hide the HUD, so nothing overlaps the results. The level keeps running behind them, a little brighter than before.
 
+### 20. Enemies you can watch die (r26)
+BDC's note: everything was dying in one shot before you even noticed it.
+
+- **Twice the health** on every ordinary enemy. Bosses and minibosses are unchanged.
+- **Health bars** appear over anything that is being hit and fade a moment later.
+- **Damage numbers** float off whatever you are hitting, in small batches so they stay readable. Score numbers still float up on a kill.
+- **A wider view again.** The camera sits further back in levels, and further still for bosses and arenas.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

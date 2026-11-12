@@ -45,6 +45,7 @@ export function snapshot(g) { const p = g.players[0]; return { level: g.level.id
 export const LOOP = { hp: [1, 1.7, 2.6, 4], bs: [1, 1.3, 1.6, 1.95], fire: [1, 0.65, 0.45, 0.3], rev: [0, 4, 8, 10], boss: [0, 80, 40, 24], bfan: [0, 3, 5, 7], all: [0, 75, 38, 28], fan: [0, 1, 2, 3], scroll: [1, 1.15, 1.3, 1.5], inv: [90, 70, 50, 30], hunt: [0, 170, 80, 60] }, lp = g => Math.min(3, g.loop || 0);
 export function addEnemy(g, e) {
   const o = Object.assign({ type: 'pop', x: 0, y: 4.5, z: SPAWN_Z, vx: 0, vy: 0, vz: -8, hp: 2, r: 0.6, t: 0, col: '#ff3df0', score: 100, x0: e.x ?? 0, y0: e.y ?? 4.5, ax: 0, ay: 0, w: 2, ph: 0, fire: 0, rel: true }, e);
+  if (o.type !== 'boss' && o.type !== 'bomb' && !o.mini) o.hp = Math.round(o.hp * 2); // sturdier, so you see them take the hits
   if (g.loop) { const l = lp(g), h = LOOP.hp[l] + Math.max(0, g.loop - 3); o.hp = Math.round(o.hp * h); if (o.hpMax) o.hpMax = Math.round(o.hpMax * h); if (o.fire) o.fire = Math.max(18, Math.round(o.fire * LOOP.fire[l])); else if (o.type !== 'boss' && o.type !== 'bomb' && o.type !== 'rock' && !o.mini) o.fire = LOOP.all[l]; /* everything shoots */ if (o.fire && LOOP.fan[l]) o.fan = (o.fan || (o.type === 'saucer' ? 3 : 1)) + LOOP.fan[l]; }
   o.max = o.hp; if (o.group) { const gr = g.groups[o.group] ||= { n: 0, k: 0, next: -1, ord: true, dead: [] }; o.gi = gr.n++; }
   g.enemies.push(o); return o;
@@ -92,14 +93,16 @@ function kill(g, e) {
   if (e.pod) addPod(g, e.x, e.y, e.z);
   if (g.loop && e.type !== 'rock' && e.type !== 'bomb' && e.type !== 'boss' && e.z > 5) { const n = LOOP.rev[lp(g)]; for (let i = 0; i < n; i++) aimed(g, e, 7, (i - (n - 1) / 2) * 0.22, '#ff4d6d'); }
   if (e.group) { const gr = g.groups[e.group]; if (gr.next >= 0 && e.gi !== gr.next) gr.ord = false; groupNext(gr, e); // the first kill starts the order; after that the marked one is next
-    if (++gr.k >= gr.n) { addPod(g, e.x, e.y, e.z); if (gr.ord && gr.n > 2) { const b = 300 * gr.n; g.score += b; g.stats.order++; pop(g, 'TARGET ORDER +' + b, e.x, e.y + 1.4, e.z, '#ffe14a', true); g.fx.push('ring'); } else pop(g, 'WIPEOUT', e.x, e.y + 1, e.z, '#3dffb0'); } }
+    if (++gr.k >= gr.n) { addPod(g, e.x, e.y, e.z); if (gr.ord && gr.n > 2) { const b = 300 * gr.n; g.score += b; g.stats.order++; pop(g, 'TARGET ORDER +' + b, e.x, e.y + 1.4, e.z, '#ffe14a'); g.fx.push('ring'); } else pop(g, 'WIPEOUT', e.x, e.y + 1, e.z, '#3dffb0'); } }
   else if (!e.pod && g.rand() < 0.01) addPod(g, e.x, e.y, e.z, 'god');
   else if (!e.pod && g.rand() < 0.02) addPod(g, e.x, e.y, e.z, 'bomb');
 }
 export function damage(g, e, d) {
   if (e.hp <= 0) return;
   if (e.type === 'boss' && !(e.vuln || []).includes(g.view)) { if (g.tick % 8 === 0) g.fx.push('ting'); e.deflect = 6; return; }
-  e.hp -= d; e.hit = 4; if (e.hp <= 0) { if (e.type === 'boss') e.hp = 0; else kill(g, e); }
+  e.hp -= d; e.hit = 4; e.hbT = 75; e.dAcc = (e.dAcc || 0) + d; // a health bar while it is being hit, and the damage floats off it in batches
+  if (g.tick - (e.dT || -99) >= 10 && g.pops.length < 70) { e.dT = g.tick; const j = ((g.tick * 7) % 11 - 5) * 0.09; pop(g, '' + Math.max(1, Math.round(e.dAcc * 10)), e.x + j, e.y + (e.hy ?? e.r) * 0.6, e.z, '#ffffff'); g.pops[g.pops.length - 1].sm = true; e.dAcc = 0; }
+  if (e.hp <= 0) { if (e.type === 'boss') e.hp = 0; else kill(g, e); }
 }
 function hurt(g, p) {
   if (p.inv > 0 || p.dead > 0) return; g.stats.hits++;
@@ -239,7 +242,7 @@ export function step(g, inputs) {
 
   // ----- enemies -----
   for (const e of g.enemies) {
-    e.t++; if (e.hit > 0) e.hit--; if (e.deflect > 0) e.deflect--;
+    e.t++; if (e.hit > 0) e.hit--; if (e.hbT > 0) e.hbT--; if (e.deflect > 0) e.deflect--;
     if (e.type === 'boss') { lvd.boss.update(g, e, dt); continue; }
     if (!e.rel) e.z -= dz;
     if (e.type === 'walker') { e.x += e.vx * dt; if (Math.abs(e.x) > 7.2) { e.vx = -e.vx; e.x = clamp(e.x, -7.2, 7.2); } } // things that walk or drive along the floor or the ceiling

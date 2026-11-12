@@ -286,7 +286,7 @@ export function drawWorld(ctx, g, o = {}) {
   const t = g.tick, p0 = g.players[0], th = g.level.theme || {};
   vA = g.viewFrom; vB = g.view; mix = g.shiftT > 0 ? ease(1 - g.shiftT) : 1; rollA = g.shiftT > 0 ? g.shiftDir * mix * TAU : 0; wob = th.trippy ? Math.sin(t * 0.013) * 0.05 : 0;
   { const al = g.players.filter(q => q.dead <= 0), n = al.length || 1, cx = al.length ? al.reduce((a, q) => a + q.x, 0) / n : p0.x, cy = al.length ? al.reduce((a, q) => a + q.y, 0) / n : p0.y, cz = al.length ? Math.min(...al.map(q => q.z)) : p0.z; cam.x = cx * 0.55; cam.y = cy * 0.55 + 1.9; cam.z = cz - 7.5; } const tags = [];
-  HQ = !(o.q >= 1); { const bz = g.level.rules?.arena ? 0.6 : g.boss && !g.boss.dying && g.boss.z < 30 ? 0.6 : 0.78; ZK += (bz - ZK) * 0.04; if (Math.abs(ZK - bz) < 0.002) ZK = bz; } // the camera pulls back for a boss so there is room to move
+  HQ = !(o.q >= 1); { const bz = g.level.rules?.arena ? 0.52 : g.boss && !g.boss.dying && g.boss.z < 30 ? 0.52 : 0.68; ZK += (bz - ZK) * 0.04; if (Math.abs(ZK - bz) < 0.002) ZK = bz; } // the camera pulls back for a boss so there is room to move
   ctx.save();
   if (g.shake > 0.5 && o.shake !== false) ctx.translate((Math.random() - 0.5) * g.shake, (Math.random() - 0.5) * g.shake);
   ctx.globalCompositeOperation = 'lighter';
@@ -338,7 +338,8 @@ export function drawWorld(ctx, g, o = {}) {
   NG = true; for (const q of g.parts) { depth(q.x, q.z); if (q.splat) { seg(q.x, q.y, q.z, q.x - q.vx * 0.05, q.y - q.vy * 0.05 + 0.15, q.z - q.vz * 0.05, q.col, Math.min(1, q.life / q.max * 1.6)); seg(q.x - 0.12, q.y, q.z, q.x + 0.12, q.y, q.z, q.col, Math.min(1, q.life / q.max * 1.6)); } else seg(q.x, q.y, q.z, q.x - q.vx * 0.035, q.y - q.vy * 0.035, q.z - q.vz * 0.035, q.col, Math.min(1, q.life / q.max * 1.6)); }
   NG = false; for (const s of g.shocks) { depth(s.x, s.z); circle(s.x, s.y, s.z, s.r, s.col, s.life / s.max, 16, vB === 3 ? 1 : vB === 0 ? 2 : 0); }
   { const trip = th.trippy ? ((t * 0.8) % 360 / 30 | 0) * 30 : 0; for (let L = 0; L < NL; L++) { if (FILL) drawQuads(ctx, L); flush(ctx, o.glow !== false && !(o.q >= 2), trip, L); } depth0(); }
-  for (const q of g.pops) { P(q.x, q.y, q.z); if (!OK) continue; text(ctx, q.txt, X, Y, q.big ? 15 : 9, q.col, { align: 'center', alpha: Math.min(1, q.life / 20), glow: q.big }); }
+  for (const q of g.pops) { P(q.x, q.y, q.z); if (!OK) continue; text(ctx, q.txt, X, Y, q.big ? 15 : q.sm ? 6.5 : 9, q.col, { align: 'center', alpha: Math.min(1, q.life / 20) * (q.sm ? 0.85 : 1), glow: q.big }); }
+  for (const e of g.enemies) { if (!(e.hbT > 0) || e.hp <= 0 || e.type === 'boss' || e.mini || e.max < 2) continue; P(e.x, e.y + (e.hy ?? e.r) + 0.45, e.z); if (!OK) continue; const w = 26, f = Math.max(0, e.hp / e.max), a = Math.min(1, e.hbT / 20); ctx.globalAlpha = a; ctx.fillStyle = '#0a0c24'; ctx.fillRect(X - w / 2 - 1, Y - 2, w + 2, 5); ctx.fillStyle = f > 0.5 ? '#3dffb0' : f > 0.25 ? '#ffe14a' : '#ff4d6d'; ctx.fillRect(X - w / 2, Y - 1, w * f, 3); ctx.globalAlpha = 1; } // health bars on whatever is being hit
   for (const q of tags) text(ctx, q[2], q[0], q[1], 7, q[3], { align: 'center', glow: false });
   ctx.restore();
   if (g.level.rules?.heat && g.heat > 5) { ctx.fillStyle = '#ff5a1f'; ctx.globalAlpha = Math.min(0.3, g.heat / 100 * 0.3); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
