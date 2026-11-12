@@ -29,7 +29,7 @@ export function createGame({ seed = 1, level, start = null, players = 1, wing = 
   const g = { seed, rand: rng(seed), tick: 0, camZ: z0 - INTRO_RUN, level, evi: 0, view: 3, viewFrom: 3, shiftT: 0, shiftDir: 1, shiftCd: 0, intro: INTRO, gear: start?.gear ?? 0,
     players: [], enemies: [], shots: [], ebul: [], obs: [], rings: [], pods: [], parts: [], pops: [], beams: [], shocks: [], fx: [], groups: {},
     score: start?.score || 0, chain: 0, chainT: 0, bestChain: 0, state: 'play', boss: null, hint: null, hintT: 0, zone: null, recView: 0, heat: 0,
-    flags: { warp: !!start?.warp, warpNow: false }, stats: Object.assign({ kills: 0, shifts: 0, deaths: 0, hits: 0, perfect: 0, ticks: 0, order: 0 }, start?.stats), coop: players > 1, mut: mut || {}, perfT: 0,
+    flags: { warp: !!start?.warp, warpNow: false }, stats: Object.assign({ kills: 0, shifts: 0, deaths: 0, hits: 0, perfect: 0, ticks: 0, order: 0 }, start?.stats), coop: players > 1, mut: mut || {}, loop: mut?.loop || 0, perfT: 0,
     wing: wing && players === 1 ? makeWing() : null, shake: 0, flash: 0, endT: 0, speedMul: 3, checkpoint: z0, cpSnap: null };
   for (let i = 0; i < players; i++) { const p = newPlayer(i, start, players > 1); if (i) p.up = g.players[0].up; for (let k = 0; k < p.up[U.DRONE]; k++) p.drones.push({ x: p.x, y: p.y, z: p.z }); g.players.push(p); }
   g.z0 = z0; while (g.evi < level.events.length && level.events[g.evi].z < z0 - 20) g.evi++;
@@ -41,15 +41,18 @@ export function createGame({ seed = 1, level, start = null, players = 1, wing = 
 export function snapshot(g) { const p = g.players[0]; return { level: g.level.id, z: g.checkpoint, score: g.score, lives: Math.max(p.lives, 0), bombs: p.bombs, up: [...p.up], shield: p.shield, cursor: p.cursor, dmode: p.dmode, gear: g.gear, warp: g.flags.warp }; }
 
 // ---------- helpers the level scripts use ----------
+// loops: every time round the enemy is tougher, shoots faster and more often, and shoots back when it dies
+export const LOOP = { hp: [1, 1.7, 2.6, 4], bs: [1, 1.3, 1.6, 1.95], fire: [1, 0.65, 0.45, 0.3], rev: [0, 4, 8, 10], boss: [0, 80, 40, 24], bfan: [0, 3, 5, 7], all: [0, 75, 38, 28], fan: [0, 1, 2, 3], scroll: [1, 1.15, 1.3, 1.5], inv: [90, 70, 50, 30], hunt: [0, 170, 80, 60] }, lp = g => Math.min(3, g.loop || 0);
 export function addEnemy(g, e) {
   const o = Object.assign({ type: 'pop', x: 0, y: 4.5, z: SPAWN_Z, vx: 0, vy: 0, vz: -8, hp: 2, r: 0.6, t: 0, col: '#ff3df0', score: 100, x0: e.x ?? 0, y0: e.y ?? 4.5, ax: 0, ay: 0, w: 2, ph: 0, fire: 0, rel: true }, e);
+  if (g.loop) { const l = lp(g), h = LOOP.hp[l] + Math.max(0, g.loop - 3); o.hp = Math.round(o.hp * h); if (o.hpMax) o.hpMax = Math.round(o.hpMax * h); if (o.fire) o.fire = Math.max(18, Math.round(o.fire * LOOP.fire[l])); else if (o.type !== 'boss' && o.type !== 'bomb' && o.type !== 'rock' && !o.mini) o.fire = LOOP.all[l]; /* everything shoots */ if (o.fire && LOOP.fan[l]) o.fan = (o.fan || (o.type === 'saucer' ? 3 : 1)) + LOOP.fan[l]; }
   o.max = o.hp; if (o.group) { const gr = g.groups[o.group] ||= { n: 0, k: 0, next: -1, ord: true, dead: [] }; o.gi = gr.n++; }
   g.enemies.push(o); return o;
 }
 export function addObs(g, o) { const b = Object.assign({ x: 0, y: 4.7, z: SPAWN_Z, hx: 1, hy: 1, hz: 1, vx: 0, vy: 0, vz: 0, rel: false, col: '#2ee6ff', warm: 0, kind: 'box' }, o); b.bx = b.x; b.by = b.y; b.warm0 = b.warm; if (b.hp != null) b.hpMax = b.hp; g.obs.push(b); return b; }
 export function addRing(g, r) { const o = Object.assign({ x: 0, y: 4.5, z: SPAWN_Z, r: 1.6, kind: 'bonus', got: false }, r); g.rings.push(o); return o; }
 export function addPod(g, x, y, z, kind = 'pod') { g.pods.push({ x: clamp(x, -7, 7), y: clamp(y, 1, 8.5), z, kind, t: 0 }); }
-export function bullet(g, x, y, z, vx, vy, vz, col = '#ff8a2b') { if (g.ebul.length < 260) g.ebul.push({ x, y, z, vx, vy, vz, r: 0.28, col, life: 420 }); }
+export function bullet(g, x, y, z, vx, vy, vz, col = '#ff8a2b') { if (g.loop) { const s = LOOP.bs[lp(g)]; vx *= s; vy *= s; vz *= s; } if (g.ebul.length < (g.loop ? 360 : 260)) g.ebul.push({ x, y, z, vx, vy, vz, r: 0.28, col, life: 420 }); }
 export const near = (g, e) => { let b = g.players[0], bd = 1e9; for (const p of g.players) if (p.dead <= 0) { const d = Math.hypot(p.x - e.x, p.z - e.z); if (d < bd) { bd = d; b = p; } } return b; };
 export function aimed(g, e, speed = 9, spread = 0, col) {
   const p = near(g, e), m = MASK[g.view]; let dx = (p.x - e.x) * m[0], dy = (p.y - e.y) * m[1], dz = p.z - e.z;
@@ -84,6 +87,7 @@ function kill(g, e) {
   if (e.burst) for (let i = 0; i < e.burst; i++) { const a = i / e.burst * 6.283; bullet(g, e.x, e.y, e.z, Math.cos(a) * 5, Math.sin(a) * 5, -3, e.col); }
   if (e.type === 'rock' && e.size > 1) for (let i = 0; i < 2 + (g.rand() < 0.4); i++) addEnemy(g, { type: 'rock', rel: false, size: e.size - 1, x: e.x, y: e.y, z: e.z, vx: (g.rand() - 0.5) * 6, vy: (g.rand() - 0.5) * 5, vz: (g.rand() - 0.3) * 4, hp: e.size === 3 ? 4 : 2, r: e.size === 3 ? 1 : 0.6, col: e.col, score: 30, shape: 'rock', pod: e.size === 2 && g.rand() < 0.22 });
   if (e.pod) addPod(g, e.x, e.y, e.z);
+  if (g.loop && e.type !== 'rock' && e.type !== 'bomb' && e.type !== 'boss' && e.z > 5) { const n = LOOP.rev[lp(g)]; for (let i = 0; i < n; i++) aimed(g, e, 7, (i - (n - 1) / 2) * 0.22, '#ff4d6d'); }
   if (e.group) { const gr = g.groups[e.group]; if (gr.next >= 0 && e.gi !== gr.next) gr.ord = false; groupNext(gr, e); // the first kill starts the order; after that the marked one is next
     if (++gr.k >= gr.n) { addPod(g, e.x, e.y, e.z); if (gr.ord && gr.n > 2) { const b = 300 * gr.n; g.score += b; g.stats.order++; pop(g, 'TARGET ORDER +' + b, e.x, e.y + 1.4, e.z, '#ffe14a', true); g.fx.push('ring'); } else pop(g, 'WIPEOUT', e.x, e.y + 1, e.z, '#3dffb0'); } }
   else if (!e.pod && g.rand() < 0.01) addPod(g, e.x, e.y, e.z, 'god');
@@ -96,7 +100,7 @@ export function damage(g, e, d) {
 }
 function hurt(g, p) {
   if (p.inv > 0 || p.dead > 0) return; g.stats.hits++;
-  if (p.shield > 0) { p.shield--; p.inv = 90; g.fx.push('shield'); explode(g, p.x, p.y, p.z, '#5ee7ff', 12, 7); g.shake = 6; return; }
+  if (p.shield > 0 && g.loop < 3) { p.shield = g.loop >= 2 ? 0 : p.shield - 1; p.inv = LOOP.inv[lp(g)]; /* loop 3: one hit strips every layer. loop 4: shields do nothing */ g.fx.push('shield'); explode(g, p.x, p.y, p.z, '#5ee7ff', 12, 7); g.shake = 6; return; }
   explode(g, p.x, p.y, p.z, '#ffffff', 46, 15); explode(g, p.x, p.y, p.z, '#ff3df0', 30, 10); g.fx.push('die'); g.shake = 14; g.flash = 10; g.chain = 0; g.stats.deaths++;
   if (g.level.bonus) { p.dead = 1e9; g.state = 'over'; g.endT = 0; return; } // a bonus stage just ends; it never costs a ship
   p.lives--; p.dead = 70;
@@ -211,7 +215,7 @@ export function step(g, inputs) {
   if (g.wing) wingStep(g, dt, playing);
 
   // ----- scroll + level script -----
-  g.speedMul += (GEARMUL[g.gear] * (g.mut.turbo ? 1.25 : 1) - g.speedMul) * 0.06;
+  g.speedMul += (GEARMUL[g.gear] * (g.mut.turbo ? 1.25 : 1) * LOOP.scroll[lp(g)] - g.speedMul) * 0.06;
   const dz = rules.arena ? 0 : playing ? SCROLL * g.speedMul * dt : SCROLL * 0.4 * dt;
   if (playing) {
     g.camZ += dz;
@@ -220,6 +224,8 @@ export function step(g, inputs) {
     if (zn && zn !== g.zone) { g.zone = zn; if (zn.msg) hint(g, zn.msg, 260); }
     if (!g.boss && g.zone) g.recView = g.zone.view;
     for (const c of lvd.checkpoints) if (g.camZ >= c && c > g.checkpoint) { g.checkpoint = c; g.cpSnap = snapshot(g); g.fx.push('blip', 'toast:CHECKPOINT|PROGRESS SAVED'); }
+    if (g.loop && g.boss && g.boss.hp > 0 && !g.boss.dying && g.boss.z < 30 && g.state === 'play' && g.tick % LOOP.boss[lp(g)] === 0) { const n = LOOP.bfan[lp(g)]; for (let i = 0; i < n; i++) aimed(g, g.boss, 7, (i - (n - 1) / 2) * 0.2, '#ff4d6d'); g.fx.push('eshot'); }
+    if (g.loop && g.state === 'play' && g.intro <= 0 && !rules.arena && g.tick % LOOP.hunt[lp(g)] === 0) addEnemy(g, { type: 'kami', col: '#ff4d6d', hp: 2, r: 0.55, score: 150, vz: -11 - 2 * lp(g), shape: 'kami', x: (g.rand() * 2 - 1) * 7, y: 1.5 + g.rand() * 6.5 }); // hunters dive at you all level long // on later loops the bosses shoot at you as well
     if (lvd.endZ && g.camZ >= lvd.endZ && !g.boss && !(g.mini && g.mini.hp > 0)) { g.state = 'clear'; g.endT = 0; g.score += lvd.endBonus || 0; g.fx.push('clear', 'toast:BONUS COMPLETE|+' + (lvd.endBonus || 0)); }
     if (rules.heat && g.camZ > 26) { const p = P[0], m = MASK[g.view]; let shade = false; for (const o of g.obs) if (o.kind === 'shade' && ov({ x: p.x, y: p.y, z: p.z, r: 0.1 }, o, m)) { shade = true; break; }
       g.heat = clamp(g.heat + (shade ? -1.2 : 0.3), 0, 100); if (g.heat >= 100 && p.dead <= 0) { g.heat = 45; hurt(g, p); pop(g, 'OVERHEAT', p.x, p.y + 1, p.z, '#ff4d6d', true); } }

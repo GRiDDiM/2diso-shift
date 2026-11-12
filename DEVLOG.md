@@ -251,6 +251,16 @@ BDC beat THE SHIFTER and nothing much happened. This revision gives the game an 
 - **Target order.** Shoot one of a wave and the next one gets a target on it. Finish the whole wave in that order for a bonus of 300 a head.
 - **Calmer missiles.** Smaller rockets, about half as often, less smoke, and never more than two out of the back. Each one hits harder to make up for it.
 
+### 17. Loops that bite back (r23)
+BDC's order: loop 2 significantly harder, loop 3 extremely difficult, loop 4 borderline impossible.
+
+- **Every loop:** enemies are tougher (1.7, 2.6, then 4 times the health), their shots are faster, everything that flies now shoots, and it shoots back when it dies.
+- **Hunters.** Red divers come at you all level long, more often each loop.
+- **The scroll speeds up:** 15, 30, then 50 percent faster.
+- **Bosses shoot at you too,** in wider fans each loop, on top of their own attacks.
+- **Shields fade.** On loop 3 one hit strips every layer. On loop 4 shields do nothing.
+- Past loop 4 the enemy just keeps getting tougher.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
