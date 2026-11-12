@@ -342,7 +342,7 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **Score and time.** A clock runs while you play and shows in the HUD with the fight number. The end screen gives fights won, time and score, and your best run is kept and shown in the PLAY menu. Beating all twelve unlocks a new achievement, GAUNTLET.
 - Also fixed: the WEAPONS LOST callout when you lose a ship had been silently switched off by a stray comment.
 
-## 32. Extra ships
+### 32. Extra ships (r39)
 
 - **1UP pickups.** Enemies now sometimes drop an extra ship: a small green ship turning inside a purple ring with a plus sign beside it. They are rare, but one is always due after enough kills, so every level should show at least one. Picking it up adds a ship (up to nine) with a "1UP!" callout; at nine it pays 5000 points instead.
 - **Ship counter.** The HUD still shows six ship icons, with a "+N" beside them when you hold more.
