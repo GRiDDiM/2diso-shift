@@ -324,6 +324,13 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 ### 28. The boss health bar is back (r35)
 - When the bosses were moved further back in r29, the boss health bar and the weak-spot marker were still waiting for the boss at its old distance, so neither ever appeared. Both now show again and the bar drains as the boss takes damage.
 
+### 29. Arena warps, a map that keeps score, and calmer lava (r36)
+- **Arenas are found, not handed out.** A planet's bonus arena no longer follows its boss. Each level now hides a second warp, a gold one with no announcement, a little after the first checkpoint. Fly into it from CHASE view and you fight the arena; win or lose, you are dropped back at the next checkpoint of the level you left.
+- **Space stations on the solar map.** Each arena is a small station tethered under its planet, shown as a question mark until you find its warp. The ship flies to it and back on the map, the same as for the other bonus stages.
+- **Ticks and grades.** Cleared planets get a green tick and their rank on the map; cleared bonus stages and arenas get a tick.
+- **The lava tide rolls.** The rising lava and falling ash in THE COLOSSUS fight now have a proper wave running along the surface and through the layers beneath it.
+- **No more lava lines.** The flickering lines over the nearby volcanoes are gone. Far-off volcanoes now spit blobs of lava that arc up and fall back.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
