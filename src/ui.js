@@ -3,7 +3,7 @@
 // (C) 2026 GRiDDiM / ArcadeGridz / BDC
 import { createGame, step, autopilot, snapshot, makeWing, VIEWS, BAR, GEARS, INTRO } from './game.js';
 import { LEVELS, ORDER, buildLevel } from './levels.js';
-import { W, H, drawWorld, drawHUD, drawLogo, drawSplash, meshScreen, text, textWidth, SHIP_HULL, SHIP_WING, SHIP_FIN, RAINBOW, VCOL, PIV } from './render.js';
+import { W, H, drawWorld, drawHUD, drawLogo, drawSplash, meshScreen, text, textWidth, SHIP_HULL, SHIP_WING, SHIP_FIN, RAINBOW, VCOL, PIV, logosReady } from './render.js';
 import { createAudio } from './audio.js';
 import { DEVLOG, CREDITS } from './devlog.js';
 
@@ -58,7 +58,7 @@ export function mountShift(root, host = {}) {
   let q = 0, slow = 0, ema = 16; // q: automatic quality step-down when frames run long (0 full, 1 no outer halo + lower res, 2 no glow)
   let destroyed = false, raf = 0, last = performance.now(), acc = 0, scale = 1, res = 1, rotOk = false;
   let scene = 'intro', sceneT = 0, g = null, attract = null, assisted = false, testRun = false, submitted = false, focusPaused = false, lastDev = coarse ? 'touch' : 'kb', titleT = 0, endInfo = null, levelId = 'earth', returnTo = null, warpT = 0, coop = false, daily = null, rec = null, ghost = null, fxC = null, crtPat = null; const mouse = { x: 0, y: 0, t: -1e9, down: false };
-  const menus = []; let hits = []; const toasts = []; let story = null, hiShown = false, loopN = 0, endCarry = null, cred = null, achGot = LS.get('ach', {});
+  const menus = []; let hits = []; const toasts = []; let introWait = 0, story = null, hiShown = false, loopN = 0, endCarry = null, cred = null, achGot = LS.get('ach', {});
   // achievements: kept on this device. Idle mode never unlocks them.
   function award(id) { if (opt.idle || achGot[id]) return; achGot = LS.get('ach', {}); if (achGot[id]) return; achGot[id] = 1; LS.set('ach', achGot); const d = ACH.find(a => a[0] === id); if (!d) return; toast('ACHIEVEMENT', d[1]); audio.sfx('ring'); }
   function achTick() { const p = g.players[0], s = g.stats; if (s.shifts) award('shift'); if (s.perfect) award('perfect'); if (s.order) award('order'); if (g.bestChain >= 50) award('chain50'); if (g.bestChain >= 100) award('chain100'); if (g.flags.warp) award('warp'); if (p.god > 0) award('god'); if (p.up[0] >= 6) award('drones'); if ([1, 2, 3, 4, 5].every(k => p.up[k] >= 3)) award('arsenal'); if (g.score >= 250000) award('score1'); if (g.score >= 1000000) award('score2'); }
@@ -247,7 +247,7 @@ export function mountShift(root, host = {}) {
   // ---------- frame ----------
   let prevIn = {};
   function update(i) {
-    sceneT++;
+    sceneT++; if (scene === 'intro' && sceneT < 3 && !logosReady() && (introWait = (introWait || 0) + 1) < 180) sceneT = 0; /* the intro waits (up to 3 s) for the logo images */
     if (scene === 'intro') { if ((i.ok && !prevM.ok) || (i.pause && !prevM.pause) || tap || sceneT > 600) { tap = null; showTitle(); titleT = 0; audio.sfx('slam'); } if (sceneT === 330) audio.sfx('whoosh'); prevM = i; return; }
     if (scene === 'story') { const st = story; st.t++; const k = st.t / 150 | 0; if (k < st.lines.length && k !== st.said) { st.said = k; audio.say(st.lines[k].replace('(C)', 'copyright'), true); } if (st.end && st.t < 90) tap = null; if (tap || (st.t >= (st.end ? 90 : 0) && ((i.ok && !prevM.ok) || (i.pause && !prevM.pause))) || st.t > st.lines.length * 150 + 120) { tap = null; audio.hush(); const f = st.after; story = null; f(); } prevM = i; return; }
     if (scene === 'title') { titleT++; step(attract, [autopilot(attract)]); if (attract.state !== 'play' || attract.camZ > 700) { attract = createGame({ seed: sceneT, level: buildLevel(ORDER[sceneT % 4]), start: { up: [2, 2, 1, 1, 1, 1, 0, 0] } }); attract.players[0].lives = 99; } menuInput(i); return; }

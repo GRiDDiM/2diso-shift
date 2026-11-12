@@ -542,8 +542,9 @@ export function drawLogo(ctx, cx, y, sc = 1, t = 0) {
 }
 // the real GRiDDiM and ArcadeGridz logos, when their image files sit beside the game; the drawn ones are the fallback
 const LOGO = typeof Image === 'undefined' ? [] : ['logo-griddim.png', 'logo-arcadegridz.png'].map(f => { const im = new Image(); try { im.src = new URL('./' + f, import.meta.url).href + new URL(import.meta.url).search; } catch (e) { } return im; }), LOGO_ON = [null, null];
+export const logosReady = () => LOGO.every(im => im.complete); // loaded, or failed and falling back
 export function drawSplash(ctx, which, a, t) {
-  const im = LOGO[which]; if (LOGO_ON[which] === null || t < 0.05) LOGO_ON[which] = !!(im && im.complete && im.naturalWidth); // decided once per splash so it never swaps mid-fade
+  const im = LOGO[which]; if (!LOGO_ON[which]) LOGO_ON[which] = !!(im && im.complete && im.naturalWidth);
   if (LOGO_ON[which]) { const w = (which ? 560 : 470) * (0.94 + 0.06 * Math.min(1, t * 1.6)), h = w * im.naturalHeight / im.naturalWidth; ctx.globalAlpha = a; ctx.shadowColor = which ? '#ff3df0' : '#2ee6ff'; ctx.shadowBlur = 26; ctx.drawImage(im, 480 - w / 2, 250 - h / 2, w, h); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
     if (which) text(ctx, 'P R E S E N T S', 480, 250 + h / 2 + 34, 11, '#ffffff', { align: 'center', alpha: a }); return; }
   ctx.globalCompositeOperation = 'lighter';
