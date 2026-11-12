@@ -286,6 +286,15 @@ BDC's note: everything was dying in one shot before you even noticed it.
 - **Hover traffic is a CHASE section now.** BDC found it far more fun from behind the ship than from the isometric view, so the level calls for CHASE there.
 - **A construction zone takes the ISO slot on Earth.** Half-built girders at every height, crane loads swinging across the lane on their cables, crate stacks to shoot through for gems and pods, and turrets on the ground. It sits between the firewall gates and the traffic, so the level is a little longer and its par time went up to match.
 
+### 23. Room to fly, a kinder hitbox, and things that look like what they are (r29)
+- **The ship can fly much further forward.** The forward limit moved out by two thirds, and bosses hold further back near the edge, so there is more room to read their attacks.
+- **A smaller hitbox.** Only the hull counts now. Wing tips and the tail pass through things, so a car you have already cleared no longer clips you from behind.
+- **Hits flash red.** Enemies and bosses blink red for a split second when a shot lands.
+- **Earth's obstacles are drawn as what they are.** Hover cars are wedges with a glass canopy, headlights, tail lights and hover pads; buses are long slabs with a row of windows. Girders are yellow I-beams with rivets and hazard stripes, slung on cables or stood on posts. Cranes are lattice masts with a cab, a jib out over the lane and a counterweight; their loads hang on four slings and a hook. Crates have straps, and the wider towers get a rooftop pad.
+- **The Sun stage has solar satellites.** The shade lanes are now the panels of satellites, each with a gold body, a dish and antennas.
+- **Solar flares.** Big bright prominences loop up off the surface and whip across the lane, five in the first half and four in the second.
+- **A fix on the Sun.** The heat kept climbing during the miniboss, after the last shade had gone, so the stage could end there through no fault of yours. The heat now stops once the miniboss arrives.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

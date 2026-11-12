@@ -4,7 +4,7 @@
 export const VIEWS = ['SIDE', 'ISO', 'CHASE', 'TOP'];
 export const MASK = [[0, 1, 1], [1, 1, 1], [1, 1, 1], [1, 0, 1]]; // which of x,y,z count in each view
 export const AR = { x: 12.5, z0: 0.8, z1: 33 }; // the bonus arena floor
-export const B = { x: 8.2, y0: 0.6, y1: 9.1, z0: 0.5, z1: 12 };
+export const B = { x: 8.2, y0: 0.6, y1: 9.1, z0: 0.5, z1: 20 };
 export const BAR = ['DRONE', 'MISSILE', 'LASER', 'WAVE', 'BOLT', 'SPREAD', 'SHIELD', '???'];
 export const BARMAX = [6, 3, 3, 3, 3, 3, 3, 99];
 const EFF = [0, 2, 4, 5]; // three ranks per weapon: the weak early ranks are skipped, rank 3 is still the full max effect
@@ -234,7 +234,7 @@ export function step(g, inputs) {
     if (g.loop && g.boss && g.boss.hp > 0 && !g.boss.dying && g.boss.z < 30 && g.state === 'play' && g.tick % LOOP.boss[lp(g)] === 0) { const n = LOOP.bfan[lp(g)]; for (let i = 0; i < n; i++) aimed(g, g.boss, 7, (i - (n - 1) / 2) * 0.2, '#ff4d6d'); g.fx.push('eshot'); }
     if (g.loop && g.state === 'play' && g.intro <= 0 && !rules.arena && g.tick % LOOP.hunt[lp(g)] === 0) addEnemy(g, { type: 'kami', col: '#ff4d6d', hp: 2, r: 0.55, score: 150, vz: -11 - 2 * lp(g), shape: 'kami', x: (g.rand() * 2 - 1) * 7, y: 1.5 + g.rand() * 6.5 }); // hunters dive at you all level long // on later loops the bosses shoot at you as well
     if (lvd.endZ && g.camZ >= lvd.endZ && !g.boss && !(g.mini && g.mini.hp > 0)) { g.state = 'clear'; g.endT = 0; g.score += lvd.endBonus || 0; g.fx.push('clear', 'toast:BONUS COMPLETE|+' + (lvd.endBonus || 0)); }
-    if (rules.heat && g.camZ > 26) { const p = P[0], m = MASK[g.view]; let shade = false; for (const o of g.obs) if (o.kind === 'shade' && ov({ x: p.x, y: p.y, z: p.z, r: 0.1 }, o, m)) { shade = true; break; }
+    if (rules.heat && g.camZ > 26 && !g.mini) { /* no cooking during the miniboss: there is no shade left by then */ const p = P[0], m = MASK[g.view]; let shade = false; for (const o of g.obs) if (o.kind === 'shade' && ov({ x: p.x, y: p.y, z: p.z, r: 0.1 }, o, m)) { shade = true; break; }
       g.heat = clamp(g.heat + (shade ? -1.2 : 0.3), 0, 100); if (g.heat >= 100 && p.dead <= 0) { g.heat = 45; hurt(g, p); pop(g, 'OVERHEAT', p.x, p.y + 1, p.z, '#ff4d6d', true); } }
     if (lvd.tick) lvd.tick(g);
   }
@@ -300,7 +300,7 @@ export function step(g, inputs) {
 
   // ----- player collisions -----
   if (playing) for (const p of P) {
-    if (p.dead > 0) continue; const pb = { x: p.x, y: p.y, z: p.z, hx: 0.3, hy: 0.22, hz: 0.5 };
+    if (p.dead > 0) continue; const pb = { x: p.x, y: p.y, z: p.z + 0.1, hx: 0.21, hy: 0.18, hz: 0.32 }; // the hull only: wing tips and the tail do not count
     for (const b of g.ebul) if (b.life > 0 && ov(pb, b, m, -0.08)) { b.life = 0; g.cause = 'bullet'; hurt(g, p); }
     for (const e of g.enemies) if (e.hp > 0 && live(e, vw) && e.y > 0 && ov(pb, e, m, -0.1)) { if (p.god > 0) { if (e.type !== 'boss') damage(g, e, 50); } else { if (e.type !== 'boss') damage(g, e, 3); g.cause = e.shape || e.type; hurt(g, p); } }
     for (const o of g.obs) if (solid(o, vw) && ov(pb, o, m, -0.05)) { if (p.god > 0 && o.hp != null) o.hp = 0; else if (p.god <= 0) { g.cause = o.kind; hurt(g, p); } }

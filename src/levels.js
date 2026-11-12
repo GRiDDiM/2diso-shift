@@ -60,7 +60,7 @@ function boss(spec) {
       if (b.dying % 36 === 2 && b.dying < 146) { g.viewFrom = g.view; g.view = (g.view + 1) % 4; g.shiftT = 1; g.shiftDir = 1; g.fx.push('shift', 'boom2'); g.flash = 8; for (let i = 0; i < 3; i++) g.shocks.push({ x: b.x, y: b.y, z: b.z, r: 0.5, vr: 14 + i * 10, life: 30, max: 30, col: ['#ffffff', '#ff3df0', '#2ee6ff'][i] }); }
       if (b.dying % 6 === 0) { explode(g, b.x + (g.rand() - 0.5) * 5, b.y + (g.rand() - 0.5) * 5, b.z + (g.rand() - 0.5) * 3, ['#ff3df0', '#ffe14a', '#2ee6ff', '#ffffff'][b.dying / 6 & 3], 26, 14, spec.splat); g.fx.push('boom2'); g.shake = 12; }
       if (b.dying > 150) { explode(g, b.x, b.y, b.z, '#ffffff', 90, 26, spec.splat); g.flash = 20; g.shake = 22; b.gone = true; g.boss = null; g.lockShift = false; g.score += b.score; g.state = 'clear'; g.endT = 0; g.fx.push('clear', 'say:' + spec.name + ' destroyed. sector clear.', 'toast:LEVEL COMPLETE|' + spec.toast); } return; }
-    g.recView = S.rec; if (b.z > 19) { b.z -= 6 * dt; b.st = 0; return; }
+    g.recView = S.rec; if (b.z > 29) { b.z -= 6 * dt; b.st = 0; return; }
     b.vuln = S.vuln; b.col = S.col; b.st++;
     b.x = Math.sin(b.st * 0.011) * (S.sway ?? 1.5); b.y = 4.6 + Math.sin(b.st * 0.017) * (S.bob ?? 0.8);
     b.ovk = Math.max(0, Math.min(1, (b.ovk || 0) + (b.ovOn ? 0.05 : -0.03))); b.ovOn = false; if (b.st % 400 === 240) addPod(g, (g.rand() - 0.5) * 10, 2 + g.rand() * 5, b.z - 2); if (b.ovk > 0) { b.x += (b.ovx - b.x) * b.ovk; b.y += (b.ovy - b.y) * b.ovk; } // an attack can take over where the boss is (the Eye turning to face you)
@@ -119,9 +119,9 @@ function earth() {
 
   // a tower going up: half-built girders at every height, crane loads swinging across the lane, crate stacks to shoot through. Only ISO shows it all
   zone(800, 1010, ISO, 'CONSTRUCTION ZONE - SHIFT TO ISO VIEW');
-  const girder = (z, x, y, hx = 4.3) => obs(z, { x, y, hx, hy: 0.42, hz: 0.7, col: '#ffe14a', kind: 'slab' });
+  const girder = (z, x, y, hx = 4.3) => obs(z, { x, y, hx, hy: 0.42, hz: 0.7, col: '#ffe14a', kind: 'girder' });
   const crate = (z, x, y, o) => obs(z, { x, y, hx: 1, hy: 1, hz: 1, col: '#ff8a2b', kind: 'crate', hp: 7, score: 120, ...o });
-  const crane = (z, x, ph) => { obs(z, { x, y: 4.75, hx: 0.45, hy: 4.75, hz: 0.45, col: C.pylon, kind: 'pylon' }); obs(z, { x: x > 0 ? x - 4.6 : x + 4.6, y: 4.4, hx: 1.1, hy: 1, hz: 1.1, col: '#3dffb0', kind: 'elevator', osc: { ax: 3.3, ay: 0.5, w: 1.3, ph } }); };
+  const crane = (z, x, ph) => { obs(z, { x, y: 4.75, hx: 0.45, hy: 4.75, hz: 0.45, col: '#ffe14a', kind: 'crane', jib: x > 0 ? -1 : 1 }); obs(z, { x: x > 0 ? x - 4.6 : x + 4.6, y: 4.4, hx: 1.1, hy: 1, hz: 1.1, col: '#ff8a2b', kind: 'load', osc: { ax: 3.3, ay: 0.5, w: 1.3, ph } }); };
   for (let i = 0, z = 838; z < 1000; z += 13, i++) { const m = i % 4, sd = i % 8 < 4 ? 1 : -1;
     if (m === 0) { girder(z, -4.3 * sd, 2.5); girder(z, 4.3 * sd, 6.9); }
     else if (m === 1) crane(z, 7.4 * sd, i * 1.3);
@@ -343,9 +343,11 @@ function moon() { // low gravity trench run: the ship drifts, nothing shoots bac
 }
 function sun() { // surf the flares: stay in the shadow lane or cook
   const K = kit('sun'), { at, obs, en, zone } = K, HOT = '#ffb02e';
-  zone(-99, 175, TOP, 'BONUS // THE SUN - STAY IN THE SHADOW LANE');
+  zone(-99, 175, TOP, 'BONUS // THE SUN - STAY IN THE SHADE OF THE SOLAR SATELLITES');
   for (let i = 0; i < 12; i++) { const z = 34 + i * 12; obs(z, { x: Math.sin(i * 0.8) * 4.6, y: 4.75, hx: 2.3, hy: 4.75, hz: 6.2, col: '#2ee6ff', kind: 'shade', ghost: true }); if (i % 3 === 1) obs(z, { x: Math.sin(i * 0.8) * 4.6, y: 4.5, hx: 0.7, hy: 0.7, hz: 0.7, col: '#7df9ff', kind: 'ice', hp: 3, gem: true, score: 150 }); }
+  for (let i = 0; i < 5; i++) obs(54 + i * 26, { x: 0, y: 4.75, hx: 0.8, hy: 4.75, hz: 2.6, col: HOT, kind: 'flare', osc: { ax: 6.6, ay: 0, w: 0.75 + (i % 2) * 0.25, ph: i * 1.7 } }); // prominences whipping across the lane
   zone(175, 1e9, SIDE, 'SHADOW LANE DIVES - SHIFT TO SIDE VIEW');
+  for (let i = 0; i < 4; i++) obs(206 + i * 27, { x: 0, y: 4.75, hx: 8.6, hy: 0.7, hz: 2.6, col: HOT, kind: 'flare', osc: { ax: 0, ay: 3.7, w: 0.85, ph: i * 2.1 } });
   for (let i = 0; i < 12; i++) { const z = 186 + i * 12; obs(z, { x: 0, y: 4.7 + Math.sin(i * 0.9) * 2.6, hx: 8.6, hy: 1.5, hz: 6.2, col: '#2ee6ff', kind: 'shade', ghost: true }); }
   for (let i = 0; i < 9; i++) en(46 + i * 32, { type: 'pop', x: (i % 3 - 1) * 4, y: 3 + (i % 4) * 1.5, ax: 2, ay: 1.5, vz: -5, hp: 3, r: 0.8, col: HOT, score: 250, shape: 'plasma', pod: i % 3 === 0 });
   const tick = stageMini(K, 'sun', 322);
