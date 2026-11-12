@@ -308,6 +308,9 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **Mars lava rivers flow across the lane.** They are wide, they stream sideways, and they no longer block. Instead the lava drags the ship to a crawl and fills a heat meter: cross one at the slowest speed and you overheat and take a hit. Shift up, or dash forward, and you get through with heat to spare.
 - **Arena floors belong to their planet.** Earth is a circuit board with pulses running down the traces. Mars is a cracked crucible with glowing fissures, lava at both ends and braziers in the corners. Jupiter is a slowly turning storm spiral ringed with cloud. Planet X is a beating heart with veins running out to eye stalks.
 
+### 26. The real logos (r32)
+- The opening GRiDDiM and ArcadeGridz screens now show the actual logos when their image files sit beside the game (`src/logo-griddim.png` and `src/logo-arcadegridz.png`). On ArcadeGridz they do. Where the files are missing the game falls back to the drawn versions, so nothing breaks.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

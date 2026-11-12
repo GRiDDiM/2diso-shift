@@ -540,7 +540,12 @@ export function drawLogo(ctx, cx, y, sc = 1, t = 0) {
   const hi = (t * 1.2 | 0) % 4; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3 * sc; ctx.beginPath(); ctx.moveTo(x + uw * hi / 4 + 5 * sc, uy); ctx.lineTo(x + uw * (hi + 1) / 4 - 5 * sc, uy); ctx.stroke();
   ctx.globalCompositeOperation = 'source-over';
 }
+// the real GRiDDiM and ArcadeGridz logos, when their image files sit beside the game; the drawn ones are the fallback
+const LOGO = typeof Image === 'undefined' ? [] : ['logo-griddim.png', 'logo-arcadegridz.png'].map(f => { const im = new Image(); try { im.src = new URL('./' + f, import.meta.url).href + new URL(import.meta.url).search; } catch (e) { } return im; }), LOGO_ON = [null, null];
 export function drawSplash(ctx, which, a, t) {
+  const im = LOGO[which]; if (LOGO_ON[which] === null || t < 0.05) LOGO_ON[which] = !!(im && im.complete && im.naturalWidth); // decided once per splash so it never swaps mid-fade
+  if (LOGO_ON[which]) { const w = (which ? 560 : 470) * (0.94 + 0.06 * Math.min(1, t * 1.6)), h = w * im.naturalHeight / im.naturalWidth; ctx.globalAlpha = a; ctx.shadowColor = which ? '#ff3df0' : '#2ee6ff'; ctx.shadowBlur = 26; ctx.drawImage(im, 480 - w / 2, 250 - h / 2, w, h); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    if (which) text(ctx, 'P R E S E N T S', 480, 250 + h / 2 + 34, 11, '#ffffff', { align: 'center', alpha: a }); return; }
   ctx.globalCompositeOperation = 'lighter';
   if (which === 0) { const n = Math.min(7, t * 9 | 0), str = 'GRiDDiM', sz = 64, w = textWidth(str, sz), x = 480 - w / 2;
     for (let i = 0; i < 9; i++) { const gx = 480 - 33 + (i % 3) * 24, gy = 150 + (i / 3 | 0) * 24, on = ((t * 6 | 0) % 9) === i; ctx.strokeStyle = on ? '#ffffff' : i % 2 ? '#ff3df0' : '#2ee6ff'; ctx.lineWidth = 2; ctx.globalAlpha = a * (on ? 1 : 0.7); ctx.strokeRect(gx, gy, 18, 18); ctx.globalAlpha = a * 0.18; ctx.lineWidth = 7; ctx.strokeRect(gx, gy, 18, 18); }
