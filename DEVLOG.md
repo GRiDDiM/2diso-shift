@@ -680,6 +680,11 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - Every few seconds, the turning ship on the title screen briefly glitches: torn lines, a red and blue split and a little static.
 - The jam ribbon is a little longer, so SHIFT sits clear of its bottom edge.
 
+### 72. The folding world (r78)
+
+- The planet in the opening cutscene keeps folding between dimensions. It turns as a 3D globe, peels flat into a map, tips into an isometric diamond, flattens into a top-down disc, then rolls back into a globe, with a ripple each time it folds.
+- Cutscene lines now wait for the voice to finish before the next one starts, so "only one ship can see the fold" no longer gets cut off.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

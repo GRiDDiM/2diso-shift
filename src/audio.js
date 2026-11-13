@@ -105,7 +105,7 @@ export function createAudio(opt) {
         if (i) u.onstart = () => { try { if (ac && ac.state === 'running') tone('sine', 1320 - i * 220, 660 - i * 110, 0.35, 0.1 * k); } catch { } }; return u; });
       setTimeout(() => { sy.speak(first); P.forEach(u => sy.speak(u)); }, 90); } catch { } };
     if (!vox && !pickVoices()) { let done = false; const once = () => { if (!done) { done = true; go(); } }; try { sy.addEventListener('voiceschanged', once, { once: true }); } catch { } setTimeout(once, 900); } else go(); }
-  return { titleSay, unlock() { if (init() && ac.state === 'suspended') ac.resume().catch(() => { }); }, sfx, vol, say, hush() { try { window.speechSynthesis?.cancel(); } catch { } },
+  return { speaking: () => { try { return !!(opt.voice && window.speechSynthesis?.speaking); } catch { return false; } }, titleSay, unlock() { if (init() && ac.state === 'suspended') ac.resume().catch(() => { }); }, sfx, vol, say, hush() { try { window.speechSynthesis?.cancel(); } catch { } },
     music(m) { if (m === mode) return; mode = m; step = 0; nextT = 0; clearInterval(timer); if (m) timer = setInterval(sched, 60); },
     suspend() { ac?.suspend?.().catch(() => { }); try { window.speechSynthesis?.cancel(); } catch { } }, resume() { ac?.resume?.().catch(() => { }); }, close() { clearInterval(timer); try { window.speechSynthesis?.cancel(); } catch { } try { ac?.close(); } catch { } ac = null; } };
 }

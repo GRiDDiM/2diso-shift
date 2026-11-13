@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r77';
+const VER = 'r78';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -276,9 +276,24 @@ export function mountShift(root, host = {}) {
     let left = shown; lines.forEach((l2, j) => { if (left <= 0) return; text(ctx, l2.slice(0, left), bx + 112, by + 32 + j * 22, 13, '#ffffff', { bold: true, glow: j === 0 }); left -= l2.length + 1; });
     for (let j = 0; j < n; j++) { ctx.fillStyle = j <= k ? '#ffb070' : '#30345a'; ctx.fillRect(bx + bw - 16 - (n - j) * 12, by + bh - 12, 8, 4); }
     text(ctx, lastDev === 'touch' ? 'TAP TO SKIP' : lastDev === 'pad' ? padNames()[0] + ' TO SKIP' : 'ENTER TO SKIP', 480, 522, 7, '#5a66b0', { align: 'center', glow: false }); }
+  // the intro's world: one planet that keeps folding between dimensions. Globe, flat map, isometric slab, top-down disc, and back,
+  // every point of its grid sliding from one projection to the next
+  function drawFoldGlobe(t, ex, ey, er) { const HOLD = 2.2, MORPH = 1.1, CY = HOLD + MORPH, PJ = [
+      (lo, la, r) => { const c = Math.cos(la), x = c * Math.sin(lo + r), z = c * Math.cos(lo + r); return [x * er, -Math.sin(la) * er, z]; }, // a 3D globe, turning
+      (lo, la) => [lo / Math.PI * er * 1.35, -la / (Math.PI / 2) * er * 0.78, 1], // flat: the map peeled off
+      (lo, la) => { const u = lo / Math.PI * er * 1.05, v = la / (Math.PI / 2) * er * 0.75; return [(u - v) * 0.8, (u + v) * 0.42 + 6, 1]; }, // ISO: the map tipped into a diamond
+      (lo, la, r) => { const rr = (Math.PI / 2 - la) / Math.PI * er * 1.1; return [Math.cos(lo + r) * rr, Math.sin(lo + r) * rr * 0.92, 1]; }]; // TOP: looking straight down on the pole
+    const ph = t % (CY * PJ.length), a = ph / CY | 0, u = Math.max(0, (ph - a * CY - HOLD) / MORPH), e = u * u * (3 - 2 * u), A = PJ[a], Bp = PJ[(a + 1) % PJ.length], r = t * 0.5;
+    const pt = (lo, la) => { const p = A(lo, la, r), q = Bp(lo, la, r); return [ex + p[0] + (q[0] - p[0]) * e, ey + p[1] + (q[1] - p[1]) * e, p[2] + (q[2] - p[2]) * e]; };
+    const line = (pts, col) => { for (let i = 1; i < pts.length; i++) { const [x0, y0, z0] = pts[i - 1], [x1, y1, z1] = pts[i]; ctx.globalAlpha = (z0 + z1) / 2 < 0 ? 0.18 : 0.75; ctx.strokeStyle = col; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); } };
+    ctx.lineWidth = 1.5; const N = 24;
+    for (let k = 1; k < 8; k++) { const la = -Math.PI / 2 + k * Math.PI / 8, P = []; for (let i = 0; i <= N; i++) P.push(pt(-Math.PI + i * TAU / N, la)); line(P, k === 4 ? '#ff3df0' : '#2ee6ff'); } // latitudes, the equator in pink
+    for (let k = 0; k < 12; k++) { const lo = -Math.PI + k * TAU / 12, P = []; for (let i = 0; i <= 12; i++) P.push(pt(lo, -Math.PI / 2 + i * Math.PI / 12)); line(P, k % 3 ? '#2ee6ff' : '#b06bff'); } // longitudes
+    if (u > 0 && u < 1) { ctx.globalAlpha = 0.5 * Math.sin(u * Math.PI); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(ex, ey, er * (0.4 + u * 0.9), 0, TAU); ctx.stroke(); } // a ripple as it folds
+    ctx.globalAlpha = 1; ctx.lineWidth = 1; }
   function drawStory() { const st = story, t = performance.now() / 1000; if (st.end) return drawEnding(st); if (st.cut) return drawCut(st); ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = '#8fa8ff'; for (let k = 0; k < 80; k++) { ctx.globalAlpha = 0.2 + (k % 5) * 0.12; ctx.fillRect((k * 131 + st.t * (0.2 + k % 3 * 0.15)) % W, (k * 71) % H, 1.5, 1.5); } ctx.globalAlpha = 1;
-    const ex = 760, ey = 300, er = 92; ctx.strokeStyle = '#2ee6ff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(ex, ey, er, 0, TAU); ctx.stroke(); ctx.globalAlpha = 0.5; for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.ellipse(ex, ey, er, er * k / 4, 0, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.ellipse(ex, ey, er * Math.abs(Math.cos(t * 0.3 + k * 0.8)), er, 0, 0, TAU); ctx.stroke(); } ctx.globalAlpha = 1;
+    drawFoldGlobe(t, 760, 300, 92);
     ctx.strokeStyle = '#ff3df0'; ctx.lineWidth = 2; for (let j = 0; j < 3; j++) { ctx.beginPath(); for (let k = 0; k <= 14; k++) { const yy = 60 + k * 30, xx = 600 + j * 14 + Math.sin(k * 1.7 + t * 2 + j) * (10 + k * 1.5) + (k % 2 ? 9 : -9); k ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.globalAlpha = 0.9 - j * 0.3; ctx.stroke(); } ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over'; const per = 150, n = Math.min(st.lines.length, 1 + (st.t / per | 0));
     for (let k = 0; k < n; k++) { const age = st.t - k * per, ln = st.lines[k], shown = ln.slice(0, Math.max(0, age * 0.9 | 0)); text(ctx, shown, 70, 110 + k * 44, ln.length > 44 ? 10 : 13, k === n - 1 ? '#ffffff' : '#8d9be0', { glow: k === n - 1 }); }
@@ -351,7 +366,7 @@ export function mountShift(root, host = {}) {
   function update(i) {
     sceneT++; if (scene === 'intro' && sceneT < 3 && !logosReady() && performance.now() - (introWait || (introWait = performance.now())) < 5000) sceneT = 0; /* the intro waits (up to 5 s, by the clock, not by frames) for the logo images */
     if (scene === 'intro') { if ((i.ok && !prevM.ok) || (i.pause && !prevM.pause) || tap || sceneT > 600) { tap = null; showTitle(); titleT = 0; audio.sfx('slam'); } if (sceneT === 54) { audio.unlock(); audio.sfx('buzz'); } /* the game's sound starts a beat after launch, so the app's own coin-drop sound gets to finish first */ if (sceneT === 170) audio.sfx('jingle'); if (sceneT === 296) { audio.unlock(); audio.sfx('swoop'); } prevM = i; return; }
-    if (scene === 'story') { const st = story, per = st.per || 150; st.t++; const k = st.t / per | 0; if (k < st.lines.length && k !== st.said) { st.said = k; audio.say(st.lines[k].replace('(C)', 'copyright'), true); } if (st.end && st.t < 90) tap = null; if (tap || (st.t >= (st.end ? 90 : 0) && ((i.ok && !prevM.ok) || (i.pause && !prevM.pause))) || st.t > st.lines.length * per + 120) { tap = null; audio.hush(); const f = st.after; story = null; f(); } prevM = i; return; }
+    if (scene === 'story') { const st = story, per = st.per || 150; if ((st.t + 1) % per === 0 && audio.speaking() && (st.hold = (st.hold || 0) + 1) < 360) { } else { st.hold = 0; st.t++; } /* a line waits for the voice to finish before the next one starts */ const k = st.t / per | 0; if (k < st.lines.length && k !== st.said) { st.said = k; audio.say(st.lines[k].replace('(C)', 'copyright'), true); } if (st.end && st.t < 90) tap = null; if (tap || (st.t >= (st.end ? 90 : 0) && ((i.ok && !prevM.ok) || (i.pause && !prevM.pause))) || st.t > st.lines.length * per + 120) { tap = null; audio.hush(); const f = st.after; story = null; f(); } prevM = i; return; }
     if (scene === 'title') { titleT++; menuInput(i); return; } // no game runs behind the title any more: it is a still, cheap backdrop
     if (scene === 'credits') { if (menus.length) { menuInput(i); return; } cred.y = Math.min(cred.max, cred.y + (i.ok || i.down ? 3 : 0.5)); if (tap) { tap = null; cred.y = Math.min(cred.max, cred.y + 160); }
       if ((cred.y >= cred.max && ++cred.hold > 100) || (sceneT > 40 && ((i.pause && !prevM.pause) || (i.back && !prevM.back)))) creditsMenu(); prevM = i; return; }
