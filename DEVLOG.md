@@ -398,6 +398,12 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **Title voiceover.** The title screen says the name: "two-diso ... shift".
 - **ISO is a word.** The announcer used to spell out I-S-O; it now says "eye-so", like the rest of us.
 
+### 37. Test tools: any skin, any loadout (r45)
+
+- **Skin picker in BUG TEST.** Wear any skin for testing, locked or not. It only works while the test menu exists, so it goes away with it.
+- **Loadout manager in BUG TEST.** Set drones, each weapon, bomb tier, hyperdrive, shields, bombs and ships by hand; every test, Boss Rush included, starts with that loadout. MAX EVERYTHING and EMPTY are one press each.
+- **A shorter pause menu.** Idle mode and the RIVET-9 assist only live in OPTIONS now.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

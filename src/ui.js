@@ -44,7 +44,6 @@ const RUSH = ['earth', 'arena-earth', 'moon', 'mars', 'arena-mars', 'sun', 'jupi
 const BUGTEST = true;
 const BUGLIST = [['earth', 'EARTH'], ['moon', 'MOON'], ['arena-earth', 'EARTH ARENA'], ['mars', 'MARS'], ['sun', 'SUN'], ['arena-mars', 'MARS ARENA'],
   ['jupiter', 'JUPITER'], ['belt', 'ASTEROID BELT'], ['arena-jupiter', 'JUPITER ARENA'], ['x', 'PLANET X'], ['pluto', 'PLUTO'], ['arena-x', 'X ARENA'], ['rush', 'BOSS RUSH'], ['end', 'ENDING AND LOOP']];
-const BUGKIT = { earth: [0, 0, 0, 0, 0, 0, 0, 0], mars: [1, 1, 1, 0, 0, 1, 0, 0], jupiter: [2, 2, 1, 1, 1, 1, 0, 0], x: [3, 2, 2, 2, 2, 2, 0, 0] }; // planets start with what you would roughly have by then; upgrade from there by hand
 const TAU = Math.PI * 2, COPY = '(C) 2026 GRIDDIM / ARCADEGRIDZ / BDC';
 // solar map: four planets along the route, each with its hidden bonus stage above it
 const NODES = [{ id: 'earth', x: 300, r: 13, col: '#2ee6ff' }, { id: 'moon', x: 334, r: 5, col: '#c8d0e0', up: 1 }, { id: 'mars', x: 430, r: 10, col: '#ff4d6d' }, { id: 'sun', x: 90, r: 30, col: '#ffe14a', up: 2 }, { id: 'jupiter', x: 620, r: 24, col: '#ff8a2b' }, { id: 'belt', x: 520, r: 6, col: '#c8a070', up: 1 }, { id: 'x', x: 860, r: 15, col: '#3dffb0' }, { id: 'pluto', x: 780, r: 5, col: '#9fe9ff', up: 1 },
@@ -67,7 +66,7 @@ export function mountShift(root, host = {}) {
   // ship skins: looks only. Each is earned with an achievement, or owned through the host site's store when it sells them
   const SKIN = [['PILOT'], ['FIRE MAGE', 'mars', 'DEFEAT THE COLOSSUS', 'shift-fire-mage'], ['DARK LORD', 'x', 'DEFEAT THE SHIFTER', 'shift-dark-lord']];
   let owned = LS.get('owned', []), forSale = [], skinView = opt.skin | 0; if (host.skins) Promise.resolve().then(() => host.skins()).then(r => { if (r && Array.isArray(r.owned)) { owned = r.owned; LS.set('owned', owned); } if (r && Array.isArray(r.forSale)) forSale = r.forSale; }).catch(() => { });
-  const skinOk = i => !i || !!SKIN[i] && (!!LS.get('ach', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinNow = () => skinOk(opt.skin | 0) ? opt.skin | 0 : 0;
+  const skinOk = i => !i || BUGTEST && opt.skinTest || !!SKIN[i] && (!!LS.get('ach', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinReal = i => !i || !!SKIN[i] && (!!LS.get('ach', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinNow = () => skinOk(opt.skin | 0) ? opt.skin | 0 : 0;
   const audio = createAudio(opt);
   let q = 0, slow = 0, ema = 16; // q: automatic quality step-down when frames run long (0 full, 1 no outer halo + lower res, 2 no glow)
   let destroyed = false, raf = 0, last = performance.now(), acc = 0, scale = 1, res = 1, rotOk = false;
@@ -168,7 +167,7 @@ export function mountShift(root, host = {}) {
     const items = [{ label: 'PLAY', act: play }, ...(BUGTEST ? [{ label: 'BUG TEST', act: bugMenu }] : []), { label: 'OPTIONS', act: optionsMenu }, { label: 'HIGH SCORES', act: scoresMenu }, { label: 'ACHIEVEMENTS', act: () => push({ title: 'ACHIEVEMENTS', kind: 'ach', items: [{ label: 'BACK', act: popMenu }] }) }, { label: 'DEVLOG', act: () => scrollMenu('DEVLOG', DEVLOG) }];
     if (host.onExit) items.push({ label: 'EXIT GAME', act: () => host.onExit() }); push({ kind: 'title', root: true, items }); }
   function pauseMenu() { if (scene !== 'play' || menus.length || !g || g.state !== 'play') return; audio.sfx('blip'); audio.hush(); audio.music('title'); push({ title: 'PAUSED', pause: true, items: [
-    { label: 'RESUME', act: resume }, ...(BUGTEST ? [{ label: 'BUG TEST', act: bugMenu }] : []), { label: 'MAP', act: () => mapMenu() }, { label: 'OPTIONS', act: optionsMenu }, { label: () => 'IDLE MODE  ' + onoff(opt.idle), act: () => setIdle(!opt.idle), adj: () => setIdle(!opt.idle) }, ...(coop ? [] : [{ label: () => 'RIVET-9 ASSIST  ' + onoff(opt.assist), act: () => setAssist(!opt.assist), adj: () => setAssist(!opt.assist) }]),
+    { label: 'RESUME', act: resume }, ...(BUGTEST ? [{ label: 'BUG TEST', act: bugMenu }] : []), { label: 'MAP', act: () => mapMenu() }, { label: 'OPTIONS', act: optionsMenu },
     { label: daily ? 'QUIT RUN' : 'SAVE AND QUIT', act: () => { if (!testRun && !daily && !rush) LS.set('save', returnTo ? { ...returnTo, loop: loopN } : { ...snapshot(g), loop: loopN, z: g.boss ? g.checkpoint : Math.max(g.checkpoint, Math.floor(g.camZ - 4)) }); showTitle(); } }] }); } // saves the exact spot (or the pre-boss checkpoint during a boss)
   const track = () => { const L = LEVELS[levelId]; return g?.boss ? 'boss' : L.isArena ? 'arena' : L.isBonus ? 'bonus' : MUSIC[levelId] || 'play'; };
   function resume() { menus.length = 0; audio.music(track()); prevIn = { pause: true, fire: true, upgrade: true, bomb: true, drone: true, shiftL: true, shiftR: true, gear: true }; last = performance.now(); acc = 0; }
@@ -178,7 +177,8 @@ export function mountShift(root, host = {}) {
     if (tap) { for (const h of hits) if (tap.x >= h.x && tap.x <= h.x + h.w && tap.y >= h.y && tap.y <= h.y + h.h) { if (h.fn) h.fn(tap); else { m.i = h.i; const it = m.items[h.i]; audio.sfx('ok'); if (it.act) it.act(); else it.adj?.(1); } break; } tap = null; prevM = i; return; }
     if (m.travel && !m.travel.done && performance.now() - m.travel.t0 > 3000) { m.travel.done = true; m.items[0].act(); return; }
     if (m.kind === 'map' && !m.locked) { const n = NODES.length; if (e('left')) { m.sel = (m.sel + n - 1) % n; audio.sfx('move'); } if (e('right')) { m.sel = (m.sel + 1) % n; audio.sfx('move'); } }
-    if (m.kind === 'bug') { const n = m.items.length, mv = j => { m.i = j; audio.sfx('move'); }; if (e('left')) mv((m.i + n - 1) % n); if (e('right')) mv((m.i + 1) % n); if (e('down')) mv(m.i < 12 ? (m.i + 3 < 12 ? m.i + 3 : 12 + Math.min(1, (m.i % 3) >> 1)) : m.i < 14 ? m.i + 2 : m.i - 14); if (e('up')) mv(m.i < 3 ? 14 + Math.min(1, m.i >> 1) : m.i < 12 ? m.i - 3 : m.i < 14 ? 9 + (m.i - 12) * 2 : m.i - 2); }
+    if (m.kind === 'bug') { const n = m.items.length, mv = j => { m.i = j; audio.sfx('move'); }, I = m.i; if (e('left')) mv((I + n - 1) % n); if (e('right')) mv((I + 1) % n);
+      if (e('down')) mv(I < 9 ? I + 3 : I < 12 ? 12 + ((I % 3) >> 1) : I < 16 ? I + 2 : I === 16 ? 0 : 2); if (e('up')) mv(I < 3 ? 16 + (I >> 1) : I < 12 ? I - 3 : I < 14 ? 9 + (I - 12) * 2 : I - 2); }
     else if (m.kind === 'scroll') { if (i.up) m.off = Math.max(0, m.off - 6); if (i.down) m.off += 6; }
     else { if (e('up')) { m.i = (m.i + m.items.length - 1) % m.items.length; audio.sfx('move'); } if (e('down')) { m.i = (m.i + 1) % m.items.length; audio.sfx('move'); } }
     const it = m.items[m.i];
@@ -252,18 +252,26 @@ export function mountShift(root, host = {}) {
   function bugTick(id) { const d = bugDone(); if (d[id]) return; d[id] = 1; LS.set('bugtest', d); const n = BUGLIST.filter(b => d[b[0]]).length; toast('TESTED: ' + (BUGLIST.find(b => b[0] === id) || [, id])[1], n >= BUGLIST.length ? 'ALL TESTED - READY TO PUBLISH' : n + ' / ' + BUGLIST.length + ' DONE'); audio.sfx('ring'); }
   function bugStart(id) { if (id === 'rush') { menus.length = 0; startRush(true); return; }
     bug = true; testRun = true; returnTo = null; coop = false; daily = null; rush = null; loopN = 0; assisted = true; const L = LEVELS[id];
-    if (id === 'end') { const cps = buildLevel('x').checkpoints; startLevel('x', { up: BUGKIT.x, z: cps[cps.length - 1] }); toast('BUG TEST: ENDING', 'BEAT THE BOSS, WATCH THE ENDING, PICK LOOP'); return; }
-    startLevel(id, { up: L.isBonus ? (L.kit || undefined) : BUGKIT[id] }); toast('BUG TEST: ' + (BUGLIST.find(b => b[0] === id) || [, id])[1], 'NO DAMAGE. HITS ARE MARKED, NOT TAKEN'); }
+    if (id === 'end') { const cps = buildLevel('x').checkpoints, k = bugKit(); startLevel('x', { up: [...k.up], shield: k.shield, bombs: k.bombs, lives: k.lives, z: cps[cps.length - 1] }); toast('BUG TEST: ENDING', 'BEAT THE BOSS, WATCH THE ENDING, PICK LOOP'); return; }
+    const k = bugKit(); startLevel(id, { up: [...k.up], shield: k.shield, bombs: k.bombs, lives: k.lives }); toast('BUG TEST: ' + (BUGLIST.find(b => b[0] === id) || [, id])[1], 'NO DAMAGE. LOADOUT: ' + bugKitText()); }
+  const KITROWS = [['DRONES', 0, 6], ['MISSILE', 1, 3], ['LASER', 2, 3], ['WAVE', 3, 3], ['BOLT', 4, 3], ['SPREAD', 5, 3], ['BOMB TIER', 7, 3], ['HYPERDRIVE', 8, 1], ['SHIELD', 'shield', 3], ['BOMBS', 'bombs', 9], ['SHIPS', 'lives', 9]];
+  const bugKit = () => Object.assign({ up: [0, 0, 0, 0, 0, 0, 0, 0, 0], shield: 1, bombs: 3, lives: 3 }, LS.get('bugkit', {}));
+  const bugKitText = () => { const k = bugKit(), w = k.up.slice(1, 6).reduce((a, b) => a + b, 0); return w || k.up[0] || k.up[7] || k.up[8] ? 'D' + k.up[0] + ' W' + w + '/15 B' + k.up[7] + (k.up[8] ? ' HYPER' : '') : 'NOTHING'; };
+  function kitMenu() { const set = (r, d) => { const k = bugKit(), key = r[1]; if (typeof key === 'number') k.up[key] = Math.max(0, Math.min(r[2], k.up[key] + d)); else k[key] = Math.max(key === 'lives' ? 1 : 0, Math.min(r[2], k[key] + d)); LS.set('bugkit', k); };
+    push({ title: 'LOADOUT', gap: 22, notes: ['EVERY BUG TEST STARTS WITH THIS. LEFT / RIGHT TO CHANGE'], items: [...KITROWS.map(r => ({ label: () => { const k = bugKit(), v = typeof r[1] === 'number' ? k.up[r[1]] : k[r[1]]; return r[0] + '  ' + v + ' / ' + r[2]; }, adj: d => set(r, d) })),
+      { label: 'MAX EVERYTHING', act: () => { LS.set('bugkit', { up: [6, 3, 3, 3, 3, 3, 0, 3, 1], shield: 3, bombs: 9, lives: 9 }); audio.sfx('ring'); } }, { label: 'EMPTY', act: () => { LS.set('bugkit', {}); audio.sfx('blip'); } }, { label: 'BACK', act: popMenu }] }); }
   function bugMenu() { const d = bugDone(); push({ title: 'BUG TEST', kind: 'bug', items: [...BUGLIST.map(b => ({ label: b[1], id: b[0], act: () => bugStart(b[0]) })),
+      { label: () => 'SKIN  ' + SKIN[opt.skin | 0][0] + (opt.skinTest && !skinReal(opt.skin | 0) ? '  (TEST)' : ''), id: 'skin', act: () => { opt.skin = ((opt.skin | 0) + 1) % SKIN.length; opt.skinTest = true; skinView = opt.skin; saveOpt(); audio.sfx('blip'); } },
+      { label: () => 'LOADOUT  ' + bugKitText(), id: 'kit', act: kitMenu },
       { label: 'CLEAR THE LIST', id: 'reset', act: () => { LS.set('bugtest', {}); toast('BUG TEST', 'LIST CLEARED'); } }, { label: 'BACK', id: 'back', act: popMenu }], i: Math.max(0, BUGLIST.findIndex(b => !d[b[0]])) }); }
   function drawBug(m) { const d = bugDone(), n = BUGLIST.filter(b => d[b[0]]).length, all = n >= BUGLIST.length, t = performance.now() / 1000;
-    text(ctx, all ? 'ALL ' + n + ' TESTED - READY TO PUBLISH. TELL CLAUDE TO HIDE THIS MENU' : n + ' / ' + BUGLIST.length + ' TESTED.  PICK ONE: NO DAMAGE, UPGRADE BY HAND, CLEAR IT TO TICK IT OFF', 480, 84, 7, all ? '#3dffb0' : '#9fb0ff', { align: 'center', glow: all });
+    text(ctx, all ? 'ALL ' + n + ' TESTED - READY TO PUBLISH. TELL CLAUDE TO HIDE THIS MENU' : n + ' / ' + BUGLIST.length + ' TESTED.  PICK ONE: NO DAMAGE, STARTS WITH YOUR LOADOUT, CLEAR IT TO TICK IT OFF', 480, 84, 7, all ? '#3dffb0' : '#9fb0ff', { align: 'center', glow: all });
     ['PLANET', 'WARP STAGE', 'ARENA'].forEach((h, c) => text(ctx, h, 200 + c * 280, 112, 7, '#6a76c0', { align: 'center', glow: false }));
-    m.items.forEach((it, k) => { let x, y, w = 240; if (k < 12) { x = 80 + (k % 3) * 280; y = 132 + (k / 3 | 0) * 44; } else if (k < 14) { x = 220 + (k - 12) * 280; y = 322; } else { x = 220 + (k - 14) * 280; y = 400; }
+    m.items.forEach((it, k) => { let x, y, w = 240; if (k < 12) { x = 80 + (k % 3) * 280; y = 132 + (k / 3 | 0) * 44; } else if (k < 14) { x = 220 + (k - 12) * 280; y = 322; } else if (k < 16) { x = 140 + (k - 14) * 360; y = 368; w = 320; } else { x = 220 + (k - 16) * 280; y = 424; }
       const on = k === m.i, ok = d[it.id], lab = it.label; if (on) { ctx.fillStyle = '#ff3df0'; ctx.globalAlpha = 0.16 + 0.06 * Math.sin(t * 6); ctx.fillRect(x - 8, y - 9, w, 30); ctx.globalAlpha = 1; }
       if (k < 14) { ctx.strokeStyle = ok ? '#3dffb0' : '#30345a'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y - 1, 14, 14); if (ok) { ctx.strokeStyle = '#3dffb0'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x + 3, y + 6); ctx.lineTo(x + 6, y + 10); ctx.lineTo(x + 12, y + 2); ctx.stroke(); } }
-      text(ctx, lab, x + (k < 14 ? 24 : w / 2 - 8), y, 10, on ? '#ffffff' : ok ? '#3dffb0' : '#8d9be0', { glow: on, align: k < 14 ? 'left' : 'center' }); hits.push({ x: x - 8, y: y - 9, w, h: 30, i: k }); }); }
-  function startRush(asBug) { bug = !!asBug; testRun = false; returnTo = null; coop = false; daily = null; assisted = true; loopN = 0; rush = { i: 0, t: 0, won: 0 }; rushGo({ up: [3, 2, 2, 2, 2, 2, 0, 0], shield: 2, lives: 5, score: 0 }); }
+      text(ctx, typeof lab === 'function' ? lab() : lab, x + (k < 14 ? 24 : w / 2 - 8), y, 10, on ? '#ffffff' : ok ? '#3dffb0' : '#8d9be0', { glow: on, align: k < 14 ? 'left' : 'center' }); hits.push({ x: x - 8, y: y - 9, w, h: 30, i: k }); }); }
+  function startRush(asBug) { bug = !!asBug; testRun = false; returnTo = null; coop = false; daily = null; assisted = true; loopN = 0; rush = { i: 0, t: 0, won: 0 }; const k = bug ? bugKit() : null; rushGo(k ? { up: [...k.up], shield: k.shield, bombs: k.bombs, lives: k.lives, score: 0 } : { up: [3, 2, 2, 2, 2, 2, 0, 0], shield: 2, lives: 5, score: 0 }); }
   function rushStep(cleared) { const lives = g.players[0].lives; if (cleared) rush.won++; if (!opt.idle && cleared && RUSH[rush.i]) { }
     if (cleared && rush.i < RUSH.length - 1) { rush.i++; rushGo(carry()); return; } // straight into the next one: no results screen, no map, no story
     const done = cleared && rush.i === RUSH.length - 1, secs = rush.t / 60, best = LS.get('rush', null), r = { won: rush.won, time: Math.round(secs), score: g.score }, better = !best || r.won > best.won || (r.won === best.won && (done ? r.time < best.time : r.score > best.score));
