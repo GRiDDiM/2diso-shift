@@ -606,11 +606,17 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 ### 62. The Labyrinth, and tighter pacing (r68)
 
 - Mars has a new stretch between the caves and the magma tubes: THE LABYRINTH, a maze of lava rock seen from above. The forge locks your speed at SLOW the whole way through. One gap in each row is the way on. The other gaps lead into side pockets with gems and pods, sealed at the far end by rock you have to blast through.
-- Earth was the longest level by a wide margin, so parts of the skyscrapers, skyways, firewall gates, construction zone and hover traffic are gone. It is now about a minute shorter.
-- Warp stages now run about a minute and a half: their minibosses have less health. Bonus arenas have smaller waves and a lighter champion, so each one takes about a minute.
+- Earth was the longest level by a wide margin, so parts of the skyscrapers, skyways and firewall gates are gone. The construction zone and the hover traffic stay in full.
+- Warp stages are shorter: the run up to each miniboss is trimmed, and the minibosses keep their full health. Bonus arenas have smaller waves, so each one takes about a minute.
 - The blob walls in the final boss fight have a bit less health.
 
 ![The Labyrinth on Mars](shots/mars-labyrinth.jpg)
+
+### 63. The Motherlode (r69)
+
+- Halfway through the asteroid belt you now fly into one giant hollowed-out rock with a mining colony inside it, played in SIDE view. The cave roof and floor close in, drill rigs pump up and down, ore carts run along the rails, laser fences guard the seams and the ore crates are full of gems. Mining drones patrol it. After that you're back out among the rocks.
+
+![The Motherlode](shots/belt-motherlode.jpg)
 
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
