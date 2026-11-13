@@ -692,6 +692,12 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 
 ![The Colossus, face on](shots/colossus-face.jpg)
 
+### 74. Ranks that actually climb (r80)
+
+- Fixed a bug from the six-rank change: weapons topped out at their rank-3 strength, so ranks 4 to 6 only added their small twists and never reached the real full power. Each rank now steps up a little, and rank 6 is the full-strength weapon again.
+- Every shield rank now adds something: one layer, then longer safe time after a hit, a second layer, BLOWBACK, a third layer, and AFTERGLOW for the longest safe time.
+- The Eye on Jupiter has less health. Its lightning walks are shorter, the cyclone pulls more gently and fires fewer sparks, and its storm orbs are softer and shoot less. The pupil's stare comes less often, and its ground strike is one spot with a longer warning instead of three.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

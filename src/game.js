@@ -8,15 +8,15 @@ export const B = { x: 8.2, y0: 0.6, y1: 9.1, z0: 0.5, z1: 26, zb: 20 }; // z1: h
 export const BAR = ['DRONE', 'MISSILE', 'LASER', 'WAVE', 'BOLT', 'SPREAD', 'SHIELD', 'BOMB', 'HYPER'];
 export const BARMAX = [6, 6, 6, 6, 6, 6, 6, 6, 6]; // six ranks everywhere. Even ranks are the old ranks (2 = old 1, 4 = old 2, 6 = old max); odd ranks add a twist of their own that carries upward
 export const hyperOk = p => p.up[0] >= 6 && p.up[1] >= 6 && p.up[2] >= 6 && p.up[3] >= 6 && p.up[4] >= 6 && p.up[5] >= 6 && p.up[7] >= 6; // HYPERDRIVE opens once drones, every weapon and the bomb are maxed (shields come and go, so they do not count)
-const EFF = [0, 1, 2, 3, 4, 4, 5]; // weapon strength by rank: rank 6 is still the old full max
+const EFF = [0, 1, 2, 3, 4, 4, 5]; // weapon strength by rank, a step at a time up to the full max at rank 6 (rank 5 adds its perk on rank 4's strength)
 export const U = { DRONE: 0, MISSILE: 1, LASER: 2, WAVE: 3, BOLT: 4, SPREAD: 5, SHIELD: 6, BOMB: 7, WILD: 8 };
 export const TIER = { 1: [, 'SPARKLER', 'SWARM', 'SHRAPNEL', 'BARRAGE', 'TAGGER', 'CLUSTER'], 2: [, 'PENLIGHT', 'FOCUS', 'MIRROR', 'LANCE', 'CAPACITOR', 'PRISM'], 3: [, 'RIPPLE', 'WIDE', 'ECHO', 'TIDAL', 'UNDERTOW', 'TSUNAMI'],
-  4: [, 'STATIC', 'FORK', 'MAGNET COIL', 'CHAIN', 'BLACKOUT', 'STORM'], 5: [, 'DOUBLE TAP', 'TWIN FAN', 'PIERCER', 'STAR FAN', 'RAILGUN', 'NOVA FAN'], 6: [, 'FILM', 'BARRIER', 'BLOWBACK', 'DOUBLE BARRIER', 'AFTERGLOW', 'TRIPLE BARRIER'],
+  4: [, 'STATIC', 'FORK', 'MAGNET COIL', 'CHAIN', 'BLACKOUT', 'STORM'], 5: [, 'DOUBLE TAP', 'TWIN FAN', 'PIERCER', 'STAR FAN', 'RAILGUN', 'NOVA FAN'], 6: [, 'FILM', 'BARRIER', 'DOUBLE BARRIER', 'BLOWBACK', 'TRIPLE BARRIER', 'AFTERGLOW'],
   7: [, 'WIDE RING', 'SWEEP BOMB', 'BACKDRAFT', 'SCATTER BOMB', 'VACUUM', 'MEGA NUKE'], 8: [, 'OVERCLOCK', 'MAGNET', 'QUICKSILVER', 'SECOND WIND', 'BOMB FORGE', 'SINGULARITY'] };
 // what each odd rank adds (and keeps at the ranks above it)
 export const PERK = { 1: [, 'TWO SMALL MISSILES, SLOW', , 'BLASTS THROW SHRAPNEL', , 'HIT ENEMIES TAKE +25% DAMAGE FOR 3S'], 2: [, 'A THIN, SLOW BEAM', , 'THE BEAM CUTS ENEMY BULLETS', , 'EVERY 5TH PULSE PIERCES, DOUBLE POWER'],
   3: [, 'A SMALL, SLOW WAVE', , 'A SECOND, MIRRORED WAVE', , 'WAVES SHOVE ENEMIES BACK'], 4: [, 'ONE BOLT, NO CHAIN', , 'STRIKES YANK PICKUPS TO YOU', , 'STRIKES WIPE NEARBY ENEMY BULLETS'],
-  5: [, 'TWO PARALLEL SHOTS', , 'SHOTS PIERCE ONE ENEMY', , 'FASTER SHOTS, +20% DAMAGE'], 6: [, 'HALF A LAYER', , 'A BREAKING LAYER BLASTS BULLETS AWAY', , 'LONGER SAFETY AFTER A HIT'],
+  5: [, 'TWO PARALLEL SHOTS', , 'SHOTS PIERCE ONE ENEMY', , 'FASTER SHOTS, +20% DAMAGE'], 6: [, 'ONE LAYER', 'MORE SAFE TIME AFTER A HIT', 'A SECOND LAYER', 'A BREAKING LAYER BLASTS BULLETS AWAY', 'A THIRD LAYER', 'THE LONGEST SAFE TIME AFTER A HIT'],
   7: [, 'A BIGGER RING', , 'SWEEPS FORWARD AND BACK', , 'PULLS EVERY PICKUP TO YOU'], 8: [, '+15% DAMAGE FROM EVERYTHING', 'PICKUPS DRIFT TO YOU', 'EVERY WEAPON FIRES 15% FASTER', 'ONCE A LEVEL A KILLING HIT IS SHRUGGED OFF', 'A NEW BOMB EVERY 40 SECONDS', '+30% DAMAGE IN ALL'] };
 const rate = (p, od) => (od ? 0.6 : 1) * (p.up[8] >= 3 ? 0.85 : 1); // overdrive and QUICKSILVER speed every gun up
 export const hyperMul = p => p.up[8] >= 6 ? 1.3 : p.up[8] >= 1 ? 1.15 : 1;
@@ -96,7 +96,7 @@ function ov(a, b, m, pad = 0) {
 }
 const live = (o, v) => o.phase == null || o.phase === v;
 export const solid = (o, v) => !o.dead && !o.ghost && !o.idle && o.warm <= 0 && live(o, v);
-export const lv = (p, i) => i >= 1 && i <= 5 ? (p.god > 0 ? 5 : EFF[Math.min(3, p.up[i])]) : p.up[i];
+export const lv = (p, i) => i >= 1 && i <= 5 ? (p.god > 0 ? 5 : EFF[Math.min(6, p.up[i])]) : p.up[i];
 
 function addScore(g, base, x, y, z, col) {
   const mult = 1 + Math.min(9, g.chain / 5 | 0); g.score += base * mult;
@@ -134,8 +134,8 @@ function hurt(g, p) {
   if (p.inv > 0 || p.dead > 0) return;
   if (g.mut.bug) { g.stats.bugHits = (g.stats.bugHits || 0) + 1; p.inv = 40; g.fx.push('shield'); g.shake = Math.max(g.shake, 4); return; } // bug test: nothing is lost, the hit is only marked
   g.stats.hits++;
-  if (p.shield > 0 && g.loop < 3) { const s0 = p.shield; glitch(g, 14, 0.45); p.shield = g.loop >= 2 ? 0 : Math.max(0, p.shield - 2); p.inv = LOOP.inv[lp(g)] * (s0 >= 5 ? 1.6 : 1) | 0; /* shields are counted in half layers: a hit takes a whole layer. AFTERGLOW stretches the safety after it */
-    if (s0 >= 3) { for (const b of g.ebul) if (Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z) < 6) b.life = 0; for (const e of g.enemies) if (e.hp > 0 && e.type !== 'boss' && !e.mini && Math.hypot(e.x - p.x, e.y - p.y, e.z - p.z) < 3.5) damage(g, e, 12); g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.5, vr: 22, life: 16, max: 16, col: '#5ee7ff' }); } /* BLOWBACK */ /* loop 3: one hit strips every layer. loop 4: shields do nothing */ g.fx.push('shield'); explode(g, p.x, p.y, p.z, '#5ee7ff', 12, 7); g.shake = 6; return; }
+  if (p.shield > 0 && g.loop < 3) { const s0 = p.shield; glitch(g, 14, 0.45); p.shield = g.loop >= 2 ? 0 : Math.max(0, p.shield - 2); p.inv = LOOP.inv[lp(g)] * (s0 >= 6 ? 1.6 : s0 >= 2 ? 1.3 : 1) | 0; /* shields are counted in half layers: a hit takes a whole layer. AFTERGLOW stretches the safety after it */
+    if (s0 >= 4) { for (const b of g.ebul) if (Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z) < 6) b.life = 0; for (const e of g.enemies) if (e.hp > 0 && e.type !== 'boss' && !e.mini && Math.hypot(e.x - p.x, e.y - p.y, e.z - p.z) < 3.5) damage(g, e, 12); g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.5, vr: 22, life: 16, max: 16, col: '#5ee7ff' }); } /* BLOWBACK */ /* loop 3: one hit strips every layer. loop 4: shields do nothing */ g.fx.push('shield'); explode(g, p.x, p.y, p.z, '#5ee7ff', 12, 7); g.shake = 6; return; }
   if (p.up[8] >= 4 && !p.sw && !g.level.bonus) { p.sw = 1; p.inv = 180; g.flash = 8; g.shake = 8; g.fx.push('shield', 'god'); hint(g, 'SECOND WIND - THAT ONE WOULD HAVE KILLED YOU', 200); for (let i = 0; i < 3; i++) g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.4, vr: 12 + i * 6, life: 22, max: 22, col: i % 2 ? '#ffffff' : '#ffe14a' }); return; } // SECOND WIND: once a level
   explode(g, p.x, p.y, p.z, '#ffffff', 46, 15); explode(g, p.x, p.y, p.z, '#ff3df0', 30, 10); g.fx.push('die'); g.shake = 14; g.flash = 10; g.chain = 0; g.stats.deaths++; glitch(g, 36, 1);
   if (g.level.bonus && !g.mut.rush) { p.dead = 1e9; g.state = 'over'; g.endT = 0; return; } // a bonus stage just ends; it never costs a ship (in boss rush it costs one like anywhere else)

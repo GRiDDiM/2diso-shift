@@ -326,20 +326,20 @@ function jupiter() {
 
   zone(1140, 1e9, SIDE, 'WARNING // THE EYE OPENS');
   K.cut(220, 270); K.cut(484, 512); // room for the descent
-  spawnBoss(K, 1190, { name: 'THE EYE', look: 'eye', hp: 3200, col: ZAP });
+  spawnBoss(K, 1190, { name: 'THE EYE', look: 'eye', hp: 2600, col: ZAP });
   const B = boss({ name: 'THE EYE', toast: 'JUPITER CALMED', adds: { shape: 'shark', col: '#7df9ff', hp: 4, r: 0.9, vz: -8, ax: 3, w: 1.3, score: 250 }, addEvery: 520, stages: [
     // STATIC: lightning walks down the lane toward you, then the Eye stares: a flat beam at whatever height you are flying
     { name: 'STATIC', vuln: [SIDE], rec: SIDE, col: ZAP, bob: 2.2, attack(g, b, t) { const p = near(g, b), c = t % 360;
-      if (c === 30) { hint(g, 'LIGHTNING - WATCH THE RINGS', 110); g.fx.push('charge'); } if (c >= 30 && c < 150 && c % 24 === 6) { const k = (c - 30) / 24 | 0; strike(g, p.x, 11.5 - k * 2.3 + (k % 2 ? 0.6 : 0)); }
+      if (c === 30) { hint(g, 'LIGHTNING - WATCH THE RINGS', 110); g.fx.push('charge'); } if (c >= 30 && c < 126 && c % 24 === 6) { const k = (c - 30) / 24 | 0; strike(g, p.x, 11.5 - k * 2.3 + (k % 2 ? 0.6 : 0)); }
       if (c === 185) hint(g, 'THE EYE TURNS TO YOU - MOVE WHEN IT LOCKS', 130); if (c >= 185 && c < 357) stare(g, b, c - 185, { col: ZAP, trackX: false }); if (c === 300) for (let i = 0; i < 3; i++) addEnemy(g, { type: 'pop', x: 0, y: 2.5 + i * 2.2, z: b.z - 1, vz: -8, ay: 1, hp: 2, col: ZAP, shape: 'spark', ph: i }); } },
     // CYCLONE: the storm drags you toward the Eye while two spiral arms of sparks sweep the deck
-    { name: 'CYCLONE', vuln: [TOP], rec: TOP, col: '#b06bff', sway: 3, attack(g, b, t) { const p = near(g, b); g.pull = [Math.max(-1.6, Math.min(1.6, (b.x - p.x) * 0.5)), 0, p.z < 9 ? 1.5 : 0];
-      if (t % 420 === 5) hint(g, 'CYCLONE - FLY AGAINST THE PULL', 120); if (t % 9 === 0 && t % 420 < 300) for (const k of [0, 3.1416]) { const a = t * 0.045 + k; bullet(g, b.x, 4.6, b.z - 2, Math.cos(a) * 4.2, 0, -3.4 - (Math.sin(a) + 1) * 1.6, k ? '#b06bff' : ZAP); }
-      if (t % 420 === 330) { strike(g, p.x, p.z); strike(g, p.x - 2.6, p.z + 1.5); strike(g, p.x + 2.6, p.z + 1.5); g.fx.push('charge'); } } },
+    { name: 'CYCLONE', vuln: [TOP], rec: TOP, col: '#b06bff', sway: 3, attack(g, b, t) { const p = near(g, b); g.pull = [Math.max(-1.2, Math.min(1.2, (b.x - p.x) * 0.4)), 0, p.z < 9 ? 1.1 : 0];
+      if (t % 420 === 5) hint(g, 'CYCLONE - FLY AGAINST THE PULL', 120); if (t % 12 === 0 && t % 420 < 280) for (const k of [0, 3.1416]) { const a = t * 0.045 + k; bullet(g, b.x, 4.6, b.z - 2, Math.cos(a) * 4.2, 0, -3.4 - (Math.sin(a) + 1) * 1.6, k ? '#b06bff' : ZAP); }
+      if (t % 420 === 330) { strike(g, p.x, p.z); strike(g, p.x + (p.x > 0 ? -3 : 3), p.z + 1.5); g.fx.push('charge'); } } },
     // THE PUPIL: storm orbs circle it and soak up shots, and its stare is now a narrow shaft that follows you
     { name: 'THE PUPIL', vuln: [ISO, CHASE], rec: ISO, col: '#ffffff', attack(g, b, t) { const orbs = g.enemies.filter(e => e.orb && e.hp > 0).length;
-      if (t % 480 === 20 && orbs < 2) { for (let i = 0; i < 4; i++) addEnemy(g, { type: 'pop', orb: true, x: b.x, x0: 0, y0: 4.8, ax: 3.3, ay: 3.3, w: 1.3, ph: i * 1.5708, z: b.z - 3, vz: 0, hp: 9, r: 0.8, col: ZAP, score: 300, shape: 'plasma', fire: 170, bs: 6 }); hint(g, 'STORM ORBS - CLEAR THEM TO REACH THE PUPIL', 150); }
-      { const c = t % 330; if (c >= 110 && c < 282) stare(g, b, c - 110, { col: ZAP }); } if (t % 480 === 330) { const p = near(g, b); for (let i = -1; i <= 1; i++) strike(g, p.x + i * 3, p.z + 1, { hz: 3 }); g.fx.push('charge'); } } }] });
+      if (t % 480 === 20 && orbs < 2) { for (let i = 0; i < 4; i++) addEnemy(g, { type: 'pop', orb: true, x: b.x, x0: 0, y0: 4.8, ax: 3.3, ay: 3.3, w: 1.3, ph: i * 1.5708, z: b.z - 3, vz: 0, hp: 6, r: 0.8, col: ZAP, score: 300, shape: 'plasma', fire: 230, bs: 5 }); hint(g, 'STORM ORBS - CLEAR THEM TO REACH THE PUPIL', 150); }
+      { const c = t % 420; if (c >= 160 && c < 332) stare(g, b, c - 160, { col: ZAP }); } if (t % 480 === 400) { const p = near(g, b); strike(g, p.x, p.z + 1, { hz: 2.2, warm: 95 }); g.fx.push('charge'); } } }] });
   K.fill(spark, 108, 735, 32, 'crystal'); K.hill(330, 380, 1.6); K.hill(690, 730, 1.3);
   return K.done({ name: 'JUPITER', title: 'STORM DECK', boss: B, warpName: 'THE ASTEROID BELT', theme: { sky: 'cloud', grid: '#1e7a5a', nofloor: true },
     rules: { wind: g => g.camZ > 462 && g.camZ < 682 && !g.boss /* (after the cuts) */ ? [Math.sin(g.tick * 0.012) * 1.4, 0] : [0, 0] } });
