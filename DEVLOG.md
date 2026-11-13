@@ -386,6 +386,12 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 
 ![A third more of the level in view, here from above](shots/view-top-further.jpg)
 
+### 35. A bug test checklist (r42)
+
+- **BUG TEST.** The title menu and the pause menu have a BUG TEST checklist: every planet, warp stage and arena, Boss Rush, and the ending with its loop. Picking one starts you there with no damage: hits are marked on screen and counted, but nothing is lost, so the weapons and upgrades behave as in a real run and you buy them by hand. Planets start with roughly the loadout you would have by then. Clearing one ticks it off, and the list is kept between sessions.
+- **Clean test runs.** Test runs never post scores and do not unlock achievements, skins, medals, ghosts or Boss Rush records.
+- **One switch for release.** When the list is done, a single flag hides the checklist and the solar map's level-jump test buttons together for the jam build.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
