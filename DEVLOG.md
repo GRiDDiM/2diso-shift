@@ -434,17 +434,27 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **More hills and ramps** on every planet, and the bonus stages lean on chase and iso views.
 - **Smoother.** Quality steps down sooner when frames slow down and comes back once things settle.
 
+![The Sun in chase view: dense red fog with one clear way through](shots/sun-red-fog.jpg)
+
 ### 41. Ragged holes and real boulders (r49)
 
 - **No more square holes off Earth.** In chase view a gate on Mars, Jupiter or Planet X is now one wall of rock, cloud or flesh with a ragged rounded opening, a tunnel rim, and cracks, ripples or veins spreading out from it. A soft green rim inside marks the way through. The opening is drawn slightly inside the real gap, so the edge never kills you before it looks like it should. Earth keeps its square building gaps.
 - **The Sun's fog** is drawn the same way in chase and iso: slice after slice of red fog with a rounded hole for the channel.
 - **Rocks look like rocks.** Rocks on every planet bulge in the middle and taper front and back instead of being extruded blocks, with round shaded lobes instead of box fills. The Moon trench is now a ragged line of boulders of different sizes instead of a row of cubes.
 
+![Planet X: one wall of tissue with a ragged opening instead of a square gap](shots/gate-ragged-hole.jpg)
+
+![The Sun fog drawn as slices with rounded holes](shots/sun-fog-slices.jpg)
+
 ### 42. RIVET-9 on comms (r50)
 
 - **Tips come from RIVET-9.** View calls, hazard tips and anomaly alerts now pop up as a little instant-message window in the top left, with his portrait, a title bar and the text typing out. It stays up long enough to read, fades away on its own, and he reads it out loud. If a second message comes in, the first slides down and fades.
 - **He overreacts, on purpose.** His face is an emoji on a visor and changes as he talks: shocked then starry-eyed at an anomaly, panicking with a sweat drop at lava, sharks and lightning, angry eyebrows at a boss, a smug grin when it's time to shift. His mouth flaps while the words come out, he shakes when he's scared, and every message opens with WHOA!!, YIKES!, GET HIM! or OOH!
 - **The big calls stay big.** Stage names, waves and other headline calls stay as centre-screen banners, now in the thick bold font along with the level titles, results screens, boss names, warnings and score pop-ups.
+
+![RIVET-9 panicking about sharks in the top left corner](shots/rivet-comms.jpg)
+
+## Day 3 — Fri 13 Nov 2026
 
 ### 43. Warps you have to mean (r51)
 
@@ -461,10 +471,14 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **Reality shifts in the levels.** The fold now flips your view for you once or twice on every planet, not only in the last boss fight. Where it happens is random each run, but always somewhere in the middle half of the level and never right on a change of view. Roll back yourself.
 - **The last boss's blob walls hold.** They have more than ten times the health and scale with your guns, so it now takes a few seconds of focused fire to burst one before it reaches you.
 
+![Options split into tabs](shots/options-tabs.jpg)
+
 ### 46. Cutscenes between planets (r54)
 
 - **A short flight between planets.** After each boss, before the map and hyperspace, there is a short scene. The world you saved slides away behind you, the next one looms up with the rift cracked across it, and you fly with RIVET-9 tucked in behind. He talks you through it on comms, with his face doing the acting: proud, then panicking, then fired up.
 - **RIVET-9 calls the reality shifts** in the levels and in the last boss fight, with a WHOA WHOA WHOA! and a shocked face.
+
+![Leaving Earth for Mars, with RIVET-9 on comms](shots/cutscene-mars.jpg)
 
 ### 47. A story between the planets (r55)
 
@@ -474,6 +488,8 @@ The cutscenes now tell a story, five lines each, and it carries through to the e
 - **Jupiter to Planet X.** RIVET-9 pulls coordinates out of the Eye's last look. Planet X is not a planet. It is a dream that something far past Pluto is having, and the only hope is to break the dream so the dreamer stays asleep.
 - The ending's last line now points back at the dreamer. Each line also stays on screen longer, so the whole thing can be read and heard.
 
+![On the way to Planet X](shots/cutscene-x.jpg)
+
 ### 48. A jam banner on the title screen (r56)
 
 - The Game Off note on the title screen is now a neon pennant hanging in the top right corner: GITHUB GAME OFF 2026, THEME: SHIFT and a DEVLOG button. It sways, glints and glows brighter when you point at it. Click or tap it, or press the drone button, to read the devlog. The DEVLOG item has left the title menu.
@@ -481,6 +497,10 @@ The cutscenes now tell a story, five lines each, and it carries through to the e
 ### 49. Skin previews (r57)
 
 - The SHIP tab in Options now shows the skin you are looking at as a turning model, with dots for all four skins. A skin you have not earned is a dim silhouette with a padlock, plus what unlocks it: beat the boss, or the Sparkz price from the store (FIRE MAGE: THE COLOSSUS or 500, PIXIE: THE EYE or 650, DARK LORD: THE SHIFTER or 800).
+
+![A skin you have unlocked, turning in the preview](shots/skin-card-fire-mage.jpg)
+
+![A locked skin: a dim silhouette, a padlock and what unlocks it](shots/skin-card-locked.jpg)
 
 ### 50. Skins drop from the warp stages (r58)
 
@@ -495,8 +515,23 @@ The cutscenes now tell a story, five lines each, and it carries through to the e
 - **BUG TEST** has moved out of the title and pause menus into Options, on the MORE tab.
 - **The title voice says the whole name again.** In some browsers a line spoken straight after another one was cut gets dropped, so the 2DISO part was being lost and only a rushed SHIFT came through. The title is now one slower line with a real pause in the middle.
 
+![The new title screen](shots/title-r59.jpg)
+
+### 52. A devlog you can actually read (r60)
+
+- **Entries fold up.** The in-game devlog used to be one long wall of text. Now every entry is a single line until you open it, and only one is open at a time. Tabs along the top split it into the backstory, each day of the jam and the to-do list, and the screenshots from this page appear inside the entries they belong to.
+- **The DEVLOG button is back on the title menu,** on the second row between ACHIEVEMENTS and EXIT. The jam banner in the corner is now just a banner.
+
+![Day 3 in the new devlog, every entry folded to one line](shots/devlog-tabs.jpg)
+
+![An entry opened, with its screenshot inside](shots/devlog-entry-open.jpg)
+
+![The DEVLOG button back on the title menu](shots/title-devlog-button.jpg)
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
-- Recorded announcer lines instead of the browser voice (it now has a radio chirp and a better voice pick, but it is still the browser).
-- The itch.io page and the HTML5 build for the jam.
+- Finish the bug test list, then hide the bug test menu for the jam build.
+- Recorded announcer lines instead of the browser voice.
+- Push the HTML5 build to itch.io (the page is set up as a draft) and submit it to the jam.
+- Retake the itch.io screenshots once the game is final.
