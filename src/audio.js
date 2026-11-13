@@ -84,7 +84,7 @@ export function createAudio(opt) {
       step++; nextT += spb; }
   }
   // ---- announcer ----
-  let lastSay = 0, vox = null, voxM = null;
+  let lastSay = 0, vox = null, voxM = null, talkEnd = 0, talking = false, talkT = 0; // when the current line should be over, by estimate and by the voice's own events
   // voices: a female voice for the announcer, a male one for the SHIFT on the title. The browser fills its voice list late, so look again when it does
   const pickVoices = () => { const vs = window.speechSynthesis?.getVoices?.() || []; if (!vs.length) return false;
     vox = vs.find(v => /Microsoft (Aria|Jenny|Sonia|Libby|Emma|Ava|Michelle|Natasha) Online/i.test(v.name)) || vs.find(v => /Google UK English Female|Samantha|Serena|Moira|Karen|Tessa|Ava|Allison|Susan|Hazel|Zira/i.test(v.name)) || vs.find(v => /^en/i.test(v.lang) && /female|woman/i.test(v.name)) || vs.find(v => /Google US English/i.test(v.name)) || vs.find(v => /^en/i.test(v.lang)) || null;
@@ -94,7 +94,7 @@ export function createAudio(opt) {
   const speakable = t => String(t).toLowerCase().replace(/\b2d ?iso\b/g, 'two dye-so').replace(/\biso\b/g, 'eye-so');
   function say(txt, force) { let slow = false; if (String(txt).includes('|')) { txt = String(txt).split('|').map(q => q.trim()).filter(Boolean).join('. ... '); slow = true; } // 'a | b': one utterance with a real pause between the parts (two utterances back to back lose the first one in some browsers)
     const sy = window.speechSynthesis; if (!sy || !opt.voice || opt.mute || opt.sfx <= 0) return; const now = performance.now(); if (!force && (sy.speaking || now - lastSay < 900)) return; lastSay = now;
-    try { const wasBusy = sy.speaking || sy.pending; if (force) sy.cancel(); sfx('vox'); const u = new SpeechSynthesisUtterance(speakable(txt)); if (!vox) pickVoices(); if (vox) u.voice = vox; u.pitch = 0.92; u.rate = /!$/.test(txt) ? 0.98 : 0.86; /* a calm, close, low female voice: unhurried, never shouted */ u.volume = Math.min(1, opt.sfx * 1.1); if (slow) u.rate = 0.8; if (force && wasBusy) setTimeout(() => sy.speak(u), 60); else sy.speak(u); /* speaking straight after cancel() is dropped in Chrome */ } catch { } }
+    try { const wasBusy = sy.speaking || sy.pending; if (force) sy.cancel(); sfx('vox'); const u = new SpeechSynthesisUtterance(speakable(txt)); if (!vox) pickVoices(); if (vox) u.voice = vox; u.pitch = 0.92; u.rate = /!$/.test(txt) ? 0.98 : 0.86; /* a calm, close, low female voice: unhurried, never shouted */ u.volume = Math.min(1, opt.sfx * 1.1); if (slow) u.rate = 0.8; const est = String(txt).length * 78 / u.rate + 400; talkEnd = performance.now() + est + (force && wasBusy ? 60 : 0); talking = true; talkT = performance.now(); u.onend = u.onerror = () => { talking = false; talkEnd = Math.min(talkEnd, performance.now() + 150); }; if (force && wasBusy) setTimeout(() => sy.speak(u), 60); else sy.speak(u); /* speaking straight after cancel() is dropped in Chrome */ } catch { } }
   // the title line: "2diso" then a stuttering SHIFT that echoes away. The browser voice cannot be run through a real delay, so the echo is
   // the voice itself repeated, softer and quicker each time, with a quiet electronic ping under each repeat
   function titleSay() { const sy = window.speechSynthesis; if (!sy || !opt.voice || opt.mute || opt.sfx <= 0) return;
@@ -105,7 +105,7 @@ export function createAudio(opt) {
         if (i) u.onstart = () => { try { if (ac && ac.state === 'running') tone('sine', 1320 - i * 220, 660 - i * 110, 0.35, 0.1 * k); } catch { } }; return u; });
       setTimeout(() => { sy.speak(first); P.forEach(u => sy.speak(u)); }, 90); } catch { } };
     if (!vox && !pickVoices()) { let done = false; const once = () => { if (!done) { done = true; go(); } }; try { sy.addEventListener('voiceschanged', once, { once: true }); } catch { } setTimeout(once, 900); } else go(); }
-  return { speaking: () => { try { return !!(opt.voice && window.speechSynthesis?.speaking); } catch { return false; } }, titleSay, unlock() { if (init() && ac.state === 'suspended') ac.resume().catch(() => { }); }, sfx, vol, say, hush() { try { window.speechSynthesis?.cancel(); } catch { } },
+  return { speaking: () => { if (!opt.voice || opt.mute || opt.sfx <= 0) return false; const now = performance.now(); let sp = false; try { sp = !!window.speechSynthesis?.speaking; } catch { } return now < talkEnd || (talking && sp && now - talkT < 20000); }, /* some voices report speaking wrongly, so a length-based estimate backs it up */ titleSay, unlock() { if (init() && ac.state === 'suspended') ac.resume().catch(() => { }); }, sfx, vol, say, hush() { try { window.speechSynthesis?.cancel(); } catch { } },
     music(m) { if (m === mode) return; mode = m; step = 0; nextT = 0; clearInterval(timer); if (m) timer = setInterval(sched, 60); },
     suspend() { ac?.suspend?.().catch(() => { }); try { window.speechSynthesis?.cancel(); } catch { } }, resume() { ac?.resume?.().catch(() => { }); }, close() { clearInterval(timer); try { window.speechSynthesis?.cancel(); } catch { } try { ac?.close(); } catch { } ac = null; } };
 }

@@ -685,6 +685,13 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - The planet in the opening cutscene keeps folding between dimensions. It turns as a 3D globe, peels flat into a map, tips into an isometric diamond, flattens into a top-down disc, then rolls back into a globe, with a ripple each time it folds.
 - Cutscene lines now wait for the voice to finish before the next one starts, so "only one ship can see the fold" no longer gets cut off.
 
+### 73. The Colossus gets a face (r79)
+
+- The Mars boss's eyes were carved on the sides of its head, so in CHASE view you only ever saw a blank stone slab. Now it has a face carved into the front as well: angry brows, burning eyes, a ridge of a nose, and a lava mouth that splits open with teeth of fire when it is about to attack. It is drawn in front of the solid stone so nothing hides it.
+- Cutscene voice timing no longer trusts the browser alone: some voices report they have stopped talking when they haven't. Each line also gets a length-based estimate, so lines in the RIVET-9 cutscenes stop getting cut off mid-sentence.
+
+![The Colossus, face on](shots/colossus-face.jpg)
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
