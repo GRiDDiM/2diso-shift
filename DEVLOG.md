@@ -446,6 +446,10 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **He overreacts, on purpose.** His face is an emoji on a visor and changes as he talks: shocked then starry-eyed at an anomaly, panicking with a sweat drop at lava, sharks and lightning, angry eyebrows at a boss, a smug grin when it's time to shift. His mouth flaps while the words come out, he shakes when he's scared, and every message opens with WHOA!!, YIKES!, GET HIM! or OOH!
 - **The big calls stay big.** Stage names, waves and other headline calls stay as centre-screen banners, now in the thick bold font along with the level titles, results screens, boss names, warnings and score pop-ups.
 
+### 43. Warps you have to mean (r51)
+
+- On Earth the arena warp could still be hanging around when the level asked you to shift to chase view, so you could fall into it by accident and skip a good stretch. Every warp now appears in a stretch that isn't played in chase view, and closes before the next chase stretch, so taking one is always a choice.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
