@@ -434,6 +434,12 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **More hills and ramps** on every planet, and the bonus stages lean on chase and iso views.
 - **Smoother.** Quality steps down sooner when frames slow down and comes back once things settle.
 
+### 41. Ragged holes and real boulders (r49)
+
+- **No more square holes off Earth.** In chase view a gate on Mars, Jupiter or Planet X is now one wall of rock, cloud or flesh with a ragged rounded opening, a tunnel rim, and cracks, ripples or veins spreading out from it. A soft green rim inside marks the way through. The opening is drawn slightly inside the real gap, so the edge never kills you before it looks like it should. Earth keeps its square building gaps.
+- **The Sun's fog** is drawn the same way in chase and iso: slice after slice of red fog with a rounded hole for the channel.
+- **Rocks look like rocks.** Rocks on every planet bulge in the middle and taper front and back instead of being extruded blocks, with round shaded lobes instead of box fills. The Moon trench is now a ragged line of boulders of different sizes instead of a row of cubes.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

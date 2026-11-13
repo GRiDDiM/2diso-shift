@@ -23,10 +23,10 @@ function kit(id) {
     if (i % 5 === 3 || i % 10 === 8) { const up = i % 10 === 8, yy = up ? 8.9 : 0.75; ground(z + step * 0.3, { type: 'walker', x: h2 * 12 - 6, vx: (h > 0.5 ? 1 : -1) * (1.2 + h2), y: yy, y0: yy, col: tmpl.col, hp: 4, r: 0.85, score: 200, fire: 150, bs: 6, shape: gshape, ceil: up, pod: i % 10 === 3 }); } // ground troops: they walk or drive the floor (and sometimes the ceiling) and shoot
     if (i % 3 === 2) for (let k = 0; k < 3; k++) en(z + k * 2.5, { ...tmpl, type: 'kami', hp: 1, vz: -6, score: 80, x: v === 0 ? 0 : (k - 1) * 3 + o.x * 0.5, y: v === 3 ? 5 : 2.5 + ((k + i) % 3) * 2.2 }); else wing(z, 4 + (i % 2), { ...tmpl, ...o }); } };
   const zone = (z0, z1, view, msg) => zones.push({ z0, z1, view, msg });
-  const gate = (z, hx, hy, o = {}) => { const w = o.w || 2.2, h = o.h || 1.9, k = { hz: 0.5, kind: 'gate', col: '#ffe14a', ...o }, X = 11, T = 12.5, Bm = -3;
+  const gate = (z, hx, hy, o = {}) => { const w = o.w || 2.2, h = o.h || 1.9, k = { hz: 0.5, kind: 'gate', col: '#ffe14a', org: 1, ...o }, X = 11, T = 12.5, Bm = -3;
     obs(z, { x: (-X + hx - w) / 2, y: 4.75, hx: (hx - w + X) / 2, hy: 7.75, ...k }); obs(z, { x: (X + hx + w) / 2, y: 4.75, hx: (X - hx - w) / 2, hy: 7.75, ...k });
     obs(z, { x: hx, y: (T + hy + h) / 2, hx: w, hy: (T - hy - h) / 2, ...k }); obs(z, { x: hx, y: (hy - h + Bm) / 2, hx: w, hy: (hy - h - Bm) / 2, ...k });
-    obs(z, { x: hx, y: hy, hx: w, hy: h, hz: 0.5, ghost: true, kind: 'safe', osc: k.osc }); if (!o.noRing && !k.osc) ring(z, { x: hx, y: hy, r: 1.5 }); };
+    obs(z, { x: hx, y: hy, hx: w, hy: h, hz: 0.5, ghost: true, kind: 'safe', osc: k.osc, org: ++gid, gcol: k.col }); if (!o.noRing && !k.osc) ring(z, { x: hx, y: hy, r: 1.5 }); };
   const done = extra => { // nothing solid sits right around a change of view: you get a clear run to make the shift
     for (let i = ev.length - 1; i >= 0; i--) { const e = ev[i]; if (e.oz != null && !e.keep && zones.some((q, k) => k > 0 && e.oz > q.z0 - 30 && e.oz < q.z0 + 8)) ev.splice(i, 1); }
     ev.sort((a, b) => a.z - b.z); return { id, events: ev, zones, checkpoints, hills, len: extra.endZ || zones.find(q => q.z1 > 1e8)?.z0 || 0, ...extra }; };
@@ -373,7 +373,7 @@ function planetx() {
 function moon() { // low gravity trench run: the ship drifts, nothing shoots back
   const K = kit('moon'), { at, obs, ring, en, zone } = K, GREY = '#c8d0e0';
   zone(-99, 190, CHASE, 'BONUS // THE MOON - LOW GRAVITY TRENCH RUN'); zone(190, 1e9, ISO, 'CRATER FIELD - SHIFT TO ISO VIEW');
-  for (let z = 30; z < 330; z += 8) { obs(z, { x: -7.2, y: 1.6, hx: 1.4, hy: 1.6, hz: 4, col: GREY, kind: 'rockwall' }); obs(z, { x: 7.2, y: 1.6, hx: 1.4, hy: 1.6, hz: 4, col: GREY, kind: 'rockwall' }); }
+  for (let z = 30, i = 0; z < 330; z += 6, i++) for (const sd of [-1, 1]) { const h = 1.1 + Math.abs(Math.sin(i * 1.7 + sd)) * 1.6, w = 1.1 + Math.abs(Math.sin(i * 2.3 - sd)) * 0.7; obs(z, { x: sd * (7.6 - w * 0.4 + Math.sin(i * 0.9) * 0.4), y: h, hx: w, hy: h, hz: 3.2, col: i % 3 ? GREY : '#9aa4c0', kind: 'rockwall' }); } // the trench walls: a ragged line of boulders of all sizes
   for (let i = 0; i < 34; i++) { const z = 40 + i * 8.4; ring(z, { x: Math.sin(i * 0.55) * 4, y: 3.5 + Math.sin(i * 0.4) * 2.2, r: 1.5 }); }
   for (let i = 0; i < 7; i++) { const z = 62 + i * 40; obs(z, { x: 0, y: 7.6, hx: 8.6, hy: 1.9, hz: 1, col: GREY, kind: 'arch' }); obs(z + 18, { x: (i % 2 ? 3.4 : -3.4), y: 1.4, hx: 1.2, hy: 1.4, hz: 1.2, col: '#7df9ff', kind: 'ice', hp: 4, gem: true, score: 150 }); }
   for (let i = 0; i < 8; i++) en(50 + i * 36, { type: 'pop', x: (i % 2 ? 4 : -4), y: 6, ax: 2, ay: 1, vz: -5, hp: 3, r: 0.8, col: '#ffe14a', score: 300, shape: 'sat', pod: i % 3 === 1 });
@@ -382,7 +382,7 @@ function moon() { // low gravity trench run: the ship drifts, nothing shoots bac
 }
 function sun() { // the corona: a dense red plasma fog with one clear channel through it. Out of the channel you cook
   const K = kit('sun'), { at, obs, en, zone } = K, HOT = '#ffb02e', FOG = '#ff3b1f';
-  const chan = (z, x, y, hx, hy, full) => { obs(z, { x, y, hx, hy, hz: 3.1, col: HOT, kind: 'shade', ghost: true }); // the channel itself (cool), and the fog packed around it
+  const chan = (z, x, y, hx, hy, full) => { obs(z, { x, y, hx, hy, hz: 3.1, col: HOT, kind: 'shade', ghost: true, fog: 1 }); // the channel itself (cool), and the fog packed around it
     const f = { col: FOG, kind: 'redfog', ghost: true, hz: 3.1 }, L0 = -9.6, R0 = 9.6, B0 = 0, T0 = 9.8;
     if (!full) { if (x - hx > L0 + 0.2) obs(z, { ...f, x: (L0 + x - hx) / 2, y: 4.9, hx: (x - hx - L0) / 2, hy: 4.9 }); if (x + hx < R0 - 0.2) obs(z, { ...f, x: (x + hx + R0) / 2, y: 4.9, hx: (R0 - x - hx) / 2, hy: 4.9 }); }
     const xl = full ? 0 : x, xw = full ? 9.6 : hx; if (y - hy > B0 + 0.2) obs(z, { ...f, x: xl, y: (B0 + y - hy) / 2, hx: xw, hy: (y - hy - B0) / 2 }); if (y + hy < T0 - 0.2) obs(z, { ...f, x: xl, y: (y + hy + T0) / 2, hx: xw, hy: (T0 - y - hy) / 2 }); };
