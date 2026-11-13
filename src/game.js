@@ -240,7 +240,8 @@ export function step(g, inputs) {
     if (edge('bomb')) nuke(g, p);
     if (edge('drone')) { p.dmode = (p.dmode + 1) % 4; pop(g, 'DRONES: ' + DRONE_MODES[p.dmode], p.x, p.y + 1, p.z, '#b06bff'); g.fx.push('blip'); }
     if (edge('gear') && g.forceGear == null) { g.gear = (g.gear + 1) % GEARS.length; const up = g.gear > 0; pop(g, (up ? 'SHIFTING UP - ' : 'SHIFTING DOWN - ') + GEARS[g.gear], p.x, p.y + 1.2, p.z + 2, up ? '#ffe14a' : '#5ee7ff', true); g.fx.push('gear', up ? 'say:shifting up' : 'say:shifting down'); }
-    const sp = (8.5 + g.gear * 1.2) * DT, mx = clamp(inp.mx || 0, -1, 1), my = clamp(inp.my || 0, -1, 1), v = g.view, ox = p.x, oy = p.y;
+    const sp = (8.5 + g.gear * 1.2) * DT, v = g.view, ox = p.x, oy = p.y; let mx = clamp(inp.mx || 0, -1, 1), my = clamp(inp.my || 0, -1, 1);
+    if (g.rot && !inp.world) { const c = Math.cos(g.rot), s = Math.sin(g.rot); [mx, my] = [mx * c + my * s, -mx * s + my * c]; } // when the stage is turned, the stick still moves the ship the way it looks on screen
     let ax = mx, ay = my; if (rules.inertia) { p.ivx += (mx - p.ivx) * 0.045; p.ivy += (my - p.ivy) * 0.045; ax = p.ivx; ay = p.ivy; }
     if (rules.arena) { // free flight over a fixed arena; the guns fire the way the ship is facing, and it faces the way it moves
       p.x = clamp(p.x + ax * sp, -AR.x, AR.x); p.z = clamp(p.z - ay * sp, AR.z0, AR.z1); p.y = 4.5;
@@ -295,6 +296,11 @@ export function step(g, inputs) {
     const zn = lvd.zones.find(z => g.camZ + 32 >= z.z0 && g.camZ + 32 < z.z1);
     if (zn && zn !== g.zone) { g.zone = zn; if (zn.msg) hint(g, zn.msg, 260); }
     if (!g.boss && g.zone) g.recView = g.zone.view;
+    { // the stage moving: ease toward this stretch's tilt, or back to level outside one (and always during a boss)
+      const T = !g.boss && !rules.arena && lvd.tilts ? lvd.tilts.find(q => g.camZ >= q.z0 && g.camZ < q.z1) : null, k = g.tick, wr = a => a - Math.round(a / 6.2832) * 6.2832;
+      if (T && T.spin) g.spinA = wr((g.spinA || 0) + T.spin); else g.spinA = 0;
+      const tr = T ? (T.rot || 0) + (T.sway || 0) * Math.sin(k * (T.w || 0.012)) + g.spinA : 0, tx = T ? (T.px || 0) * Math.sin(k * (T.w || 0.012) * 0.7) : 0, ty = T ? (T.py || 0) * Math.sin(k * (T.w || 0.012) * 0.9 + 1) : 0, e = T && T.spin ? 0.12 : 0.025;
+      g.rot = wr((g.rot || 0) + wr(tr - (g.rot || 0)) * e); if (Math.abs(g.rot) < 1e-4 && !T) g.rot = 0; g.panX = (g.panX || 0) + (tx - (g.panX || 0)) * 0.03; g.panY = (g.panY || 0) + (ty - (g.panY || 0)) * 0.03; }
     for (const c of lvd.checkpoints) if (g.camZ >= c && c > g.checkpoint) { g.checkpoint = c; g.cpSnap = snapshot(g); g.fx.push('blip', 'toast:CHECKPOINT|PROGRESS SAVED'); }
     if (g.loop && g.boss && g.boss.hp > 0 && !g.boss.dying && g.boss.z < 30 && g.state === 'play' && g.tick % LOOP.boss[lp(g)] === 0) { const n = LOOP.bfan[lp(g)]; for (let i = 0; i < n; i++) aimed(g, g.boss, 7, (i - (n - 1) / 2) * 0.2, '#ff4d6d'); g.fx.push('eshot'); }
     if (g.loop && g.state === 'play' && g.intro <= 0 && !rules.arena && g.tick % LOOP.hunt[lp(g)] === 0) addEnemy(g, { type: 'kami', col: '#ff4d6d', hp: 2, r: 0.55, score: 150, vz: -11 - 2 * lp(g), shape: 'kami', x: (g.rand() * 2 - 1) * 7, y: 1.5 + g.rand() * 6.5 }); // hunters dive at you all level long // on later loops the bosses shoot at you as well
@@ -424,7 +430,7 @@ export function doShift(g, to, dir, p) {
 // ---------- autopilot (idle mode + attract demo + headless tests) ----------
 const TAU = [0, 0.12, 0.25, 0.4, 0.6, 0.85, 1.15, 1.5, 1.9, 2.4];
 export function autopilot(g, i = 0) {
-  const p = g.players[i], out = { fire: true, mx: 0, my: 0 }; if (!p || p.dead > 0 || g.intro > 0) return out;
+  const p = g.players[i], out = { fire: true, mx: 0, my: 0, world: true }; if (!p || p.dead > 0 || g.intro > 0) return out;
   const want = g.recView, pv = p.prev || {};
   if (g.view !== want && g.shiftCd <= 0 && !g.lockShift) { const d = (want - g.view + 4) % 4; if (d === 3 && !g.level.rules?.arena) out.shiftL = !pv.shiftL; else out.shiftR = !pv.shiftR; }
   const v = g.view, m = MASK[v], rules = g.level.rules || {}, sc = rules.arena ? 0 : SCROLL * g.speedMul;

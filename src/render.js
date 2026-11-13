@@ -9,7 +9,8 @@ const RAINBOW = ['#ff4d6d', '#ff8a2b', '#ffe14a', '#3dffb0', '#2ee6ff', '#b06bff
 const VCOL = ['#2ee6ff', '#3dffb0', '#ffe14a', '#ff3df0'];
 
 // ---------- projection ----------
-let cam = { x: 0, y: 2, z: -7 }, vA = 0, vB = 0, mix = 1, rollA = 0, wob = 0;
+let cam = { x: 0, y: 2, z: -7 }, vA = 0, vB = 0, mix = 1, rollA = 0, wob = 0, GR = 0, TC = 1, TS = 0, GK = 1, GPX = 0, GPY = 0; // GR..: the stage turned and drifting (level tilts)
+const TURN = () => { if (GR) { const dx = X - 480, dy = Y - 270; X = 480 + (dx * TC - dy * TS) * GK; Y = 270 + (dx * TS + dy * TC) * GK; S *= GK; } X += GPX; Y += GPY; };
 let X = 0, Y = 0, S = 1, OK = true;
 function p1(v, x, y, z) {
   if (v === 0) { X = 60 + z * 34; Y = 470 - y * 42; S = 1; return true; }
@@ -21,10 +22,10 @@ function p1(v, x, y, z) {
 export const PIV = [[200, 285], [400, 356], [480, 285], [480, 425]]; // zoom-out anchor per view (SIDE, ISO, CHASE, TOP): keeps the field centred instead of leaving dead space at the bottom or the left
 let BSK = 1, BX = 0, BY = 0, BZ = 0; // a local scale about the boss, so it reads from the far end of the CHASE view
 function P(x, y, z) { if (BSK !== 1) { x = BX + (x - BX) * BSK; y = BY + (y - BY) * BSK; z = BZ + (z - BZ) * BSK; } z *= ZS;
-  if (mix >= 1) { OK = p1(vB, x, y, z); if (ZK !== 1) { const q = PIV[vB], k = vB ? ZK : ZK + (1 - ZK) * 0.25; X = q[0] + (X - q[0]) * k; Y = q[1] + (Y - q[1]) * k; S *= k; } /* the side view is the widest, so it pulls back a little less */ if (wob) { const c = Math.cos(wob), s = Math.sin(wob), dx = X - 480, dy = Y - 270; X = 480 + dx * c - dy * s; Y = 270 + dx * s + dy * c; } return; }
+  if (mix >= 1) { OK = p1(vB, x, y, z); if (ZK !== 1) { const q = PIV[vB], k = vB ? ZK : ZK + (1 - ZK) * 0.25; X = q[0] + (X - q[0]) * k; Y = q[1] + (Y - q[1]) * k; S *= k; } /* the side view is the widest, so it pulls back a little less */ if (wob) { const c = Math.cos(wob), s = Math.sin(wob), dx = X - 480, dy = Y - 270; X = 480 + dx * c - dy * s; Y = 270 + dx * s + dy * c; } TURN(); return; }
   const okA = p1(vA, x, y, z), ax = X, ay = Y, as = S, okB = p1(vB, x, y, z);
   let px = ax + (X - ax) * mix, py = ay + (Y - ay) * mix; S = as + (S - as) * mix; OK = mix < 0.5 ? okA : okB; if (ZK !== 1) { const qa = PIV[vA], qb = PIV[vB], qx = qa[0] + (qb[0] - qa[0]) * mix, qy = qa[1] + (qb[1] - qa[1]) * mix; const ka = vA ? ZK : ZK + (1 - ZK) * 0.25, kb = vB ? ZK : ZK + (1 - ZK) * 0.25, k = ka + (kb - ka) * mix; px = qx + (px - qx) * k; py = qy + (py - qy) * k; S *= k; }
-  const c = Math.cos(rollA), s = Math.sin(rollA), dx = px - 480, dy = py - 270; X = 480 + dx * c - dy * s; Y = 270 + dx * s + dy * c;
+  const c = Math.cos(rollA), s = Math.sin(rollA), dx = px - 480, dy = py - 270; X = 480 + dx * c - dy * s; Y = 270 + dx * s + dy * c; TURN();
 }
 
 // ---------- line batching: one path per colour, stroked as a neon tube (wide halo, glow, core) ----------
@@ -440,7 +441,7 @@ function drawObs(g, b, t) {
 // ---------- world ----------
 export function drawWorld(ctx, g, o = {}) { RCTX = ctx;
   const t = g.tick, p0 = g.players[0], th = g.level.theme || {}; SKI = o.skin | 0; SKN = SKINS[SKI] || SKINS[0];
-  vA = g.viewFrom; vB = g.view; mix = g.shiftT > 0 ? ease(1 - g.shiftT) : 1; rollA = g.shiftT > 0 ? g.shiftDir * mix * TAU : 0; wob = th.trippy ? Math.sin(t * 0.013) * 0.05 : 0;
+  vA = g.viewFrom; vB = g.view; mix = g.shiftT > 0 ? ease(1 - g.shiftT) : 1; rollA = g.shiftT > 0 ? g.shiftDir * mix * TAU : 0; wob = th.trippy ? Math.sin(t * 0.013) * 0.05 : 0; GR = g.rot || 0; TC = Math.cos(GR); TS = Math.sin(GR); GK = 1 - 0.4 * Math.abs(TS); GPX = g.panX || 0; GPY = g.panY || 0;
   { const al = g.players.filter(q => q.dead <= 0), n = al.length || 1, cx = al.length ? al.reduce((a, q) => a + q.x, 0) / n : p0.x, cy = al.length ? al.reduce((a, q) => a + q.y, 0) / n : p0.y, cz = al.length ? Math.min(...al.map(q => q.z)) : p0.z; cam.x = cx * 0.55; cam.y = cy * 0.55 + 1.9; cam.z = cz - 7.5; } const tags = [];
   HQ = !(o.q >= 1); setTextGlow(o.q >= 2 ? 0 : o.q >= 1 ? 1 : 2); { const bz = g.level.rules?.arena ? 0.52 : g.boss && !g.boss.dying && g.boss.z < 30 ? 0.52 : 0.68; { const zt = g.level.rules?.arena || g.boss || g.mini ? 1 : 1 / 1.3; ZS += (zt - ZS) * 0.04; if (Math.abs(ZS - zt) < 0.002) ZS = zt; } ZK += (bz - ZK) * 0.04; if (Math.abs(ZK - bz) < 0.002) ZK = bz; } // the camera pulls back for a boss so there is room to move
   ctx.save();

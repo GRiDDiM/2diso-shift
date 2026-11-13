@@ -618,6 +618,21 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 
 ![The Motherlode](shots/belt-motherlode.jpg)
 
+### 64. The stage moves (r70)
+
+- Planet X already rocked the screen a little. Now the whole stage turns, tips, rolls and drifts in many more places, and the controls stay screen-relative: up on the stick is always up on the screen, however the stage is turned.
+- Jupiter has a new stretch, THE DESCENT. The deck gives way and the stage turns on its side, so you fall straight down through Jupiter's coloured gas bands, threading gaps in the cloud shelves and lightning, until the storm opens into the sea below. A little of the lightning chains and storm walls came out to make room, so the level is about the same length.
+- Mars: the magma tubes roll all the way round as you fly through them.
+- Planet X: the fold flips the membranes section upside down, the tentacle forest heaves, and the gullet twists as it carries you along.
+- Earth: the street banks and weaves through the hover traffic.
+- Warp stages: the Moon trench floats about in the low gravity, the Sun's channel tips nose-down for the dive, and the Pluto blizzard rocks the stage.
+- Bosses always fight on a level stage.
+- Fixed a bug in the level trimming from r68/r69: scenery after a trimmed stretch stayed where it was instead of moving up with the rest.
+
+![The Descent on Jupiter](shots/jupiter-descent.jpg)
+
+![The Sun's dive, tipped nose-down](shots/sun-dive-tilt.jpg)
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

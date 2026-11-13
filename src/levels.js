@@ -8,11 +8,11 @@ const FAR = 62;
 function kit(id) {
   const ev = [], zones = [], checkpoints = [], hills = []; let gid = 0; const hill = (z0, z1, h) => hills.push([z0, z1, h]);
   const at = (z, fn) => ev.push({ z: z - SPAWN_Z, src: z, fn });
-  const far = (z, fn, ob) => ev.push({ z: z - FAR, lim: z - SPAWN_Z, src: z, fn, oz: ob ? z : null }); // scenery is placed well beyond the old horizon and fades in, so nothing pops up in your face
-  const obs = (z, o) => { far(z, g => addObs(g, { ...o, z: z - g.camZ }), true); if (o.ghost) ev[ev.length - 1].keep = true; }; // ghosts (fog, clouds, channels) are not cleared around a change of view
-  const ring = (z, r) => far(z, g => addRing(g, { ...r, z: z - g.camZ }));
+  const far = (z, fn, ob) => { const e = { z: z - FAR, lim: z - SPAWN_Z, src: z, oz: ob ? z : null }; e.fn = g => fn(g, e.d || 0); ev.push(e); }; // e.d: how far a cut moved it // scenery is placed well beyond the old horizon and fades in, so nothing pops up in your face
+  const obs = (z, o) => { far(z, (g, d) => addObs(g, { ...o, z: z + d - g.camZ }), true); if (o.ghost) ev[ev.length - 1].keep = true; }; // ghosts (fog, clouds, channels) are not cleared around a change of view
+  const ring = (z, r) => far(z, (g, d) => addRing(g, { ...r, z: z + d - g.camZ }));
   const en = (z, o) => at(z, g => addEnemy(g, o));
-  const ground = (z, o) => far(z, g => addEnemy(g, { rel: false, z: z - g.camZ, y: 0.5, y0: 0.5, type: 'turret', ...o }));
+  const ground = (z, o) => far(z, (g, d) => addEnemy(g, { rel: false, z: z + d - g.camZ, y: 0.5, y0: 0.5, type: 'turret', ...o }));
   const wing = (z, n, o, gap = 2.2) => { const gr = id + (++gid); if (gid % 3 === 1) ev.push({ z: z - SPAWN_Z - 7, src: z, fn: g => g.warns.push({ x: o.x ?? 0, y: o.y ?? 4.5, t: 80, col: o.col || '#ff4d6d' }) }); /* every third wave flashes a warning where it will come in */ for (let i = 0; i < n; i++) at(z + i * gap, g => addEnemy(g, { type: 'pop', group: gr, gn: n, hp: 2, ph: i * 0.5, ...o })); };
   const untilChase = z => { const c = zones.filter(q => q.view === CHASE && q.z0 > z + 20).sort((a, b) => a.z0 - b.z0)[0]; return c ? c.z0 - 45 : null; }; // a warp closes before the next stretch that is played in chase anyway, so nobody falls into it by accident and skips that stretch
   const warp2 = (z, x, y) => ev.push({ z, src: z, fn: g => { if (g.flags.arena) return; addRing(g, { x, y, z: 10, r: 2, kind: 'warp', to: 'arena', stay: true, t: 0, life: 1200, until: untilChase(z) }); hint(g, 'ANOMALY DETECTED - SHIFT TO CHASE VIEW AND FLY INTO IT', 320); g.fx.push('ring', 'say:anomaly detected'); } }); // the second warp: it leads to this planet's arena
@@ -24,6 +24,8 @@ function kit(id) {
     if (i % 3 === 1) { const up = i % 6 === 4, yy = up ? 8.9 : 0.75, n = gshape === 'walker' && !up ? 2 : 1; for (let q = 0; q < n; q++) ground(z + step * 0.3 + q * 2.6, { type: 'walker', x: (h2 * 12 - 6) * (q ? -1 : 1), vx: (h > 0.5 ? 1 : -1) * (q ? -1 : 1) * (1.2 + h2), y: yy, y0: yy, col: tmpl.col, hp: 4, r: gshape === 'walker' ? 1.15 : 0.85, score: 200, fire: 150, bs: 6, shape: gshape, ceil: up, pod: i % 9 === 4 && !q }); } // ground troops: they walk or drive the floor (and sometimes the ceiling) and shoot; crawlers come in pairs // ground troops: they walk or drive the floor (and sometimes the ceiling) and shoot
     if (i % 3 === 2) for (let k = 0; k < 3; k++) en(z + k * 2.5, { ...tmpl, type: 'kami', hp: 1, vz: -6, score: 80, x: v === 0 ? 0 : (k - 1) * 3 + o.x * 0.5, y: v === 3 ? 5 : 2.5 + ((k + i) % 3) * 2.2 }); else wing(z, 4 + (i % 2), { ...tmpl, ...o }); } };
   const zone = (z0, z1, view, msg) => zones.push({ z0, z1, view, msg });
+  // tilt(z0, z1, spec): the stage itself moves for a stretch. rot = a fixed turn of the screen, sway = rocking, spin = a steady roll, px / py = drifting left-right and up-down
+  const tilts = [], tilt = (z0, z1, spec) => tilts.push({ z0, z1, ...spec });
   const gate = (z, hx, hy, o = {}) => { const w = o.w || 2.2, h = o.h || 1.9, k = { hz: 0.5, kind: 'gate', col: '#ffe14a', org: 1, ...o }, X = 11, T = 12.5, Bm = -3;
     obs(z, { x: (-X + hx - w) / 2, y: 4.75, hx: (hx - w + X) / 2, hy: 7.75, ...k }); obs(z, { x: (X + hx + w) / 2, y: 4.75, hx: (X - hx - w) / 2, hy: 7.75, ...k });
     obs(z, { x: hx, y: (T + hy + h) / 2, hx: w, hy: (T - hy - h) / 2, ...k }); obs(z, { x: hx, y: (hy - h + Bm) / 2, hx: w, hy: (hy - h - Bm) / 2, ...k });
@@ -32,14 +34,15 @@ function kit(id) {
   const cuts = [], cut = (a, b) => cuts.push([a, b]);
   const cmap = (z, keep) => { for (const [a, b] of cuts) if (z >= a && z < b) { if (!keep) return null; z = a; } return z - cuts.reduce((t, [a, b]) => t + (b <= z ? b - a : 0), 0); };
   const applyCuts = () => { if (!cuts.length) return;
-    for (let i = ev.length - 1; i >= 0; i--) { const e = ev[i]; if (e.src == null) continue; const nz = cmap(e.src); if (nz == null) { ev.splice(i, 1); continue; } const d = nz - e.src; e.z += d; if (e.lim != null) e.lim += d; if (e.oz != null) e.oz += d; }
+    for (let i = ev.length - 1; i >= 0; i--) { const e = ev[i]; if (e.src == null) continue; const nz = cmap(e.src); if (nz == null) { ev.splice(i, 1); continue; } const d = nz - e.src; e.d = d; e.z += d; if (e.lim != null) e.lim += d; if (e.oz != null) e.oz += d; }
     for (let i = zones.length - 1; i >= 0; i--) { const q = zones[i]; q.z0 = q.z0 < -90 ? q.z0 : cmap(q.z0, true); if (q.z1 < 1e8) q.z1 = cmap(q.z1, true); if (q.z1 <= q.z0) zones.splice(i, 1); }
     for (let i = checkpoints.length - 1; i >= 0; i--) { const c = cmap(checkpoints[i]); if (c == null) checkpoints.splice(i, 1); else checkpoints[i] = c; }
-    for (let i = hills.length - 1; i >= 0; i--) { const h = hills[i]; h[0] = cmap(h[0], true); h[1] = cmap(h[1], true); if (h[1] - h[0] < 4) hills.splice(i, 1); } };
+    for (let i = hills.length - 1; i >= 0; i--) { const h = hills[i]; h[0] = cmap(h[0], true); h[1] = cmap(h[1], true); if (h[1] - h[0] < 4) hills.splice(i, 1); }
+    for (let i = tilts.length - 1; i >= 0; i--) { const q = tilts[i]; q.z0 = cmap(q.z0, true); q.z1 = cmap(q.z1, true); if (q.z1 - q.z0 < 4) tilts.splice(i, 1); } };
   const done = extra => { applyCuts(); if (extra.endZ) extra.endZ = cmap(extra.endZ, true); // nothing solid sits right around a change of view: you get a clear run to make the shift
     for (let i = ev.length - 1; i >= 0; i--) { const e = ev[i]; if (e.oz != null && !e.keep && zones.some((q, k) => k > 0 && e.oz > q.z0 - 30 && e.oz < q.z0 + 8)) ev.splice(i, 1); }
-    ev.sort((a, b) => a.z - b.z); return { id, events: ev, zones, checkpoints, hills, len: extra.endZ || zones.find(q => q.z1 > 1e8)?.z0 || 0, ...extra }; };
-  return { at, obs, ring, en, ground, wing, zone, gate, warp, warp2, fill, hill, checkpoints, cut, done };
+    ev.sort((a, b) => a.z - b.z); return { id, events: ev, zones, checkpoints, hills, tilts, len: extra.endZ || zones.find(q => q.z1 > 1e8)?.z0 || 0, ...extra }; };
+  return { at, obs, ring, en, ground, wing, zone, gate, warp, warp2, fill, hill, checkpoints, cut, tilt, done };
 }
 
 // ---------- boss engine: stages that are only open from one view, attacks that fill the screen in the wrong one ----------
@@ -143,7 +146,7 @@ function earth() {
   wing(850, 5, { ...dart, x: 0, y: 5, ax: 3, ay: 1.2 }); carrier(880, { x: -3, y: 6 }); kami(905, { x: 2, y: 4 }); wing(930, 6, { ...dart, x: -2, y: 4, ax: 4, ay: 1.4 }); saucer(958, { x: 2, y: 6.4 }); carrier(985, { x: 3, y: 4 });
   K.checkpoints.push(1014);
 
-  zone(1010, 1220, CHASE, 'HOVER TRAFFIC - SHIFT TO CHASE VIEW');
+  zone(1010, 1220, CHASE, 'HOVER TRAFFIC - SHIFT TO CHASE VIEW'); K.tilt(1030, 1215, { sway: 0.16, w: 0.011, px: 34, py: 16 }); // the whole street banks as you weave through it
   for (let i = 0, z = 1048; z < 1210; z += 10, i++) { const y = [2.4, 5, 7.4][i % 3], d = i % 2 ? 4 : -4; car(z, -8 + (i * 5) % 16, y, d); car(z, 2 - (i * 3) % 10, y, d); car(z + 5, 6 - (i * 7) % 14, [5, 7.4, 2.4][i % 3], -d * 1.4, i % 3 === 0 ? 2.4 : 1.3); car(z + 2.5, -6 + (i * 4) % 13, [7.4, 2.4, 5][i % 3], d * 0.8); car(z + 7.5, 5 - (i * 6) % 12, [2.4, 5, 7.4][(i + 1) % 3], -d); if (i % 4 === 1) obs(z + 5, { x: ((i * 5) % 11) - 5, y: 4.75, hx: 0.7, hy: 4.75, hz: 0.7, col: C.pylon, kind: 'pylon' }); if (i % 6 === 3 && z < 900) slab(z + 5, false, { hz: 0.8 }); }
   K.warp(58, 3, 6.4); K.warp2(342, -3, 6);
   K.hill(56, 86, 1.7); K.hill(636, 700, 1.5); K.hill(880, 940, 1.7); K.hill(1090, 1150, 1.4); K.hill(170, 222, 1.7); K.hill(258, 312, 2.1); K.hill(1238, 1272, 1.3); // overpasses and embankments: the ground rises and the ship rides over
@@ -236,7 +239,7 @@ function mars() {
       if (DEC[r] != null && r % 4 === 2) volcano(z + ST / 2 + 2, (E(DEC[r]) + E(DEC[r] + 1)) / 2); }); // a stone head guarding some of the pockets
     wing(760, 4, { ...ember, x: 0, ax: 5, y: 5 }); wing(814, 4, { ...ember, x: 0, ax: 5, y: 5 }); forge(860, { x: 0, y: 6 }); }
   K.checkpoints.push(904);
-  zone(900, 1120, CHASE, 'MAGMA TUBES - SHIFT TO CHASE VIEW');
+  zone(900, 1120, CHASE, 'MAGMA TUBES - SHIFT TO CHASE VIEW'); K.tilt(935, 1110, { spin: 0.0026 }); at(935 + SPAWN_Z, g => hint(g, 'THE TUBE IS ROLLING - HOLD ON', 200)); // the tube turns all the way round as you fly it
   [[0, 4.5], [3.5, 5.5], [-3.5, 3.5], [0, 6], [4, 3.4], [-4, 5.6], [0, 4], [3, 6]].forEach(([x, y], i) => { const z = 936 + i * 23; gate(z, x, y, { col: FIRE, kind: 'gate', osc: i > 2 ? { ax: 1.3, ay: 0, w: 1.5, ph: i } : null }); if (i % 2) wing(z + 11, 3, { ...ember, x: x * 0.5, y, ax: 1.5 }); else if (i % 4 === 2) forge(z + 10, { x: 0, y: 5 }); else boulder(z + 11, -6, 1.1, { vx: 3, wrap: 9, hp: 9, gem: true }); if (i % 3 !== 2) river(z + 12, i % 2 ? 3 : -3, i); });
   at(1080, g => addPod(g, 0, 5, SPAWN_Z, 'god'));
   K.checkpoints.push(1124);
@@ -279,7 +282,7 @@ function jupiter() {
   zone(-99, 95, SIDE, 'SECTOR 3 // JUPITER - STORM DECK');
   fog(44, 0, 6.5, { vx: 0.6, wrap: 12 }); fog(70, 0, 2.8, { vx: -0.5, wrap: 12 }); crystal(60, 4.8, { gem: true }); crystal(90, 6.4); buoy(78, 3, 3);
   const gas = (z, x, y, w, h, c) => obs(z, { x, y, hx: w, hy: h, hz: 3.4, par: 0.5, col: c, kind: 'gas', ghost: true }); // big slow gas clouds drifting through: they move slower than the deck, so things slide in and out behind them
-  for (let i = 0, z = 40; z < 990; z += 31, i++) gas(z, (i % 2 ? 1 : -1) * (2.5 + (i * 1.7) % 3.5), 3 + (i * 2.3) % 4.5, 4.6 + (i % 3) * 0.9, 2.2 + (i % 2) * 0.9, ['#3dffb0', '#9d5bff', '#e23dff', '#5affd0'][i % 4]);
+  for (let i = 0, z = 40; z < 1130; z += 31, i++) if (z < 760 || z > 905) gas(z, (i % 2 ? 1 : -1) * (2.5 + (i * 1.7) % 3.5), 3 + (i * 2.3) % 4.5, 4.6 + (i % 3) * 0.9, 2.2 + (i % 2) * 0.9, ['#3dffb0', '#9d5bff', '#e23dff', '#5affd0'][i % 4]);
   const shark = (z, o) => en(z, { type: 'pop', col: '#7df9ff', hp: 4, r: 0.9, score: 250, vz: -12, ax: 3, w: 1.5, shape: 'shark', ...o }); // sharks: fast, weaving, straight at you
   const drift = (z, x, y, o) => en(z, { type: 'pop', col: '#ff9ef2', hp: 3, r: 0.85, score: 120, vz: -2.6, ax: 1.1, ay: 1.4, w: 0.7, shape: 'jelly', x, y, ph: x + y, ...o }); // jellyfish: slow, bobbing, deadly to touch
   wing(36, 5, { ...spark, y: 6, ax: 3 }); jelly(54, { x: -2, y: 6 }); wing(66, 6, { ...spark, y: 3.5, ax: 4 }); jelly(84, { x: 3, y: 4 }); shark(74, { x: 0, y: 3, ax: 0, ay: 1.5 }); wing(90, 4, { ...spark, y: 7, ax: 2 });
@@ -303,14 +306,26 @@ function jupiter() {
   K.checkpoints.push(764);
 
   // THE DEEP: the storm opens into a living sea. Jellyfish hang in the lanes, sharks come straight at you. Only CHASE shows both
-  zone(760, 1000, CHASE, 'THE DEEP - SHARKS AND JELLYFISH - SHIFT TO CHASE VIEW');
-  for (let i = 0, z = 796; z < 985; z += 10, i++) { const a = i * 2.39; drift(z, Math.sin(a) * 5.5, 4.8 + Math.cos(a * 1.3) * 3); if (i % 2) drift(z + 5, Math.sin(a + 2) * 5.5, 4.8 + Math.cos(a * 0.7 + 1) * 3); if (i % 3 === 0) fog(z + 3, Math.sin(a + 1) * 4, 4.8, { hy: 3.4, hx: 2.4 }); }
-  for (let i = 0, z = 812; z < 980; z += 21, i++) { const n = 2 + (i % 3); for (let k = 0; k < n; k++) shark(z + k * 1.6, { x: (k - (n - 1) / 2) * 3.2, y: 2.6 + ((k + i) % 3) * 2.2, ax: i % 2 ? 2.8 : 1.4, ph: k }); }
-  jelly(850, { x: 0, y: 5 }); jelly(930, { x: 2, y: 6 }); at(800, g => hint(g, 'THE DEEP - JELLYFISH STING, SHARKS CHARGE', 200)); K.hill(824, 868, 1.4); K.hill(920, 962, 1.7);
-  K.checkpoints.push(1004);
+  // THE DESCENT: the deck gives way and the whole stage turns on its side. You fall straight down through Jupiter's bands of gas,
+  // threading the gaps in cloud shelves and lightning, until the storm opens into the sea underneath
+  zone(760, 900, SIDE, 'THE DESCENT - WE ARE GOING DOWN - SHIFT TO SIDE VIEW');
+  K.tilt(772, 892, { rot: 1.5708, sway: 0.05, w: 0.02 }); at(772 + SPAWN_Z, g => { hint(g, 'FALLING THROUGH THE GAS LAYERS - THREAD THE GAPS', 240); g.shake = Math.max(g.shake, 6); });
+  { const BAND = ['#ffb070', '#ffe1b0', '#c8743c', '#ffd27a', '#e8946a'];
+    for (let i = 0, z = 776; z < 890; z += 9, i++) obs(z, { x: 0, y: 4.8, hx: 8.6, hy: 4.8, hz: 1.6, par: 0.35, col: BAND[i % 5], kind: 'gas', ghost: true }); // the bands of colour rushing past
+    for (let i = 0, z = 796; z < 884; z += 14, i++) { const gap = [7.2, 2.4, 5.2, 2.2, 7.4, 4.8, 3][i % 7], gh = 1.45; // a cloud shelf with one gap in it
+      if (gap - gh > 0.4) obs(z, { x: 0, y: (gap - gh) / 2, hx: 8.6, hy: (gap - gh) / 2, hz: 1.2, col: DECK, kind: 'clouddeck' }); if (gap + gh < 9.4) obs(z, { x: 0, y: (gap + gh + 9.6) / 2, hx: 8.6, hy: (9.6 - gap - gh) / 2, hz: 1.2, col: DECK, kind: 'clouddeck' });
+      if (i % 2) crystal(z + 7, [2.4, 7.2][i % 4 === 1 ? 0 : 1], { gem: true }); else hbolt(z + 7, gap < 4.8 ? 7.4 : 2.2, i * 37); }
+    wing(790, 4, { ...spark, y: 5, ax: 0, ay: 2.5, zig: false }); jelly(830, { x: 0, y: 4 }); wing(860, 5, { ...spark, y: 4, ax: 0, ay: 3, zig: false }); }
+  K.checkpoints.push(904);
+  zone(900, 1140, CHASE, 'THE DEEP - SHARKS AND JELLYFISH - SHIFT TO CHASE VIEW');
+  for (let i = 0, z = 936; z < 1125; z += 10, i++) { const a = i * 2.39; drift(z, Math.sin(a) * 5.5, 4.8 + Math.cos(a * 1.3) * 3); if (i % 2) drift(z + 5, Math.sin(a + 2) * 5.5, 4.8 + Math.cos(a * 0.7 + 1) * 3); if (i % 3 === 0) fog(z + 3, Math.sin(a + 1) * 4, 4.8, { hy: 3.4, hx: 2.4 }); }
+  for (let i = 0, z = 952; z < 1120; z += 21, i++) { const n = 2 + (i % 3); for (let k = 0; k < n; k++) shark(z + k * 1.6, { x: (k - (n - 1) / 2) * 3.2, y: 2.6 + ((k + i) % 3) * 2.2, ax: i % 2 ? 2.8 : 1.4, ph: k }); }
+  jelly(990, { x: 0, y: 5 }); jelly(1070, { x: 2, y: 6 }); at(940, g => hint(g, 'THE DEEP - JELLYFISH STING, SHARKS CHARGE', 200)); K.hill(964, 1008, 1.4); K.hill(1060, 1102, 1.7); K.tilt(940, 1130, { sway: 0.1, w: 0.007, py: 22 }); // the sea swells
+  K.checkpoints.push(1144);
 
-  zone(1000, 1e9, SIDE, 'WARNING // THE EYE OPENS');
-  spawnBoss(K, 1050, { name: 'THE EYE', look: 'eye', hp: 3200, col: ZAP });
+  zone(1140, 1e9, SIDE, 'WARNING // THE EYE OPENS');
+  K.cut(220, 270); K.cut(484, 512); // room for the descent
+  spawnBoss(K, 1190, { name: 'THE EYE', look: 'eye', hp: 3200, col: ZAP });
   const B = boss({ name: 'THE EYE', toast: 'JUPITER CALMED', adds: { shape: 'shark', col: '#7df9ff', hp: 4, r: 0.9, vz: -8, ax: 3, w: 1.3, score: 250 }, addEvery: 520, stages: [
     // STATIC: lightning walks down the lane toward you, then the Eye stares: a flat beam at whatever height you are flying
     { name: 'STATIC', vuln: [SIDE], rec: SIDE, col: ZAP, bob: 2.2, attack(g, b, t) { const p = near(g, b), c = t % 360;
@@ -326,7 +341,7 @@ function jupiter() {
       { const c = t % 330; if (c >= 110 && c < 282) stare(g, b, c - 110, { col: ZAP }); } if (t % 480 === 330) { const p = near(g, b); for (let i = -1; i <= 1; i++) strike(g, p.x + i * 3, p.z + 1, { hz: 3 }); g.fx.push('charge'); } } }] });
   K.fill(spark, 108, 735, 32, 'crystal'); K.hill(330, 380, 1.6); K.hill(690, 730, 1.3);
   return K.done({ name: 'JUPITER', title: 'STORM DECK', boss: B, warpName: 'THE ASTEROID BELT', theme: { sky: 'cloud', grid: '#1e7a5a', nofloor: true },
-    rules: { wind: g => g.camZ > 540 && g.camZ < 760 && !g.boss ? [Math.sin(g.tick * 0.012) * 1.4, 0] : [0, 0] } });
+    rules: { wind: g => g.camZ > 462 && g.camZ < 682 && !g.boss /* (after the cuts) */ ? [Math.sin(g.tick * 0.012) * 1.4, 0] : [0, 0] } });
 }
 
 // =====================================================================================
@@ -347,20 +362,20 @@ function planetx() {
   blob(78, { pod: true }); at(46, g => hint(g, 'BLOB WALL - SHOOT IT UNTIL IT BURSTS', 220)); mine(60, 0, 3); mine(68, 0, 7);
   wing(34, 8, { ...spore, y: 5, ay: 2.5, ax: 0 }, 1.4); spitter(52, { x: 0, y: 6 }); wing(64, 8, { ...spore, y: 4, ay: 3 }, 1.4);
 
-  zone(85, 285, TOP, 'TENTACLE FOREST - SHIFT TO TOP VIEW');
+  zone(85, 285, TOP, 'TENTACLE FOREST - SHIFT TO TOP VIEW'); K.tilt(110, 280, { sway: 0.18, w: 0.009, px: 40, py: 18 }); // the forest breathes: the whole floor heaves and turns
   for (let i = 0, z = 120; z < 276; z += 13, i++) (i % 2 ? [-5.2, 0, 5.2] : [-2.6, 2.6, 7.6, -7.6]).forEach((x, k) => i % 3 === 2 && k === 1 ? obs(z, { x, y: 4.75, hx: 0.8, hy: 4.75, hz: 0.8, col: FLESH, kind: 'tentacle', osc: { ax: 2.7, ay: 0, w: 2, ph: i } }) : tent(z, x, i + k * 2));
   for (let z = 152; z < 270; z += 39) { mine(z, -5.2, 4.6); mine(z + 13, 5.2, 4.6); }
   wing(140, 8, { ...spore, x: 0, ax: 5, y: 5 }, 1.4); spitter(180, { x: 0, y: 6 }); wing(215, 8, { ...spore, x: 0, ax: 6, y: 4 }, 1.4); spitter(252, { x: 2, y: 5 });
   K.checkpoints.push(288);
 
   // the Pluto warp is tucked into the roof here, and only exists in CHASE
-  zone(285, 475, SIDE, 'MEMBRANES - SHIFT TO SIDE VIEW');
+  zone(285, 475, SIDE, 'MEMBRANES - SHIFT TO SIDE VIEW'); K.tilt(352, 462, { rot: 3.1416, sway: 0.06, w: 0.015 }); at(352 + SPAWN_Z, g => hint(g, 'THE FOLD JUST TURNED US UPSIDE DOWN!', 220)); // the fold flips the whole stage over
   for (let i = 0, z = 320; z < 466; z += 17, i++) { memb(z, i % 2 === 0, i); eye(z + 8, (i % 3 - 1) * 4, i % 2 === 1); if (i % 3 === 2) blob(z + 9, { hp: 10, gem: true }); }
   K.warp(38, -3.5, 6.2); K.warp2(292, 3, 4); K.hill(28, 60, 1.8); K.hill(518, 572, 1.5); K.hill(606, 652, 1.3); /* mounds of tissue */
   wing(336, 8, { ...spore, y: 5, ay: 1 }, 1.4); spitter(372, { x: 0, y: 5, ay: 0.5 }); wing(430, 8, { ...spore, y: 4.5, ay: 1.2 }, 1.4);
   K.checkpoints.push(478);
 
-  zone(475, 690, CHASE, 'THE GULLET - SHIFT TO CHASE VIEW');
+  zone(475, 690, CHASE, 'THE GULLET - SHIFT TO CHASE VIEW'); K.tilt(495, 680, { rot: -0.5, sway: 0.35, w: 0.006 }); // swallowed: the gullet twists as it carries you down
   [[0, 4.5], [3, 5.5], [-3, 3.6], [0, 6], [3.5, 3.6], [-3.5, 5.6], [0, 4.4], [2, 6]].forEach(([x, y], i) => { const z = 510 + i * 22; gate(z, x, y, { col: FLESH, osc: { ax: 1.6, ay: i % 2 ? 0.8 : 0, w: 1.4, ph: i * 1.3 } }); if (i % 2) wing(z + 11, 5, { ...spore, x: x * 0.5, y, ax: 2 }, 1.2); else if (i % 4 === 2) spitter(z + 10, { x: 0, y: 5 }); else { mine(z + 11, -3, 3.4); mine(z + 11, 3, 6.2); } if (i === 5) blob(z + 12, { hp: 14, pod: true }); });
   K.checkpoints.push(694);
 
@@ -398,7 +413,7 @@ function planetx() {
 // =====================================================================================
 function moon() { // low gravity trench run: the ship drifts, nothing shoots back
   const K = kit('moon'), { at, obs, ring, en, zone } = K, GREY = '#c8d0e0';
-  zone(-99, 190, CHASE, 'BONUS // THE MOON - LOW GRAVITY TRENCH RUN'); zone(190, 1e9, ISO, 'CRATER FIELD - SHIFT TO ISO VIEW');
+  zone(-99, 190, CHASE, 'BONUS // THE MOON - LOW GRAVITY TRENCH RUN'); K.tilt(30, 185, { sway: 0.09, w: 0.006, px: 24, py: 24 }); /* low gravity: the trench floats about */ zone(190, 1e9, ISO, 'CRATER FIELD - SHIFT TO ISO VIEW');
   for (let z = 30, i = 0; z < 330; z += 6, i++) for (const sd of [-1, 1]) { const h = 1.1 + Math.abs(Math.sin(i * 1.7 + sd)) * 1.6, w = 1.1 + Math.abs(Math.sin(i * 2.3 - sd)) * 0.7; obs(z, { x: sd * (7.6 - w * 0.4 + Math.sin(i * 0.9) * 0.4), y: h, hx: w, hy: h, hz: 3.2, col: i % 3 ? GREY : '#9aa4c0', kind: 'rockwall' }); } // the trench walls: a ragged line of boulders of all sizes
   for (let i = 0; i < 34; i++) { const z = 40 + i * 8.4; ring(z, { x: Math.sin(i * 0.55) * 4, y: 3.5 + Math.sin(i * 0.4) * 2.2, r: 1.5 }); }
   for (let i = 0; i < 7; i++) { const z = 62 + i * 40; obs(z, { x: 0, y: 7.6, hx: 8.6, hy: 1.9, hz: 1, col: GREY, kind: 'arch' }); obs(z + 18, { x: (i % 2 ? 3.4 : -3.4), y: 1.4, hx: 1.2, hy: 1.4, hz: 1.2, col: '#7df9ff', kind: 'ice', hp: 4, gem: true, score: 150 }); }
@@ -416,7 +431,7 @@ function sun() { // the corona: a dense red plasma fog with one clear channel th
   zone(-99, 175, CHASE, 'BONUS // THE SUN - DENSE PLASMA FOG - FOLLOW THE CLEAR CHANNEL'); at(40, g => hint(g, 'OUTSIDE THE CHANNEL YOU OVERHEAT', 200)); K.hill(60, 104, 1.2);
   for (let i = 0; i < 24; i++) { const z = 34 + i * 6, x = Math.sin(i * 0.42) * 4.4, y = 4.8 + Math.sin(i * 0.31 + 1) * 2.1; chan(z, x, y, 2.5, 1.9, false); if (i % 5 === 2) obs(z, { x, y, hx: 0.7, hy: 0.7, hz: 0.7, col: '#ffe14a', kind: 'ice', hp: 3, gem: true, score: 150 }); }
   for (let i = 0; i < 4; i++) obs(64 + i * 28, { x: 0, y: 4.75, hx: 1.2, hy: 4.75, hz: 3.2, col: HOT, kind: 'flare', osc: { ax: 6.4, ay: 0, w: 0.55 + (i % 2) * 0.12, ph: i * 1.7 } }); // prominences whipping across the channel
-  zone(175, 1e9, SIDE, 'THE CHANNEL DIVES - SHIFT TO SIDE VIEW');
+  zone(175, 1e9, SIDE, 'THE CHANNEL DIVES - SHIFT TO SIDE VIEW'); K.tilt(186, 322, { rot: 0.42, sway: 0.08, w: 0.01 }); // the dive: the whole stage tips nose-down
   for (let i = 0; i < 26; i++) { const z = 178 + i * 6; chan(z, 0, 4.8 + Math.sin(i * 0.45) * 2.6, 9.6, 1.6, true); }
   for (let i = 0; i < 4; i++) obs(206 + i * 27, { x: 0, y: 4.75, hx: 8.6, hy: 0.7, hz: 2.7, col: HOT, kind: 'flare', osc: { ax: 0, ay: 3.7, w: 0.85, ph: i * 2.1 } });
   for (let i = 0; i < 9; i++) en(46 + i * 32, { type: 'pop', x: Math.sin((46 + i * 32 - 34) / 6 * 0.42) * 4.4 * (i < 4 ? 1 : 0), y: 3 + (i % 4) * 1.5, ax: 1.5, ay: 1, vz: -5, hp: 3, r: 0.8, col: HOT, score: 250, shape: 'plasma', pod: i % 3 === 0 });
@@ -454,7 +469,7 @@ function pluto() { // the cold edge: shatter the shelf, dodge the snowflake come
   for (let i = 0; i < 7; i++) { const z = 34 + i * 11; for (let k = 0; k < 4; k++) if ((i + k) % 4 !== 1) obs(z, { x: 0, y: 1.2 + k * 2.3, hx: 8.6, hy: 1.05, hz: 0.9, col: k % 2 ? ICE : DEEP, kind: 'ice', hp: 5, gem: (i + k) % 3 === 0, score: 80 }); }
   for (let i = 0; i < 6; i++) icicle(40 + i * 13, (i % 3 - 1) * 5, 2.2 + (i % 2) * 1.4);
   for (let i = 0; i < 4; i++) flake(60 + i * 16, (i % 2 ? 4 : -4), 3 + i % 3 * 2);
-  zone(120, 230, CHASE, 'SNOW COMETS - SHIFT TO CHASE VIEW');
+  zone(120, 230, CHASE, 'SNOW COMETS - SHIFT TO CHASE VIEW'); K.tilt(130, 225, { sway: 0.14, w: 0.01, px: 20 }); // blizzard gusts rock the stage
   for (let i = 0; i < 14; i++) flake(128 + i * 7, Math.sin(i * 2.3) * 6, 2 + Math.abs(Math.sin(i * 1.7)) * 6, { vz: -11 - (i % 3) * 2 });
   for (let i = 0; i < 6; i++) cryo(140 + i * 15, [-5, 0, 5, -2.5, 2.5, 6][i], i * 30);
   for (let i = 0; i < 7; i++) { const z = 134 + i * 13; icicle(z, (i % 2 ? -1 : 1) * (2 + i % 3 * 2), 3 + (i % 3)); if (i % 2) spike(z + 6, (i % 3 - 1) * 4, 2.5 + i % 2); }
