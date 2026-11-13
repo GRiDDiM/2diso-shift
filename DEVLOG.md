@@ -455,6 +455,12 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - In boss rush the four warp stages said complete straight away. Boss rush dropped you in just past the point where the miniboss is called in, so it never came. Boss rush now looks up where each stage's miniboss arrives and starts you just before it.
 - The red HIT markers from bug testing are gone. Bug test still counts your hits on the results screen.
 
+### 45. Tabs, surprise shifts and tougher blob walls (r53)
+
+- **Options in tabs.** SOUND, VIDEO, PLAY, SHIP and MORE. Flip tabs with L / R, or left / right on the tab row.
+- **Reality shifts in the levels.** The fold now flips your view for you once or twice on every planet, not only in the last boss fight. Where it happens is random each run, but always somewhere in the middle half of the level and never right on a change of view. Roll back yourself.
+- **The last boss's blob walls hold.** They have more than ten times the health and scale with your guns, so it now takes a few seconds of focused fire to burst one before it reaches you.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

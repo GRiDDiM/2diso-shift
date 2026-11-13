@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r52';
+const VER = 'r53';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -133,24 +133,31 @@ export function mountShift(root, host = {}) {
   function popMenu() { const m = menus.pop(); audio.sfx('back'); prevM = { ...HELD }; lock(); return m; }
   const onoff = v => v ? 'ON' : 'OFF';
   const scrollMenu = (title, lines) => push({ title, kind: 'scroll', lines, off: 0, items: [{ label: 'BACK', act: popMenu }] });
-  function optionsMenu() { skinView = skinNow(); push({ title: 'OPTIONS', gap: 24, items: [
-    { label: () => 'MUSIC  ' + Math.round(opt.music * 10), adj: d => { opt.music = Math.max(0, Math.min(1, opt.music + d * 0.1)); audio.vol(); saveOpt(); } },
-    { label: () => 'SOUND  ' + Math.round(opt.sfx * 10), adj: d => { opt.sfx = Math.max(0, Math.min(1, opt.sfx + d * 0.1)); audio.vol(); saveOpt(); audio.sfx('blip'); } },
-    { label: () => 'ANNOUNCER  ' + onoff(opt.voice), adj: () => { opt.voice = !opt.voice; saveOpt(); if (opt.voice) audio.say('announcer on', true); else audio.hush(); } },
-    { label: () => 'GLOW  ' + opt.glow.toUpperCase(), adj: () => { opt.glow = opt.glow === 'high' ? 'low' : 'high'; saveOpt(); fit(); } },
-    { label: () => 'SOLID OBSTACLES  ' + onoff(opt.fill), adj: () => { opt.fill = !opt.fill; saveOpt(); } },
-    { label: () => 'SCREEN SHAKE  ' + onoff(opt.shake), adj: () => { opt.shake = !opt.shake; saveOpt(); } },
-    { label: () => 'AUTO SHOOT  ' + onoff(opt.autofire), adj: () => { opt.autofire = !opt.autofire; saveOpt(); } },
-    { label: () => 'START SPEED  ' + GEARS[opt.gear], adj: d => { opt.gear = (opt.gear + (d < 0 ? GEARS.length - 1 : 1)) % GEARS.length; saveOpt(); } },
-    { label: () => 'IDLE MODE  ' + onoff(opt.idle), adj: () => setIdle(!opt.idle) },
-    { label: () => 'RIVET-9 ASSIST  ' + onoff(opt.assist), adj: () => setAssist(!opt.assist) },
-    { label: () => 'BEST RUN GHOST  ' + onoff(opt.ghost), adj: () => { opt.ghost = !opt.ghost; saveOpt(); if (!opt.ghost) ghost = null; } },
-    { label: () => 'AUTO DETONATE  ' + onoff(opt.autobomb), adj: () => { opt.autobomb = !opt.autobomb; saveOpt(); } },
-    { label: () => 'SHIP SKIN  ' + SKIN[skinView][0] + (skinOk(skinView) ? '' : '  (LOCKED)'), adj: d => { skinView = (skinView + (d < 0 ? SKIN.length - 1 : 1)) % SKIN.length; audio.sfx('blip'); if (skinOk(skinView)) { opt.skin = skinView; saveOpt(); } else toast('LOCKED', SKIN[skinView][2] + (forSale.includes(SKIN[skinView][3]) ? ' OR BUY IT IN THE SPARKZ STORE' : '')); } },
-    { label: () => 'CRT FILTER  ' + onoff(opt.crt), adj: () => { opt.crt = !opt.crt; saveOpt(); } },
-    { label: 'CONTROLS', act: () => push({ title: 'CONTROLS', kind: 'controls', items: [{ label: 'BACK', act: popMenu }] }) },
-    { label: 'CREDITS', act: () => scrollMenu('CREDITS', CREDITS) },
-    { label: 'BACK', act: popMenu }] }); }
+  // options are split into tabs: L / R (or left / right on the tab row) flips between them
+  function optionsMenu() { skinView = skinNow(); const tabs = [
+      { name: 'SOUND', items: [
+        { label: () => 'MUSIC  ' + Math.round(opt.music * 10), adj: d => { opt.music = Math.max(0, Math.min(1, opt.music + d * 0.1)); audio.vol(); saveOpt(); } },
+        { label: () => 'SOUND  ' + Math.round(opt.sfx * 10), adj: d => { opt.sfx = Math.max(0, Math.min(1, opt.sfx + d * 0.1)); audio.vol(); saveOpt(); audio.sfx('blip'); } },
+        { label: () => 'ANNOUNCER  ' + onoff(opt.voice), adj: () => { opt.voice = !opt.voice; saveOpt(); if (opt.voice) audio.say('announcer on', true); else audio.hush(); } }] },
+      { name: 'VIDEO', items: [
+        { label: () => 'GLOW  ' + opt.glow.toUpperCase(), adj: () => { opt.glow = opt.glow === 'high' ? 'low' : 'high'; saveOpt(); fit(); } },
+        { label: () => 'SOLID OBSTACLES  ' + onoff(opt.fill), adj: () => { opt.fill = !opt.fill; saveOpt(); } },
+        { label: () => 'SCREEN SHAKE  ' + onoff(opt.shake), adj: () => { opt.shake = !opt.shake; saveOpt(); } },
+        { label: () => 'CRT FILTER  ' + onoff(opt.crt), adj: () => { opt.crt = !opt.crt; saveOpt(); } }] },
+      { name: 'PLAY', items: [
+        { label: () => 'AUTO SHOOT  ' + onoff(opt.autofire), adj: () => { opt.autofire = !opt.autofire; saveOpt(); } },
+        { label: () => 'START SPEED  ' + GEARS[opt.gear], adj: d => { opt.gear = (opt.gear + (d < 0 ? GEARS.length - 1 : 1)) % GEARS.length; saveOpt(); } },
+        { label: () => 'AUTO DETONATE  ' + onoff(opt.autobomb), adj: () => { opt.autobomb = !opt.autobomb; saveOpt(); } },
+        { label: () => 'IDLE MODE  ' + onoff(opt.idle), adj: () => setIdle(!opt.idle) },
+        { label: () => 'RIVET-9 ASSIST  ' + onoff(opt.assist), adj: () => setAssist(!opt.assist) },
+        { label: () => 'BEST RUN GHOST  ' + onoff(opt.ghost), adj: () => { opt.ghost = !opt.ghost; saveOpt(); if (!opt.ghost) ghost = null; } }] },
+      { name: 'SHIP', items: [
+        { label: () => 'SHIP SKIN  ' + SKIN[skinView][0] + (skinOk(skinView) ? '' : '  (LOCKED)'), adj: d => { skinView = (skinView + (d < 0 ? SKIN.length - 1 : 1)) % SKIN.length; audio.sfx('blip'); if (skinOk(skinView)) { opt.skin = skinView; saveOpt(); } else toast('LOCKED', SKIN[skinView][2] + (forSale.includes(SKIN[skinView][3]) ? ' OR BUY IT IN THE SPARKZ STORE' : '')); } }] },
+      { name: 'MORE', items: [
+        { label: 'CONTROLS', act: () => push({ title: 'CONTROLS', kind: 'controls', items: [{ label: 'BACK', act: popMenu }] }) },
+        { label: 'CREDITS', act: () => scrollMenu('CREDITS', CREDITS) }] }];
+    const m = push({ title: 'OPTIONS', gap: 28, tabs, tab: 0, items: [] }); setTab(m, 0); }
+  function setTab(m, k) { m.tab = (k + m.tabs.length) % m.tabs.length; m.items = [{ label: () => '<  ' + m.tabs[m.tab].name + '  >', tabRow: true, adj: d => setTab(m, m.tab + d) }, ...m.tabs[m.tab].items, { label: 'BACK', act: popMenu }]; m.i = Math.min(m.i, m.items.length - 1); }
   function setIdle(v) { opt.idle = v; saveOpt(); if (v) { assisted = true; rec = null; } }
   // RIVET-9 flies as your wingman and rolls into the right view before you do. Runs with him are tagged ASSISTED.
   function setAssist(v) { opt.assist = v; saveOpt(); rec = null; ghost = null; if (v) assisted = true; if (g && scene === 'play' && !coop) g.wing = v ? makeWing(g.view) : null; }
@@ -180,7 +187,7 @@ export function mountShift(root, host = {}) {
     if (m.kind === 'bug') { const n = m.items.length, mv = j => { m.i = j; audio.sfx('move'); }, I = m.i; if (e('left')) mv((I + n - 1) % n); if (e('right')) mv((I + 1) % n);
       if (e('down')) mv(I < 9 ? I + 3 : I < 12 ? 12 + ((I % 3) >> 1) : I < 16 ? I + 2 : I === 16 ? 0 : 2); if (e('up')) mv(I < 3 ? 16 + (I >> 1) : I < 12 ? I - 3 : I < 14 ? 9 + (I - 12) * 2 : I - 2); }
     else if (m.kind === 'scroll') { if (i.up) m.off = Math.max(0, m.off - 6); if (i.down) m.off += 6; }
-    else { if (e('up')) { m.i = (m.i + m.items.length - 1) % m.items.length; audio.sfx('move'); } if (e('down')) { m.i = (m.i + 1) % m.items.length; audio.sfx('move'); } }
+    else { if (m.tabs && (e('shiftL') || e('shiftR'))) { setTab(m, m.tab + (e('shiftL') ? -1 : 1)); audio.sfx('move'); } if (e('up')) { m.i = (m.i + m.items.length - 1) % m.items.length; audio.sfx('move'); } if (e('down')) { m.i = (m.i + 1) % m.items.length; audio.sfx('move'); } }
     const it = m.items[m.i];
     if (it.adj && (e('left') || e('right'))) { it.adj(e('left') ? -1 : 1); audio.sfx('move'); }
     else if (e('ok')) { audio.sfx('ok'); if (it.act) it.act(); else it.adj?.(1); }
@@ -394,7 +401,7 @@ export function mountShift(root, host = {}) {
       if (bug) text(ctx, 'BUG TEST' + (endInfo.cleared ? ' - TICKED OFF' : '') + '   HITS TAKEN ' + (endInfo.bugHits || 0), 480, 326, 8, '#3dffb0', { align: 'center', glow: false }); else if (testRun) text(ctx, 'TEST RUN - SCORE NOT POSTED', 480, 326, 8, '#ffe14a', { align: 'center', glow: false }); else if (daily) text(ctx, 'DAILY RUN ' + daily.label, 480, 326, 8, '#ffe14a', { align: 'center', glow: false }); else if (assisted) text(ctx, coop ? 'CO-OP RUN' : 'ASSISTED RUN', 480, 326, 8, '#ffe14a', { align: 'center', glow: false });
       if (endInfo.t > 100) drawItems(m, 480, 356, 15, 36); else m.i = 0; return; }
     const full = m.kind === 'bug' || m.kind === 'map' || m.kind === 'controls' || m.kind === 'scores' || m.kind === 'scroll' || m.kind === 'ach';
-    const n = m.items.length, gap = m.gap || 34, nn = m.notes ? m.notes.length * 20 + 14 : 0, h = full ? 0 : n * gap + 80 + nn, y0 = full ? 54 : 270 - h / 2;
+    const n = m.tabs ? Math.max(...m.tabs.map(q => q.items.length)) + 2 : m.items.length, gap = m.gap || 34, nn = m.notes ? m.notes.length * 20 + 14 : 0, h = full ? 0 : n * gap + 80 + nn, y0 = full ? 54 : 270 - h / 2;
     if (!full) { panel(m.notes ? 200 : 270, y0, m.notes ? 560 : 420, h, m.pause ? '#2ee6ff' : '#ff3df0'); if (m.notes) m.notes.forEach((ln, k) => text(ctx, ln, 480, y0 + 60 + k * 20, 9, ln[0] === '+' ? '#3dffb0' : ln[0] === '-' ? '#ff4d6d' : '#9fb0ff', { align: 'center', glow: false })); } else panel(40, 40, 880, 460, '#2ee6ff');
     text(ctx, m.title, 480, y0 + (full ? 0 : 18), 22, '#ffe14a', { align: 'center', bold: true, tube: true });
     if (m.kind === 'map') { drawMap(m); drawItems(m, 480, m.items.length > 2 ? 459 : m.items.length > 1 ? 462 : 474, m.items.length > 2 ? 9 : 11, m.items.length > 2 ? 14 : 20); }
@@ -407,8 +414,12 @@ export function mountShift(root, host = {}) {
     else if (m.kind === 'scores') { const rows = m.rows; if (!rows) text(ctx, 'LOADING...', 480, 240, 12, '#9fb0ff', { align: 'center' }); else if (!rows.length) text(ctx, 'NO SCORES YET', 480, 240, 12, '#9fb0ff', { align: 'center' });
       else rows.slice(0, 10).forEach((r, k) => { const y = 124 + k * 30; text(ctx, String(k + 1), 250, y, 13, '#ffe14a', { align: 'right' }); text(ctx, String(r.name || '???').slice(0, 14), 280, y, 13, '#ffffff'); text(ctx, String(r.score), 700, y, 13, '#3dffb0', { align: 'right' }); const tag = r.cheater ? 'CHEATER' : r.assisted ? 'ASSISTED' : r.verified === false ? 'UNVERIFIED' : ''; if (tag) text(ctx, tag, 716, y + 3, 7, '#ff8a2b', { glow: false }); });
       drawItems(m, 480, 450, 14, 30); }
+    else if (m.tabs) { drawTabs(m, y0 + 56); const sub = { ...m, items: m.items.slice(1), i: m.i - 1 }; const h0 = hits.length; drawItems(sub, 480, y0 + 62 + gap, 14, gap); for (let k = h0; k < hits.length; k++) if (hits[k].i != null) hits[k].i += 1; }
     else drawItems(m, 480, y0 + 62 + nn, 14, gap);
   }
+  function drawTabs(m, y) { const n = m.tabs.length, tw = 70, x0 = 480 - n * tw / 2, on = m.i === 0; // the tab strip: the open tab lit, the row itself glowing when it is the one you are on
+    m.tabs.forEach((q, k) => { const x = x0 + k * tw, cur = k === m.tab; rr(x + 3, y - 4, tw - 6, 20, 10); ctx.fillStyle = cur ? (on ? '#ffe14a' : 'rgba(255,225,74,.25)') : 'rgba(9,6,22,.8)'; ctx.fill(); ctx.strokeStyle = cur ? '#ffe14a' : '#2ee6ff'; ctx.globalAlpha = cur ? 1 : 0.6; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = 1;
+      text(ctx, q.name, x + tw / 2, y + 2, 8, cur ? (on ? '#17101b' : '#ffe14a') : '#8d9be0', { align: 'center', bold: true, glow: false }); hits.push({ x, y: y - 4, w: tw, h: 20, fn: () => { m.i = 0; setTab(m, k); audio.sfx('move'); } }); }); }
   function drawIntro() {
     const t = sceneT / 60; ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H);
     const fade = (a, b) => Math.max(0, Math.min(1, (t - a) / 0.4, (b - t) / 0.5));
@@ -464,5 +475,5 @@ export function mountShift(root, host = {}) {
     getState: () => ({ scene, state: g?.state || scene, score: g?.score || 0, lives: g ? Math.max(0, g.players[0].lives) : 0, view: g ? VIEWS[g.view] : '-', chain: g?.chain || 0, best: LS.get('best', 0), level: LEVELS[levelId].name, bonus: !!LEVELS[levelId].isBonus, speed: g ? GEARS[g.gear] : '-', boss: g?.boss ? g.boss.name : '', warp: !!g?.flags.warp, paused: menus.length > 0 && scene === 'play', idle: !!opt.idle, assist: !!opt.assist, coop, daily: daily ? daily.label : '', muted: !!opt.mute, menu: scene !== 'play' }),
     control(a) { if (a === 'sound') { opt.mute = !opt.mute; saveOpt(); audio.vol(); if (opt.mute) audio.hush(); } else if (a === 'exit') host.onExit?.(); else if (a === 'pause') { if (menus.length && top().pause) resume(); else pauseMenu(); } else if (a === 'idle') setIdle(!opt.idle); else if (a === 'assist') setAssist(!opt.assist); else if (a === 'menu') showTitle(); else if (a === 'start' || a === 'restart') { testRun = false; returnTo = null; coop = false; daily = null; loopN = 0; assisted = !!opt.idle || !!opt.assist; startLevel('earth', null); } },
     getResult: () => ({ score: g?.score || 0, state: g?.state || scene, assisted }),
-    _debug: { ghost: () => ghost, rec: () => rec, setCoop: v => { coop = v; }, setAssist, game: () => g, scene: () => scene, menus, opt, startLevel: (id, s, test = true) => { testRun = test; returnTo = null; startLevel(id, s); }, showTitle, setIdle, startStory, beginEnding, startCredits, award, bugMenu, bugStart, skipIntro: () => { showTitle(); titleT = 99; } } };
+    _debug: { optionsMenu: () => optionsMenu(), ghost: () => ghost, rec: () => rec, setCoop: v => { coop = v; }, setAssist, game: () => g, scene: () => scene, menus, opt, startLevel: (id, s, test = true) => { testRun = test; returnTo = null; startLevel(id, s); }, showTitle, setIdle, startStory, beginEnding, startCredits, award, bugMenu, bugStart, skipIntro: () => { showTitle(); titleT = 99; } } };
 }

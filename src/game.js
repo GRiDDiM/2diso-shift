@@ -36,6 +36,10 @@ export function createGame({ seed = 1, level, start = null, players = 1, wing = 
   for (let i = 0; i < players; i++) { const p = newPlayer(i, start, players > 1); if (i) p.up = g.players[0].up; for (let k = 0; k < p.up[U.DRONE]; k++) p.drones.push({ x: p.x, y: p.y, z: p.z }); g.players.push(p); }
   g.z0 = z0; while (g.evi < level.events.length && level.events[g.evi].z < z0 - 20) g.evi++;
   if (level.rules?.arena) { g.intro = 70; g.camZ = 0; for (const p of g.players) { p.y = 4.5; p.z = 16; p.shield = Math.max(p.shield, 2); } }
+  // reality shifts: once or twice a planet the fold flips your view for you, somewhere random in the middle half of the level (never near its start or end, never at a change of view)
+  if (!level.bonus && !level.rules?.arena && level.boss && level.len) { const r = rng(seed * 7 + 13), L = level.len, n = 1 + (r() < 0.5 ? 1 : 0), zs = [];
+    for (let k = 0; k < n * 6 && zs.length < n; k++) { let z = L * (0.25 + r() * 0.5); if (zs.some(q => Math.abs(q - z) < L * 0.15)) continue; while ((level.zones || []).some(q => Math.abs(q.z0 - z) < 40)) z += 20; if (z < L * 0.75) zs.push(z); }
+    g.rs = zs.sort((a, b) => a - b).filter(z => z > z0 + 10); g.rsR = r; g.rsT = 0; }
   g.cpSnap = snapshot(g);
   return g;
 }
@@ -268,6 +272,8 @@ export function step(g, inputs) {
   const dz = rules.arena ? 0 : playing ? SCROLL * g.speedMul * dt : SCROLL * 0.4 * dt;
   if (playing) {
     g.camZ += dz;
+    if (g.rs?.length && !g.boss && g.intro <= 0 && g.camZ >= g.rs[0]) { g.rs.shift(); g.rsT = 55; hint(g, 'REALITY SHIFT!', 70); g.fx.push('charge', 'say:reality shift'); }
+    if (g.rsT > 0 && --g.rsT === 0) { doShift(g, (g.view + 1 + (g.rsR() * 3 | 0)) % 4, 1, null); g.flash = 6; g.shake = Math.max(g.shake, 6); } // the fold rolls you into some other view: roll back yourself
     if (!g.boss) while (g.evi < lvd.events.length && lvd.events[g.evi].z <= g.camZ) { const e = lvd.events[g.evi++]; if ((e.lim ?? e.z) >= g.z0 - 0.01) e.fn(g); }
     const zn = lvd.zones.find(z => g.camZ + 32 >= z.z0 && g.camZ + 32 < z.z1);
     if (zn && zn !== g.zone) { g.zone = zn; if (zn.msg) hint(g, zn.msg, 260); }
