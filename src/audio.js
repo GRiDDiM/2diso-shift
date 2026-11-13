@@ -101,7 +101,7 @@ export function createAudio(opt) {
     const go = () => { try { sy.cancel(); pickVoices(); const v = Math.min(1, opt.sfx * 1.1);
       const U = (w, voice, k, r, p) => { const u = new SpeechSynthesisUtterance(w); if (voice) u.voice = voice; u.volume = v * k; u.rate = r; u.pitch = p; return u; };
       const first = U('two dye-so', vox, 1, 0.86, 0.95); /* her */
-      const P = [['shif, shif, shift!', 1, 0.95, 0.85], ['shift', 0.5, 1.15, 0.8], ['shift', 0.26, 1.3, 0.75], ['shift', 0.12, 1.45, 0.7]].map(([w, k, r, p], i) => { const u = U(w, voxM, k, r, p); /* him, echoing away */
+      const P = [['Sh, Sh, SHIFT!', 1, 1.15, 0.85], ['shift', 0.5, 1.35, 0.8], ['shift', 0.26, 1.5, 0.75], ['shift', 0.12, 1.65, 0.7]].map(([w, k, r, p], i) => { const u = U(w, voxM, k, r, p); /* him, echoing away */
         if (i) u.onstart = () => { try { if (ac && ac.state === 'running') tone('sine', 1320 - i * 220, 660 - i * 110, 0.35, 0.1 * k); } catch { } }; return u; });
       setTimeout(() => { sy.speak(first); P.forEach(u => sy.speak(u)); }, 90); } catch { } };
     if (!vox && !pickVoices()) { let done = false; const once = () => { if (!done) { done = true; go(); } }; try { sy.addEventListener('voiceschanged', once, { once: true }); } catch { } setTimeout(once, 900); } else go(); }

@@ -664,6 +664,12 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - The ship's swoop sound starts a little earlier.
 - The title line is now two voices: a female voice says "2diso", then a male voice stutters "shif, shif, SHIFT!" and echoes away. The voices are picked once the browser has its full voice list, so the first line no longer falls back to the default voice.
 
+### 69. Tidying the title (r75)
+
+- The text on the jam ribbon is sized to fit inside its dashed border.
+- The stutter is now "Sh, Sh, SHIFT!", and it and its echoes are spoken faster.
+- Any real click, tap or key press anywhere on the page now switches the sound on. Browsers keep a page silent until you interact with it, and some clicks were not getting through to wake the music.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

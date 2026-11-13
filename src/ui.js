@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r74';
+const VER = 'r75';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -123,6 +123,7 @@ export function mountShift(root, host = {}) {
   stickEl.addEventListener('pointermove', e => { if (!stick || e.pointerId !== stick.id) return; const p = sPt(e); stick.x = p.x; stick.y = p.y; const dx = p.x - stick.ox, dy = p.y - stick.oy, d = Math.hypot(dx, dy) || 1, m = Math.min(28, d); nubEl.firstChild.style.transform = `translate(${dx / d * m}px,${dy / d * m}px)`; });
   const stickUp = e => { if (stick && e.pointerId === stick.id) { stick = null; nubEl.hidden = true; nubEl.firstChild.style.transform = ''; } }; stickEl.addEventListener('pointerup', stickUp); stickEl.addEventListener('pointercancel', stickUp);
   for (const b of touchEl.querySelectorAll('b')) { const n = b.dataset.b; const dn = e => { lastDev = 'touch'; audio.unlock(); tb.add(n); b.classList.add('on'); try { b.setPointerCapture(e.pointerId); } catch { } e.preventDefault(); }, up = () => { tb.delete(n); b.classList.remove('on'); }; b.addEventListener('pointerdown', dn); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); }
+  for (const ev of ['pointerdown', 'keydown', 'touchend', 'mousedown']) window.addEventListener(ev, e => { if (e.isTrusted && !destroyed) audio.unlock(); }, { capture: true, passive: true }); // any real click, tap or key anywhere starts the sound (browsers keep it muted until then)
   canvas.addEventListener('pointerdown', e => { audio.unlock(); if (e.pointerType === 'touch') lastDev = 'touch'; else mouse.down = true; tap = sPt(e); canvas.focus({ preventScroll: true }); });
   canvas.addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; const p = sPt(e); mouse.x = p.x; mouse.y = p.y; mouse.t = performance.now(); });
   const mUp = () => { mouse.down = false; }; addEventListener('pointerup', mUp);
@@ -442,8 +443,8 @@ export function mountShift(root, host = {}) {
     const path = () => { ctx.beginPath(); ctx.moveTo(x, -4); ctx.lineTo(x + w, -4); ctx.lineTo(x + w, h); ctx.lineTo(cx, h - tail); ctx.lineTo(x, h); ctx.closePath(); };
     const gr = ctx.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#2a0b45'); gr.addColorStop(1, '#7a1f9e'); path(); ctx.fillStyle = gr; ctx.shadowColor = '#ff3df0'; ctx.shadowBlur = 10 + pulse * 8; ctx.fill(); ctx.shadowBlur = 0;
     ctx.strokeStyle = '#ff3df0'; ctx.lineWidth = 2; ctx.stroke(); ctx.strokeStyle = '#ffe14a'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.lineDashOffset = -t * 10; ctx.beginPath(); ctx.moveTo(x + 5, 0); ctx.lineTo(x + 5, h - 6); ctx.moveTo(x + w - 5, 0); ctx.lineTo(x + w - 5, h - 6); ctx.stroke(); ctx.setLineDash([]);
-    text(ctx, 'GITHUB', cx, 12, 8, '#ffffff', { align: 'center', bold: true, glow: false }); text(ctx, 'GAME OFF', cx, 26, 10, '#ffffff', { align: 'center', bold: true, glow: true }); text(ctx, '2026', cx, 42, 20, '#ffe14a', { align: 'center', bold: true, tube: true });
-    ctx.fillStyle = '#ff3df0'; ctx.fillRect(x + 16, 72, w - 32, 1.5); text(ctx, 'THEME', cx, 80, 6, '#d6a8ff', { align: 'center', bold: true, glow: false }); text(ctx, 'SHIFT', cx, 90, 11, '#2ee6ff', { align: 'center', bold: true, glow: true }); ctx.restore(); }
+    const fs = (str, sz) => Math.min(sz, sz * (w - 22) / Math.max(1, textWidth(str, sz))); /* every line fits inside the dashed border with room to spare */ text(ctx, 'GITHUB', cx, 13, fs('GITHUB', 7.5), '#ffffff', { align: 'center', bold: true, glow: false }); text(ctx, 'GAME OFF', cx, 27, fs('GAME OFF', 9), '#ffffff', { align: 'center', bold: true, glow: true }); text(ctx, '2026', cx, 43, fs('2026', 17), '#ffe14a', { align: 'center', bold: true, tube: true });
+    ctx.fillStyle = '#ff3df0'; ctx.fillRect(x + 16, 72, w - 32, 1.5); text(ctx, 'THEME', cx, 80, 6, '#d6a8ff', { align: 'center', bold: true, glow: false }); text(ctx, 'SHIFT', cx, 90, fs('SHIFT', 10), '#2ee6ff', { align: 'center', bold: true, glow: true }); ctx.restore(); }
   function drawMenu() {
     hits = []; const m = top(); if (!m) return; const t = performance.now() / 1000;
     if (m.kind === 'title') {
