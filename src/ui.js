@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r42';
+const VER = 'r47';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -64,7 +64,7 @@ export function mountShift(root, host = {}) {
   const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
   const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: coarse ? 'low' : 'high', shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true, assist: false, ghost: true, crt: false, skin: 0, autobomb: false }, LS.get('opt', {})); const saveOpt = () => LS.set('opt', opt);
   // ship skins: looks only. Each is earned with an achievement, or owned through the host site's store when it sells them
-  const SKIN = [['PILOT'], ['FIRE MAGE', 'mars', 'DEFEAT THE COLOSSUS', 'shift-fire-mage'], ['DARK LORD', 'x', 'DEFEAT THE SHIFTER', 'shift-dark-lord']];
+  const SKIN = [['PILOT'], ['FIRE MAGE', 'mars', 'DEFEAT THE COLOSSUS', 'shift-fire-mage'], ['DARK LORD', 'x', 'DEFEAT THE SHIFTER', 'shift-dark-lord'], ['PIXIE', 'jupiter', 'DEFEAT THE EYE', 'shift-pixie']];
   let owned = LS.get('owned', []), forSale = [], skinView = opt.skin | 0; if (host.skins) Promise.resolve().then(() => host.skins()).then(r => { if (r && Array.isArray(r.owned)) { owned = r.owned; LS.set('owned', owned); } if (r && Array.isArray(r.forSale)) forSale = r.forSale; }).catch(() => { });
   const skinOk = i => !i || BUGTEST && opt.skinTest || !!SKIN[i] && (!!LS.get('ach', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinReal = i => !i || !!SKIN[i] && (!!LS.get('ach', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinNow = () => skinOk(opt.skin | 0) ? opt.skin | 0 : 0;
   const audio = createAudio(opt);
@@ -237,7 +237,7 @@ export function mountShift(root, host = {}) {
     text(ctx, lastDev === 'touch' ? 'TAP TO SKIP' : lastDev === 'pad' ? padNames()[0] + ' TO SKIP' : 'ENTER TO SKIP', 480, 512, 7, '#5a66b0', { align: 'center', glow: false }); }
 
   // ---------- flow ----------
-  function showTitle() { bug = false; scene = 'title'; sceneT = 0; g = null; loopN = 0; cred = null; rush = null; returnTo = null; coop = false; daily = null; rec = null; ghost = null; attract = createGame({ seed: 7 + (Math.random() * 99 | 0), level: buildLevel(ORDER[Math.random() * 4 | 0]), start: { up: [2, 2, 1, 1, 1, 1, 0, 0] } }); attract.players[0].lives = 99; titleMenu(); audio.music('title'); host.onState?.({ scene }); setTimeout(() => { if (scene === 'title' && menus.length === 1) audio.say('2diso. . . shift.', true); }, 700); } // the title voiceover
+  function showTitle() { bug = false; scene = 'title'; sceneT = 0; g = null; loopN = 0; cred = null; rush = null; returnTo = null; coop = false; daily = null; rec = null; ghost = null; attract = createGame({ seed: 7 + (Math.random() * 99 | 0), level: buildLevel(ORDER[Math.random() * 4 | 0]), start: { up: [2, 2, 1, 1, 1, 1, 0, 0] } }); attract.players[0].lives = 99; titleMenu(); audio.music('title'); host.onState?.({ scene }); setTimeout(() => { if (scene === 'title' && menus.length === 1) audio.say('2diso | shift', true); }, 700); } // the title voiceover
   function startLevel(id, start) { menus.length = 0; story = null; hiShown = false; toasts.length = 0; levelId = id; const L = LEVELS[id];
     const seed = daily ? daily.key * 31 + daily.n++ : (Math.random() * 1e9) | 0, st = { gear: opt.gear, ...(start || {}) }, wing = !!opt.assist && !coop;
     g = createGame({ seed, level: buildLevel(id), start: st, players: coop ? 2 : 1, wing, mut: { ...(daily ? daily.mut : rush ? { rush: true } : { loop: loopN }), ...(bug ? { bug: true } : {}) } }); if (bug) { rec = null; } if (testRun || opt.idle || opt.assist || coop) assisted = true; submitted = false; scene = 'play'; sceneT = 0; warpT = 0; endInfo = null;
@@ -323,10 +323,19 @@ export function mountShift(root, host = {}) {
     if (rush && g.state === 'play' && !g.paused) rush.t++;
     if (g.state !== 'play' && g.endT > (g.state === 'clear' ? 100 : 70) && !menus.length) { if (rush) rushStep(g.state === 'clear'); else endMenu(g.state === 'clear'); }
   }
-  function panel(x, y, w, h, col = '#2ee6ff') { ctx.fillStyle = 'rgba(4,5,22,.88)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.globalAlpha = 0.12; ctx.lineWidth = 12; ctx.strokeRect(x, y, w, h); ctx.globalAlpha = 0.3; ctx.lineWidth = 6; ctx.strokeRect(x, y, w, h); ctx.globalAlpha = 1; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); }
-  function drawItems(m, cx, y, size, gap) { const t = performance.now() / 1000; m.items.forEach((it, k) => { const lab = typeof it.label === 'function' ? it.label() : it.label, on = k === m.i, w = textWidth(lab, size), yy = y + k * gap;
-    if (on) { ctx.fillStyle = '#ff3df0'; ctx.globalAlpha = 0.16 + 0.06 * Math.sin(t * 6); ctx.fillRect(cx - w / 2 - 34, yy - 7, w + 68, size + 14); ctx.globalAlpha = 1; text(ctx, '>', cx - w / 2 - 26, yy, size, '#ffe14a'); if (it.adj) text(ctx, '<', cx + w / 2 + 12, yy, size, '#ffe14a'); }
-    text(ctx, lab, cx, yy, size, on ? '#ffffff' : '#8d9be0', { align: 'center', glow: on }); hits.push({ x: cx - w / 2 - 40, y: yy - 9, w: w + 80, h: size + 18, i: k }); }); }
+  const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); };
+  function panel(x, y, w, h, col = '#2ee6ff') { rr(x, y, w, h, 18); ctx.fillStyle = 'rgba(6,5,24,.84)'; ctx.fill(); ctx.strokeStyle = col; ctx.globalAlpha = 0.1; ctx.lineWidth = 10; ctx.stroke(); ctx.globalAlpha = 0.55; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = 1; } // a soft glass card, not a hard box
+  // menu items are neon pill buttons, as on the site and in the app: cyan outline at rest, the chosen one lit amber and lifted
+  function drawItems(m, cx, y, size, gap) { const t = performance.now() / 1000, labs = m.items.map(it => typeof it.label === 'function' ? it.label() : it.label), pill = gap >= 22;
+    if (!pill) { labs.forEach((lab, k) => { const on = k === m.i, w = textWidth(lab, size, true), yy = y + k * gap; text(ctx, lab, cx, yy, size, on ? '#ffe14a' : '#8d9be0', { align: 'center', glow: on, bold: true }); if (on) text(ctx, '>', cx - w / 2 - size * 1.4, yy, size, '#ffe14a', { bold: true }); hits.push({ x: cx - w / 2 - 40, y: yy - 6, w: w + 80, h: size + 12, i: k }); }); return; }
+    const sz = Math.min(size, gap * 0.42), ph = Math.min(gap - 6, sz * 2.3), pw = Math.max(170, Math.max(...labs.map(l => textWidth(l, sz, true))) + sz * 4.4);
+    labs.forEach((lab, k) => { const it = m.items[k], on = k === m.i, lift = on ? 2 : 0, px = cx - pw / 2, py = y + k * gap - (ph - sz) / 2 - lift, r = ph / 2;
+      rr(px, py, pw, ph, r);
+      if (on) { ctx.fillStyle = '#ffe14a'; ctx.globalAlpha = 0.22 + 0.06 * Math.sin(t * 5); ctx.lineWidth = 12; ctx.strokeStyle = '#ffe14a'; ctx.stroke(); ctx.globalAlpha = 1; ctx.fill(); ctx.strokeStyle = '#fff2a8'; ctx.lineWidth = 2; ctx.stroke(); }
+      else { ctx.fillStyle = 'rgba(9,6,22,.8)'; ctx.fill(); ctx.strokeStyle = '#2ee6ff'; ctx.globalAlpha = 0.16; ctx.lineWidth = 9; ctx.stroke(); ctx.globalAlpha = 0.85; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1; }
+      text(ctx, lab, cx, py + (ph - sz) / 2, sz, on ? '#17101b' : '#2ee6ff', { align: 'center', glow: !on, bold: true });
+      if (on && it.adj) { text(ctx, '<', px + r * 0.75, py + (ph - sz) / 2, sz, '#17101b', { bold: true, glow: false }); text(ctx, '>', px + pw - r * 0.75 - sz * 0.6, py + (ph - sz) / 2, sz, '#17101b', { bold: true, glow: false }); }
+      hits.push({ x: px, y: py, w: pw, h: ph, i: k }); }); }
   function drawMap(m) {
     const t = performance.now() / 1000, sy = 250, warp = LS.get('warps', {}), af = LS.get('arenaFound', {}), ar = LS.get('arenas', {}), bd = LS.get('bonusDone', {}), md = LS.get('medals', {}), found = L => L.isArena ? af[L.of] || ar[L.of] : warp[L.of], done = (L, id) => L.isArena ? ar[L.of] : L.isBonus ? bd[id] : md[id]; ctx.globalCompositeOperation = 'lighter';
     ctx.lineWidth = 1; for (const x of [300, 430, 620, 780, 860]) { ctx.strokeStyle = '#26348c'; ctx.beginPath(); ctx.ellipse(90, sy, x - 90, (x - 90) * 0.42, 0, -0.9, 0.9); ctx.stroke(); }
@@ -373,7 +382,7 @@ export function mountShift(root, host = {}) {
       drawLogo(ctx, 480, 34 - (sc - 1) * 30, sc, t); ctx.setTransform(res, 0, 0, res, 0, 0);
       text(ctx, 'SHIFT THE VIEW.  SHIFT THE RULES.', 480, 148, 9, '#ffe14a', { align: 'center' });
       ctx.globalCompositeOperation = 'lighter'; const a = t * 0.7, pi = -0.35 + Math.sin(t) * 0.1, rl = Math.sin(t * 0.8) * 0.3; meshScreen(ctx, SHIP_HULL, 742, 330, 86, a, pi, rl, '#ffffff'); meshScreen(ctx, SHIP_WING, 742, 330, 86, a, pi, rl, '#2ee6ff'); meshScreen(ctx, SHIP_FIN, 742, 330, 86, a, pi, rl, '#ff3df0'); ctx.globalCompositeOperation = 'source-over';
-      const n = m.items.length, gap = n > 7 ? 29 : n > 6 ? 32 : 36; panel(150, 178, 380, n * gap + 24, '#ff3df0'); drawItems(m, 340, 196, n > 7 ? 13 : 15, gap);
+      const n = m.items.length, gap = n > 7 ? 29 : n > 6 ? 32 : 36; drawItems(m, 340, 196, n > 7 ? 13 : 15, gap); // the title menu floats over the attract run, no card behind it
       text(ctx, 'GITHUB GAME OFF 2026', 742, 440, 8, '#5a66b0', { align: 'center', glow: false });
       text(ctx, lastDev === 'pad' ? padNames()[0] + ' = OK     ' + padNames()[1] + ' = BACK' : lastDev === 'touch' ? 'TAP TO CHOOSE' : 'ENTER = OK     ESC = BACK', 480, 500, 8, '#8d9be0', { align: 'center', glow: false });
       text(ctx, COPY, 480, 520, 7, '#5a66b0', { align: 'center', glow: false }); return; }
@@ -387,7 +396,7 @@ export function mountShift(root, host = {}) {
     const full = m.kind === 'bug' || m.kind === 'map' || m.kind === 'controls' || m.kind === 'scores' || m.kind === 'scroll' || m.kind === 'ach';
     const n = m.items.length, gap = m.gap || 34, nn = m.notes ? m.notes.length * 20 + 14 : 0, h = full ? 0 : n * gap + 80 + nn, y0 = full ? 54 : 270 - h / 2;
     if (!full) { panel(m.notes ? 200 : 270, y0, m.notes ? 560 : 420, h, m.pause ? '#2ee6ff' : '#ff3df0'); if (m.notes) m.notes.forEach((ln, k) => text(ctx, ln, 480, y0 + 60 + k * 20, 9, ln[0] === '+' ? '#3dffb0' : ln[0] === '-' ? '#ff4d6d' : '#9fb0ff', { align: 'center', glow: false })); } else panel(40, 40, 880, 460, '#2ee6ff');
-    text(ctx, m.title, 480, y0 + (full ? 0 : 18), 22, '#ffe14a', { align: 'center', weight: 2.6, tube: true });
+    text(ctx, m.title, 480, y0 + (full ? 0 : 18), 22, '#ffe14a', { align: 'center', bold: true, tube: true });
     if (m.kind === 'map') { drawMap(m); drawItems(m, 480, m.items.length > 2 ? 459 : m.items.length > 1 ? 462 : 474, m.items.length > 2 ? 9 : 11, m.items.length > 2 ? 14 : 20); }
     else if (m.kind === 'controls') { drawControls(); drawItems(m, 480, 440, 14, 30); }
     else if (m.kind === 'scroll') { drawScroll(m); drawItems(m, 480, 456, 14, 30); }

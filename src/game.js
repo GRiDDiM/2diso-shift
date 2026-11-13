@@ -12,7 +12,7 @@ const EFF = [0, 2, 4, 5]; // three ranks per weapon: the weak early ranks are sk
 export const U = { DRONE: 0, MISSILE: 1, LASER: 2, WAVE: 3, BOLT: 4, SPREAD: 5, SHIELD: 6, BOMB: 7, WILD: 8 };
 export const TIER = { 5: [, 'TWIN FAN', 'STAR FAN', 'NOVA FAN'], 2: [, 'FOCUS', 'LANCE', 'PRISM'], 3: [, 'WIDE', 'TIDAL', 'TSUNAMI'], 4: [, 'FORK', 'CHAIN', 'STORM'], 1: [, 'SWARM', 'BARRAGE', 'CLUSTER'], 7: [, 'SWEEP BOMB', 'SCATTER BOMB', 'MEGA NUKE'] };
 export const DRONE_MODES = ['TRAIL', 'ORBIT', 'WALL', 'HUNT'];
-export const GEARS = ['SLOW', 'CRUISE', 'FAST', 'TURBO'], GEARMUL = [0.58, 0.82, 1.2, 1.7];
+export const GEARS = ['SLOW', 'CRUISE', 'FAST', 'TURBO', 'HYPER'], GEARMUL = [0.58, 0.82, 1.2, 1.7, 2.4];
 export const SK = 1 / 1.3; // ships, enemies, shots and pickups are this much smaller than the level they fly through: the camera is in effect 30% further back, with the level built 30% bigger to match
 export const SCROLL = 7, DT = 1 / 60, SPAWN_Z = 39, INTRO = 132, INTRO_RUN = 46;
 
@@ -86,7 +86,7 @@ function addScore(g, base, x, y, z, col) {
   if (x != null) pop(g, mult > 1 ? base * mult + ' X' + mult : '' + base, x, y, z, col || '#ffe14a');
 }
 // where a wave pulse is after travelling d: forward, plus a sine swing that opens up as it leaves the ship
-export const WAVECOL = ['#7df9ff', '#b06bff', '#ff3df0'];
+export const WAVECOL = ['#7df9ff', '#b06bff', '#ffe14a'];
 export function waveAt(s, d) { const o = Math.sin(d * s.fq + s.ph) * s.amp * Math.min(1, d / 2.5); if (s.dir) return [s.ox + s.dir[0] * d + s.dir[1] * o, s.oy, s.oz + s.dir[1] * d - s.dir[0] * o]; return s.axis === 'x' ? [s.ox + o, s.oy, s.oz + d] : [s.ox, Math.max(0.3, Math.min(9.4, s.oy + o)), s.oz + d]; }
 function groupNext(gr, e) { gr.dead[e.gi] = 1; const n = Math.max(gr.n, e.gn || 0); gr.next = -1; for (let k = 1; k <= n; k++) { const i = (e.gi + k) % n; if (!gr.dead[i]) { gr.next = i; break; } } }
 function kill(g, e) {
@@ -166,7 +166,7 @@ function blastStep(g, m) {
   for (let i = g.blasts.length - 1; i >= 0; i--) if (g.blasts[i].t >= g.blasts[i].life) g.blasts.splice(i, 1);
 }
 function beam(g, x, y, z, w, dmg, col, o = {}) {
-  const m = MASK[g.view]; let zEnd = 34;
+  const m = MASK[g.view]; let zEnd = SPAWN_Z + 8; // to the far edge of the field and a bit beyond
   if (o.dx != null && !(o.dx === 0 && o.dz === 1)) { const len = 30, dx = o.dx, dz = o.dz; // aimed beam (arena): a ray in the ground plane
     if (!o.pierce) { let best = null, bt = len, isObs = false; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, g.view)) continue; const ex = e.x - x, ez = e.z - z, t = ex * dx + ez * dz; if (t > 0 && t < bt && Math.abs(ex * dz - ez * dx) < (e.hx ?? e.r) + w) { bt = t; best = e; } }
       for (const b of g.obs) if (solid(b, g.view)) { const ex = b.x - x, ez = b.z - z, t = ex * dx + ez * dz; if (t > 0 && t < bt && Math.abs(ex * dz - ez * dx) < b.hx + w) { bt = t; best = b; isObs = true; } }
@@ -240,7 +240,7 @@ export function step(g, inputs) {
     if (L && firing && --p.laserT <= 0) { p.laserT = (11 - L) * (od ? 0.6 : 1) | 0; const r = L >= 5 ? 3 : L >= 4 ? 2 : 1; beam(g, p.x + p.ax * SK, p.y, p.z + p.az * SK, (0.3 + 0.28 * r) * SK, [2.4, 4.8, 7.5][r - 1], '#3dffb0', { dx: p.ax, dz: p.az, lw: r }); if (g.tick % 12 < 6) g.fx.push('laser'); } // one beam: each rank makes it thicker and harder-hitting
     const Wv = lv(p, U.WAVE);
     if (Wv && firing && --p.waveT <= 0) { p.waveT = od ? 3 : 5; const rk = Wv >= 5 ? 2 : Wv >= 3 ? 1 : 0; // one wave: a stream of pulses riding a sine. Each rank winds the frequency tighter, swings it wider and hits harder
-      g.shots.push({ kind: 3, x: p.x, y: p.y, z: p.z + 1, ox: p.x, oy: p.y, oz: p.z + 1, vx: 0, vy: 0, vz: 22, amp: [1.1, 1.7, 2.3][rk], fq: [0.55, 0.85, 1.2][rk], rk, ph: -g.tick * 0.07, t: 0, d: 0, dmg: [0.13, 0.25, 0.4][rk], r: [0.55, 0.65, 0.78][rk] * SK, life: 110, axis: v === 0 ? 'y' : 'x', dir: rules.arena ? [p.ax, p.az] : null }); if ((p.waveN = (p.waveN || 0) + 1) % 4 === 1) g.fx.push('wave'); }
+      g.shots.push({ kind: 3, x: p.x, y: p.y, z: p.z + 1, ox: p.x, oy: p.y, oz: p.z + 1, vx: 0, vy: 0, vz: 22, amp: [1.1, 1.7, 2.3][rk], fq: [0.55, 0.85, 1.2][rk], rk, ph: -g.tick * 0.07, t: 0, d: 0, dmg: [0.2, 0.38, 0.62][rk], r: [0.55, 0.65, 0.78][rk] * SK, life: 110, axis: v === 0 ? 'y' : 'x', dir: rules.arena ? [p.ax, p.az] : null }); if ((p.waveN = (p.waveN || 0) + 1) % 4 === 1) g.fx.push('wave'); }
     const Bo = lv(p, U.BOLT);
     if (Bo && firing && --p.boltT <= 0) { p.boltT = (Bo >= 5 ? 26 : Bo >= 4 ? 40 : 64) * (od ? 0.6 : 1) | 0; const n = 1; for (let k = 0; k < n; k++) g.shots.push({ kind: 4, x: p.x, y: p.y, z: p.z + 1, vx: 0, vy: 0, vz: 0, t: 0, ph: g.rand() * 6.283 + k * 2.1, own: p.i, dmg: 5 + 3 * Bo, chain: 0, r: 0.5 * SK, life: 150, trail: [] }); g.fx.push('bolt'); }
     const M = lv(p, U.MISSILE);

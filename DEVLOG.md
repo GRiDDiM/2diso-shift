@@ -410,6 +410,16 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **SHIFT is sliced.** A seam runs through SHIFT and its top half sits shifted sideways, as if the view was caught mid-roll. Every couple of seconds it jolts further.
 - **New tagline.** "Shift the view. Shift the rules."
 
+### 39. Pill buttons, a fifth speed and a fairy (r47)
+
+- **Menus look like the site.** Menu items are neon pill buttons, as on ArcadeGridz and in the app: a cyan outline at rest, the chosen one lit amber and lifted. Option rows show their left and right arrows inside the lit pill. The title menu floats over the attract run with no box behind it, and other menus sit on a soft rounded glass card.
+- **A bolder menu font.** Menu items and titles use a new bold style of the vector font: thick strokes, corners cut square instead of rounded, a bit more lean and more room per letter.
+- **HYPER.** A fifth speed above TURBO, for going very fast.
+- **The god-mode beam reaches the far edge** of the bigger field again, and so do the laser and the drones' beams.
+- **The wave hits harder** (about half as much again at every rank), and its top rank is gold so it no longer looks like rank 2. The skins got the same fix.
+- **The title voice says it right:** "two-DIE-so", a beat, then "shift".
+- **PIXIE skin.** The ship becomes a fairy: a glowing body, four butterfly wings that flutter, antennae and a falling trail of glitter. Shots become twinkling stars, missiles little spinning stars, drones fireflies, and every beam and wave turns pastel. Beat the Eye on Jupiter to earn it, or buy it in the Sparkz store.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

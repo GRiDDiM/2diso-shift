@@ -12,26 +12,26 @@ const G = {
 const P = {};
 for (const k in G) P[k] = G[k].split(' ').map(s => { const a = []; for (let i = 0; i < s.length; i += 2) a.push(+s[i], +s[i + 1]); return a; });
 export const ADV = 5.6 / 6;
-export function textWidth(str, size) { return str.length * size * ADV - size * 1.6 / 6; }
+export function textWidth(str, size, bold) { return str.length * size * ADV * (bold ? 1.1 : 1) - size * 1.6 / 6; }
 // draws str with cap height `size` px; (x,y) is the top-left (or top-center / top-right with align)
 export function text(ctx, str, x, y, size, col, o = {}) {
   str = o.raw ? String(str) : String(str).toUpperCase();
-  const u = size / 6, sk = o.italic ? 0.3 : 0.09, w = textWidth(str, size);
+  const B = !!o.bold, u = size / 6, sk = o.italic ? 0.3 : B ? 0.16 : 0.09, w = textWidth(str, size, B), adv = size * ADV * (B ? 1.1 : 1);
   if (o.align === 'center') x -= w / 2; else if (o.align === 'right') x -= w;
   ctx.beginPath();
   for (let i = 0; i < str.length; i++) {
-    const g = P[str[i]]; const ox = x + i * size * ADV;
+    const g = P[str[i]]; const ox = x + i * adv;
     if (!g) continue;
     for (const pl of g) { // every corner is rounded off, so the strokes read as bent neon tube instead of calculator segments
       const n = pl.length >> 1, X = k => ox + (pl[k * 2] + (6 - pl[k * 2 + 1]) * sk) * u, Y = k => y + pl[k * 2 + 1] * u, R = 0.62 * u;
       if (n < 3) { ctx.moveTo(X(0), Y(0)); for (let k = 1; k < n; k++) ctx.lineTo(X(k), Y(k)); continue; }
-      const closed = pl[0] === pl[n * 2 - 2] && pl[1] === pl[n * 2 - 1], bend = (a, b, c) => { const bx = X(b), by = Y(b), l1 = Math.hypot(X(a) - bx, Y(a) - by) || 1, l2 = Math.hypot(X(c) - bx, Y(c) - by) || 1, f1 = Math.min(0.5, R / l1), f2 = Math.min(0.5, R / l2); ctx.lineTo(bx + (X(a) - bx) * f1, by + (Y(a) - by) * f1); ctx.quadraticCurveTo(bx, by, bx + (X(c) - bx) * f2, by + (Y(c) - by) * f2); };
+      const closed = pl[0] === pl[n * 2 - 2] && pl[1] === pl[n * 2 - 1], bend = (a, b, c) => { const bx = X(b), by = Y(b), l1 = Math.hypot(X(a) - bx, Y(a) - by) || 1, l2 = Math.hypot(X(c) - bx, Y(c) - by) || 1, f1 = Math.min(0.5, R / l1), f2 = Math.min(0.5, R / l2); ctx.lineTo(bx + (X(a) - bx) * f1, by + (Y(a) - by) * f1); if (B) ctx.lineTo(bx + (X(c) - bx) * f2, by + (Y(c) - by) * f2); else ctx.quadraticCurveTo(bx, by, bx + (X(c) - bx) * f2, by + (Y(c) - by) * f2); }; // bold cuts its corners square-on, the neon style bends them
       if (closed) { ctx.moveTo((X(0) + X(1)) / 2, Y(0) / 2 + Y(1) / 2); for (let k = 1; k < n - 1; k++) bend(k - 1, k, k + 1); bend(n - 2, 0, 1); ctx.closePath(); }
       else { ctx.moveTo(X(0), Y(0)); for (let k = 1; k < n - 1; k++) bend(k - 1, k, k + 1); ctx.lineTo(X(n - 1), Y(n - 1)); } }
   }
-  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-  const a = o.alpha == null ? 1 : o.alpha, lw = o.weight || Math.max(1.2, size / 9);
-  if (o.glow !== false) { ctx.strokeStyle = col; if (o.tube) { ctx.globalAlpha = a * 0.1; ctx.lineWidth = lw * 7; ctx.stroke(); } ctx.globalAlpha = a * 0.28; ctx.lineWidth = lw * 3.4; ctx.stroke(); }
+  ctx.lineJoin = B ? 'miter' : 'round'; ctx.lineCap = B ? 'square' : 'round'; ctx.miterLimit = 3;
+  const a = o.alpha == null ? 1 : o.alpha, lw = o.weight || (B ? Math.max(2, size / 4.6) : Math.max(1.2, size / 9));
+  if (o.glow !== false) { ctx.strokeStyle = col; if (o.tube) { ctx.globalAlpha = a * 0.1; ctx.lineWidth = lw * (B ? 3.6 : 7); ctx.stroke(); } ctx.globalAlpha = a * (B ? 0.22 : 0.28); ctx.lineWidth = lw * (B ? 2 : 3.4); ctx.stroke(); }
   ctx.globalAlpha = a; ctx.strokeStyle = o.core || col; ctx.lineWidth = lw; ctx.stroke();
   ctx.globalAlpha = 1;
   return w;
