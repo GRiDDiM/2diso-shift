@@ -113,7 +113,7 @@ export function damage(g, e, d) {
 }
 function hurt(g, p) {
   if (p.inv > 0 || p.dead > 0) return;
-  if (g.mut.bug) { g.stats.bugHits = (g.stats.bugHits || 0) + 1; p.inv = 40; pop(g, 'HIT' + (g.cause ? ' - ' + String(g.cause).toUpperCase() : ''), p.x, p.y + 1.1, p.z + 1, '#ff4d6d'); g.fx.push('shield'); g.shake = Math.max(g.shake, 4); return; } // bug test: nothing is lost, the hit is only marked
+  if (g.mut.bug) { g.stats.bugHits = (g.stats.bugHits || 0) + 1; p.inv = 40; g.fx.push('shield'); g.shake = Math.max(g.shake, 4); return; } // bug test: nothing is lost, the hit is only marked
   g.stats.hits++;
   if (p.shield > 0 && g.loop < 3) { p.shield = g.loop >= 2 ? 0 : p.shield - 1; p.inv = LOOP.inv[lp(g)]; /* loop 3: one hit strips every layer. loop 4: shields do nothing */ g.fx.push('shield'); explode(g, p.x, p.y, p.z, '#5ee7ff', 12, 7); g.shake = 6; return; }
   explode(g, p.x, p.y, p.z, '#ffffff', 46, 15); explode(g, p.x, p.y, p.z, '#ff3df0', 30, 10); g.fx.push('die'); g.shake = 14; g.flash = 10; g.chain = 0; g.stats.deaths++;

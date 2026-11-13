@@ -450,6 +450,11 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 
 - On Earth the arena warp could still be hanging around when the level asked you to shift to chase view, so you could fall into it by accident and skip a good stretch. Every warp now appears in a stretch that isn't played in chase view, and closes before the next chase stretch, so taking one is always a choice.
 
+### 44. Boss rush warp stages fixed (r52)
+
+- In boss rush the four warp stages said complete straight away. Boss rush dropped you in just past the point where the miniboss is called in, so it never came. Boss rush now looks up where each stage's miniboss arrives and starts you just before it.
+- The red HIT markers from bug testing are gone. Bug test still counts your hits on the results screen.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r51';
+const VER = 'r52';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -38,7 +38,7 @@ const ACH = [['shift', 'FIRST SHIFT', 'ROLL INTO ANOTHER VIEW'], ['perfect', 'PE
   ['ranks', 'S RANK', 'EARN RANK S OR BETTER ON A PLANET'], ['sss', 'TRIPLE S', 'EARN RANK SSS ON A PLANET'], ['arsenal', 'FULL ARSENAL', 'MAX EVERY WEAPON AT ONCE'], ['drones', 'SIX PACK', 'FLY WITH SIX DRONES'], ['god', 'GOD MODE', 'PICK UP GOD MODE'],
   ['score1', 'HIGH ROLLER', 'SCORE 250000 IN ONE RUN'], ['score2', 'MILLIONAIRE', 'SCORE 1000000 IN ONE RUN'], ['kills', 'EXTERMINATOR', 'DESTROY 1000 ENEMIES IN TOTAL'], ['coop', 'WINGMATES', 'CLEAR A PLANET IN CO-OP'], ['rush', 'GAUNTLET', 'BEAT ALL TWELVE IN BOSS RUSH']];
 // boss rush: every boss and miniboss back to back. Planets start at the checkpoint before the boss, bonus stages just before their miniboss, arenas skip their waves
-const RUSH = ['earth', 'arena-earth', 'moon', 'mars', 'arena-mars', 'sun', 'jupiter', 'arena-jupiter', 'belt', 'x', 'arena-x', 'pluto'], RUSHZ = { moon: 286, sun: 286, belt: 291, pluto: 286 };
+const RUSH = ['earth', 'arena-earth', 'moon', 'mars', 'arena-mars', 'sun', 'jupiter', 'arena-jupiter', 'belt', 'x', 'arena-x', 'pluto'];
 // BUG TEST: a checklist for the pre-release pass. Each entry starts you there with no damage taken (hits are only marked),
 // and is ticked off when you clear it. Set BUGTEST to false to hide the menu for the jam build.
 const BUGTEST = true;
@@ -247,7 +247,7 @@ export function mountShift(root, host = {}) {
   function finish(cleared) { if (!g || submitted || testRun) return; submitted = true; if (daily) { const db = LS.get('daily', null); if (!db || db.key !== daily.key || g.score > db.score) LS.set('daily', { key: daily.key, score: g.score, cleared }); return; } const res = { score: g.score, cleared, assisted, level: LEVELS[levelId].n || LEVELS[LEVELS[levelId].of]?.n || 0, chain: g.bestChain, kills: g.stats.kills, shifts: g.stats.shifts };
     const best = LS.get('best', 0); if (g.score > best) LS.set('best', g.score); const rows = LS.get('scores', []); rows.push({ name: coop ? 'CO-OP' : assisted ? 'ASSIST' : 'YOU', score: g.score, assisted }); rows.sort((a, b) => b.score - a.score); LS.set('scores', rows.slice(0, 8));
     try { host.submitScore?.(res); } catch { } return res; }
-  function rushGo(c) { const id = RUSH[rush.i], L = LEVELS[id], cps = L.isBonus ? null : buildLevel(id).checkpoints; startLevel(id, { ...c, z: cps ? cps[cps.length - 1] : RUSHZ[id] || 0 }); toast('BOSS RUSH  ' + (rush.i + 1) + ' / ' + RUSH.length, L.isArena || L.isBonus ? L.name : 'BOSS: ' + L.boss); }
+  function rushGo(c) { const id = RUSH[rush.i], L = LEVELS[id], lv = buildLevel(id), cps = L.isBonus ? null : lv.checkpoints, me = L.isBonus && lv.events.find(e => e.fn.mini); startLevel(id, { ...c, z: cps ? cps[cps.length - 1] : me ? me.z - 6 : 0 }); /* warp stages start just before their miniboss arrives */ toast('BOSS RUSH  ' + (rush.i + 1) + ' / ' + RUSH.length, L.isArena || L.isBonus ? L.name : 'BOSS: ' + L.boss); }
   function bugDone() { return LS.get('bugtest', {}); }
   function bugTick(id) { const d = bugDone(); if (d[id]) return; d[id] = 1; LS.set('bugtest', d); const n = BUGLIST.filter(b => d[b[0]]).length; toast('TESTED: ' + (BUGLIST.find(b => b[0] === id) || [, id])[1], n >= BUGLIST.length ? 'ALL TESTED - READY TO PUBLISH' : n + ' / ' + BUGLIST.length + ' DONE'); audio.sfx('ring'); }
   function bugStart(id) { if (id === 'rush') { menus.length = 0; startRush(true); return; }
