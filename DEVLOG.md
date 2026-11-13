@@ -392,6 +392,12 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **Clean test runs.** Test runs never post scores and do not unlock achievements, skins, medals, ghosts or Boss Rush records.
 - **One switch for release.** When the list is done, a single flag hides the checklist and the solar map's level-jump test buttons together for the jam build.
 
+### 36. A new voice (r43)
+
+- **The announcer is a woman now.** A calm, close, unhurried voice, picked from the best female voice the browser offers, a little lower and slower than normal speech.
+- **Title voiceover.** The title screen says the name: "two D, iso ... shift".
+- **ISO is a word.** The announcer used to spell out I-S-O; it now says "eye-so", like the rest of us.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
