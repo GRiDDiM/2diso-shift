@@ -35,7 +35,7 @@ const ACH = [['shift', 'FIRST SHIFT', 'ROLL INTO ANOTHER VIEW'], ['perfect', 'PE
   ['chain50', 'CHAIN 50', 'REACH A KILL CHAIN OF 50'], ['chain100', 'CHAIN 100', 'REACH A KILL CHAIN OF 100'], ['earth', 'EARTH HOLDS', 'DEFEAT THE OVERSEER'], ['mars', 'MARS COOLS', 'DEFEAT THE COLOSSUS'], ['jupiter', 'THE STORM BLINKS', 'DEFEAT THE EYE'], ['x', 'END THE SHIFT', 'DEFEAT THE SHIFTER'],
   ['end', 'EVERY SIDE OF IT', 'SEE THE ENDING'], ['solo', 'SOLO PILOT', 'FINISH THE GAME WITH NO ASSISTS'], ['loop', 'AROUND AGAIN', 'START A SECOND LOOP'], ['warp', 'HIDDEN DOOR', 'FIND A WARP'], ['warp4', 'CARTOGRAPHER', 'FIND ALL FOUR WARPS'], ['bonus', 'STAGE DIVER', 'BEAT A WARP STAGE MINIBOSS'],
   ['arena', 'CROWD CONTROL', 'CLEAR EVERY WAVE AND THE MINIBOSS IN AN ARENA'], ['arena4', 'ARENA MASTER', 'CLEAR ALL FOUR ARENAS'], ['untouched', 'UNTOUCHED', 'CLEAR A PLANET WITHOUT TAKING A HIT'], ['nodeath', 'NO SHIPS LOST', 'CLEAR A PLANET WITHOUT LOSING A SHIP'], ['fast', 'UNDER PAR', 'CLEAR A PLANET UNDER ITS PAR TIME'],
-  ['ranks', 'S RANK', 'EARN RANK S OR BETTER ON A PLANET'], ['sss', 'TRIPLE S', 'EARN RANK SSS ON A PLANET'], ['arsenal', 'FULL ARSENAL', 'MAX EVERY WEAPON AT ONCE'], ['drones', 'SIX PACK', 'FLY WITH SIX DRONES'], ['god', 'GOD MODE', 'ROLL GOD MODE ON THE WILDCARD'],
+  ['ranks', 'S RANK', 'EARN RANK S OR BETTER ON A PLANET'], ['sss', 'TRIPLE S', 'EARN RANK SSS ON A PLANET'], ['arsenal', 'FULL ARSENAL', 'MAX EVERY WEAPON AT ONCE'], ['drones', 'SIX PACK', 'FLY WITH SIX DRONES'], ['god', 'GOD MODE', 'PICK UP GOD MODE'],
   ['score1', 'HIGH ROLLER', 'SCORE 250000 IN ONE RUN'], ['score2', 'MILLIONAIRE', 'SCORE 1000000 IN ONE RUN'], ['kills', 'EXTERMINATOR', 'DESTROY 1000 ENEMIES IN TOTAL'], ['coop', 'WINGMATES', 'CLEAR A PLANET IN CO-OP'], ['rush', 'GAUNTLET', 'BEAT ALL TWELVE IN BOSS RUSH']];
 // boss rush: every boss and miniboss back to back. Planets start at the checkpoint before the boss, bonus stages just before their miniboss, arenas skip their waves
 const RUSH = ['earth', 'arena-earth', 'moon', 'mars', 'arena-mars', 'sun', 'jupiter', 'arena-jupiter', 'belt', 'x', 'arena-x', 'pluto'], RUSHZ = { moon: 286, sun: 286, belt: 291, pluto: 286 };
@@ -57,7 +57,7 @@ export function mountShift(root, host = {}) {
 <div class="ds-rotate" hidden><div>TURN YOUR SCREEN SIDEWAYS</div><button type="button">PLAY ANYWAY</button></div></section>`;
   const shell = root.querySelector('.ds-shell'), stage = root.querySelector('.ds-stage'), canvas = root.querySelector('canvas'), ctx = canvas.getContext('2d'), touchEl = root.querySelector('.ds-touch'), stickEl = root.querySelector('.ds-stick'), nubEl = root.querySelector('.ds-nub'), rotEl = root.querySelector('.ds-rotate');
   const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
-  const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: coarse ? 'low' : 'high', shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true, assist: false, ghost: true, crt: false, skin: 0 }, LS.get('opt', {})); const saveOpt = () => LS.set('opt', opt);
+  const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: coarse ? 'low' : 'high', shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true, assist: false, ghost: true, crt: false, skin: 0, autobomb: false }, LS.get('opt', {})); const saveOpt = () => LS.set('opt', opt);
   // ship skins: looks only. Each is earned with an achievement, or owned through the host site's store when it sells them
   const SKIN = [['PILOT'], ['FIRE MAGE', 'mars', 'DEFEAT THE COLOSSUS', 'shift-fire-mage'], ['DARK LORD', 'x', 'DEFEAT THE SHIFTER', 'shift-dark-lord']];
   let owned = LS.get('owned', []), forSale = [], skinView = opt.skin | 0; if (host.skins) Promise.resolve().then(() => host.skins()).then(r => { if (r && Array.isArray(r.owned)) { owned = r.owned; LS.set('owned', owned); } if (r && Array.isArray(r.forSale)) forSale = r.forSale; }).catch(() => { });
@@ -140,6 +140,7 @@ export function mountShift(root, host = {}) {
     { label: () => 'IDLE MODE  ' + onoff(opt.idle), adj: () => setIdle(!opt.idle) },
     { label: () => 'RIVET-9 ASSIST  ' + onoff(opt.assist), adj: () => setAssist(!opt.assist) },
     { label: () => 'BEST RUN GHOST  ' + onoff(opt.ghost), adj: () => { opt.ghost = !opt.ghost; saveOpt(); if (!opt.ghost) ghost = null; } },
+    { label: () => 'AUTO DETONATE  ' + onoff(opt.autobomb), adj: () => { opt.autobomb = !opt.autobomb; saveOpt(); } },
     { label: () => 'SHIP SKIN  ' + SKIN[skinView][0] + (skinOk(skinView) ? '' : '  (LOCKED)'), adj: d => { skinView = (skinView + (d < 0 ? SKIN.length - 1 : 1)) % SKIN.length; audio.sfx('blip'); if (skinOk(skinView)) { opt.skin = skinView; saveOpt(); } else toast('LOCKED', SKIN[skinView][2] + (forSale.includes(SKIN[skinView][3]) ? ' OR BUY IT IN THE SPARKZ STORE' : '')); } },
     { label: () => 'CRT FILTER  ' + onoff(opt.crt), adj: () => { opt.crt = !opt.crt; saveOpt(); } },
     { label: 'CONTROLS', act: () => push({ title: 'CONTROLS', kind: 'controls', items: [{ label: 'BACK', act: popMenu }] }) },
@@ -273,6 +274,7 @@ export function mountShift(root, host = {}) {
     if (i.pause && !prevIn.pause) { pauseMenu(); prevIn = i; return; }
     let ins; if (opt.idle) { assisted = true; rec = null; ins = g.players.map((_, k) => autopilot(g, k)); } else if (coop) ins = [i.p1 || i, i.p2 || {}];
     else { let a = i; if (g.level.rules?.arena && !i.aim && lastDev === 'kb' && performance.now() - mouse.t < 5000) { const p = g.players[0]; let wx, wz; const pv = PIV[g.view === 3 ? 3 : 1], ux = pv[0] + (mouse.x - pv[0]) / 0.52, uy = pv[1] + (mouse.y - pv[1]) / 0.52; /* undo the arena zoom */ if (g.view === 3) { wx = (ux - 480) / 40; wz = (480 - uy) / 19; } else { wx = (uy - 319 + 11 / 26 * (ux - 150)) / 15.923; wz = (ux - 150 - 14 * wx) / 26; } i.aim = [wx - p.x, wz - p.z]; if (mouse.down) i.fire = true; }
+      if (opt.autobomb && g.state === 'play' && g.intro <= 0 && g.tick % 600 === 599 && g.players[0].bombs > 0 && g.players[0].dead <= 0) i.bomb = true; /* auto detonate: a bomb every ten seconds while you have one */
       if (rec) { const c = enc(i), r = rec.runs, n = r.length; if (n && r[n - 2] === c) r[n - 1]++; else r.push(c, 1); a = dec(c); } ins = [a]; }
     step(g, ins); prevIn = i; if (!opt.idle && g.tick % 30 === 0) achTick();
     if (ghost) { if (ghost.g.state === 'play' && ghost.k < ghost.runs.length) { step(ghost.g, [dec(ghost.runs[ghost.k])]); if (++ghost.n >= ghost.runs[ghost.k + 1]) { ghost.k += 2; ghost.n = 0; } } else ghost = null; }
@@ -324,7 +326,7 @@ export function mountShift(root, host = {}) {
   function drawControls() { const pn = padNames(), rows = [['MOVE', 'ARROWS / WASD', 'D-PAD'], ['FIRE', 'SPACE / Z / J', pn[0]], ['CHANGE SPEED', 'V / F', pn[1]], ['BOMB', 'X / K', pn[2]], ['DRONE MODE', 'C / L', pn[3]], ['SHIFT VIEW', 'SHIFT KEYS / Q E', pn[4]], ['BUY UPGRADE', 'ENTER / R', pn[5]], ['PAUSE', 'ESC / P', pn[6]]];
     text(ctx, 'KEYBOARD', 430, 150, 8, '#2ee6ff', { glow: false }); text(ctx, 'CONTROLLER', 660, 150, 8, '#ff3df0', { glow: false });
     rows.forEach((r, k) => { const y = 172 + k * 24; text(ctx, r[0], 210, y, 10, '#ffe14a', { glow: false }); text(ctx, r[1], 430, y, 10, '#ffffff', { glow: false }); text(ctx, r[2], 660, y, 10, '#ffffff', { glow: false }); });
-    text(ctx, 'TOUCH: DRAG LEFT SIDE TO FLY. BUTTONS ON THE RIGHT.', 480, 372, 8, '#9fb0ff', { align: 'center', glow: false }); text(ctx, 'EACH POD MOVES THE HIGHLIGHT ALONG THE BAR. BUY WHAT IS LIT. ??? IS A WILDCARD: NUKE, OVERDRIVE OR GOD MODE.', 480, 392, 6.5, '#9fb0ff', { align: 'center', glow: false });
+    text(ctx, 'TOUCH: DRAG LEFT SIDE TO FLY. BUTTONS ON THE RIGHT.', 480, 372, 8, '#9fb0ff', { align: 'center', glow: false }); text(ctx, 'EACH POD MOVES THE HIGHLIGHT ALONG THE BAR. BUY WHAT IS LIT. HYPER OPENS ONCE THE REST IS MAXED: 15 PERCENT MORE DAMAGE, FOR GOOD.', 480, 392, 6.5, '#9fb0ff', { align: 'center', glow: false });
     text(ctx, 'SHIFT AT THE LAST MOMENT TO DODGE SOMETHING AND YOU GET A PERFECT SHIFT: SHOCKWAVE, OVERDRIVE AND A BONUS.', 480, 406, 6.5, '#ffffff', { align: 'center', glow: false }); text(ctx, 'ARENAS: RIGHT STICK OR MOUSE AIMS.   CO-OP: P1 KEYBOARD, P2 CONTROLLER (OR TWO CONTROLLERS).', 480, 420, 6.5, '#9fb0ff', { align: 'center', glow: false }); }
   function drawScroll(m) { const ST = { h1: [20, '#2ee6ff', 34], h2: [15, '#ffe14a', 30], h3: [11, '#ff3df0', 24], q: [8, '#3dffb0', 16], b: [8, '#ffffff', 16], p: [8, '#c7cdf0', 16] }; let y = 96 - m.off, total = 0;
     ctx.save(); ctx.beginPath(); ctx.rect(50, 86, 860, 340); ctx.clip();

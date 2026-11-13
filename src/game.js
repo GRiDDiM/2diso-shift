@@ -4,16 +4,17 @@
 export const VIEWS = ['SIDE', 'ISO', 'CHASE', 'TOP'];
 export const MASK = [[0, 1, 1], [1, 1, 1], [1, 1, 1], [1, 0, 1]]; // which of x,y,z count in each view
 export const AR = { x: 12.5, z0: 0.8, z1: 33 }; // the bonus arena floor
-export const B = { x: 8.2, y0: 0.6, y1: 9.1, z0: 0.5, z1: 20 };
-export const BAR = ['DRONE', 'MISSILE', 'LASER', 'WAVE', 'BOLT', 'SPREAD', 'SHIELD', 'BOMB', '???'];
-export const BARMAX = [6, 3, 3, 3, 3, 3, 3, 3, 99];
+export const B = { x: 8.2, y0: 0.6, y1: 9.1, z0: 0.5, z1: 26, zb: 20 }; // z1: how far up the screen the ship can fly; zb: the same in a boss or miniboss fight, whose attacks are built for the shorter field
+export const BAR = ['DRONE', 'MISSILE', 'LASER', 'WAVE', 'BOLT', 'SPREAD', 'SHIELD', 'BOMB', 'HYPER'];
+export const BARMAX = [6, 3, 3, 3, 3, 3, 3, 3, 1];
+export const hyperOk = p => p.up[0] >= 6 && p.up[1] >= 3 && p.up[2] >= 3 && p.up[3] >= 3 && p.up[4] >= 3 && p.up[5] >= 3 && p.up[7] >= 3; // HYPERDRIVE opens once drones, every weapon and the bomb are maxed (shields come and go, so they do not count)
 const EFF = [0, 2, 4, 5]; // three ranks per weapon: the weak early ranks are skipped, rank 3 is still the full max effect
 export const U = { DRONE: 0, MISSILE: 1, LASER: 2, WAVE: 3, BOLT: 4, SPREAD: 5, SHIELD: 6, BOMB: 7, WILD: 8 };
 export const TIER = { 5: [, 'TWIN FAN', 'STAR FAN', 'NOVA FAN'], 2: [, 'FOCUS', 'LANCE', 'PRISM'], 3: [, 'WIDE', 'TIDAL', 'TSUNAMI'], 4: [, 'FORK', 'CHAIN', 'STORM'], 1: [, 'SWARM', 'BARRAGE', 'CLUSTER'], 7: [, 'SWEEP BOMB', 'SCATTER BOMB', 'MEGA NUKE'] };
 export const DRONE_MODES = ['TRAIL', 'ORBIT', 'WALL', 'HUNT'];
 export const GEARS = ['SLOW', 'CRUISE', 'FAST', 'TURBO'], GEARMUL = [0.58, 0.82, 1.2, 1.7];
 export const SK = 1 / 1.3; // ships, enemies, shots and pickups are this much smaller than the level they fly through: the camera is in effect 30% further back, with the level built 30% bigger to match
-export const SCROLL = 7, DT = 1 / 60, SPAWN_Z = 30, INTRO = 132, INTRO_RUN = 46;
+export const SCROLL = 7, DT = 1 / 60, SPAWN_Z = 39, INTRO = 132, INTRO_RUN = 46;
 
 function rng(seed) { let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -105,6 +106,7 @@ function kill(g, e) {
 export function damage(g, e, d) {
   if (e.hp <= 0) return;
   if (e.type === 'boss' && !(e.vuln || []).includes(g.view)) { if (g.tick % 8 === 0) g.fx.push('ting'); e.deflect = 6; return; }
+  if (g.players[0].up[U.WILD]) d *= 1.15; /* hyperdrive */
   e.hp -= d; e.hit = 9; e.hbT = 75; e.dAcc = (e.dAcc || 0) + d; // a health bar while it is being hit, and the damage floats off it in batches
   if (g.tick - (e.dT || -99) >= 10 && g.pops.length < 70) { e.dT = g.tick; const j = ((g.tick * 7) % 11 - 5) * 0.09; pop(g, '' + Math.max(1, Math.round(e.dAcc * 10)), e.x + j, e.y + (e.hy ?? e.r) * 0.6, e.z, '#ffffff'); g.pops[g.pops.length - 1].sm = true; e.dAcc = 0; }
   if (e.hp <= 0) { if (e.type === 'boss') e.hp = 0; else kill(g, e); }
@@ -114,7 +116,7 @@ function hurt(g, p) {
   if (p.shield > 0 && g.loop < 3) { p.shield = g.loop >= 2 ? 0 : p.shield - 1; p.inv = LOOP.inv[lp(g)]; /* loop 3: one hit strips every layer. loop 4: shields do nothing */ g.fx.push('shield'); explode(g, p.x, p.y, p.z, '#5ee7ff', 12, 7); g.shake = 6; return; }
   explode(g, p.x, p.y, p.z, '#ffffff', 46, 15); explode(g, p.x, p.y, p.z, '#ff3df0', 30, 10); g.fx.push('die'); g.shake = 14; g.flash = 10; g.chain = 0; g.stats.deaths++;
   if (g.level.bonus && !g.mut.rush) { p.dead = 1e9; g.state = 'over'; g.endT = 0; return; } // a bonus stage just ends; it never costs a ship (in boss rush it costs one like anywhere else)
-  p.lives--; p.dead = 70;
+  p.lives--; p.dead = 70; if (g.gear) { g.gear = 0; g.apGear = false; } /* back to SLOW, so the next ship is not thrown straight into traffic */
   for (let k = 1; k <= 5; k++) p.up[k] = 0; g.players[0].cursor = -1; for (let k = 0, n = g.boss ? 4 : 2; k < n; k++) addPod(g, (k - (n - 1) / 2) * 2.6, 4.6, 13 + k * 2.5); /* a few pods to start rebuilding with, more in a boss fight */ pop(g, 'WEAPONS LOST', p.x, p.y + 2, p.z + 2, '#ff4d6d', true); // a lost ship takes its weapons with it: drones stay, the guns start over
 }
 function startGod(g, p) { p.god = 660; g.fx.push('god', 'say:god mode'); pop(g, 'GOD MODE!', p.x, p.y + 1, p.z + 2, '#ffffff', true); while (p.drones.length < 6) p.drones.push({ x: p.x, y: p.y, z: p.z, tmp: true }); }
@@ -122,13 +124,14 @@ function buy(g, p) { // in co-op the upgrade bar is the team's: one cursor, one 
   const o = g.players[0], c = o.cursor; if (c < 0) return;
   const lvl = c === U.SHIELD ? o.shield : o.up[c];
   if (lvl >= BARMAX[c]) { g.fx.push('deny'); pop(g, 'MAXED', p.x, p.y + 1, p.z + 1, '#ff4d6d'); return; }
+  if (c === U.WILD && !hyperOk(o)) { g.fx.push('deny'); pop(g, 'LOCKED - MAX EVERYTHING ELSE FIRST', p.x, p.y + 1, p.z + 1, '#ff4d6d'); return; }
   if (c === U.SHIELD) for (const q of g.players) q.shield++;
-  else if (c === U.WILD) { const r = g.rand(); if (r < 0.34) { nuke(g, p, false); pop(g, 'NUKE!', p.x, p.y + 1, p.z + 2, '#ff8a2b', true); g.fx.push('say:nuke'); } else if (r < 0.67) { p.over = 720; pop(g, 'OVERDRIVE!', p.x, p.y + 1, p.z + 2, '#ffe14a', true); g.fx.push('say:overdrive'); } else startGod(g, p); }
+  else if (c === U.WILD) { o.up[c] = 1; pop(g, 'HYPERDRIVE ONLINE', p.x, p.y + 1, p.z + 2, '#ffffff', true); g.fx.push('say:hyperdrive online', 'god'); g.flash = 10; for (let i = 0; i < 4; i++) g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.4, vr: 10 + i * 7, life: 26, max: 26, col: ['#ffffff', '#ffe14a', '#7df9ff', '#ff3df0'][i] }); } // one point, for good: 15% more damage from everything, and it survives losing a ship
   else { o.up[c]++; if (c === U.DRONE) for (const q of g.players) { const t = q.drones.find(d => d.tmp); if (t) t.tmp = false; else if (q.drones.length < 6) q.drones.push({ x: q.x, y: q.y, z: q.z }); } }
   if (c !== U.WILD) { const l = c === U.SHIELD ? o.shield : o.up[c], nm = TIER[c]?.[l]; pop(g, (nm || BAR[c]) + (nm ? '' : ' ' + l), p.x, p.y + 1, p.z + 2, '#3dffb0', true); g.fx.push('say:' + (nm || BAR[c] + (l >= BARMAX[c] ? ' maxed' : ' level ' + l))); }
   o.cursor = -1; g.fx.push('upgrade'); addScore(g, 500, p.x, p.y + 1.6, p.z, '#ffe14a'); // spending a pod always pays, so pods still matter once everything is maxed
 }
-function bombHit(g, e, d, bd) { if (e.type === 'boss') { if ((e.vuln || []).includes(g.view)) { e.hp = Math.max(0, e.hp - bd); e.hit = 9; e.hbT = 75; } } else damage(g, e, d); }
+function bombHit(g, e, d, bd) { if (e.type === 'boss') { if ((e.vuln || []).includes(g.view)) { e.hp = Math.max(0, e.hp - bd * (g.players[0].up[U.WILD] ? 1.15 : 1)); e.hit = 9; e.hbT = 75; } } else damage(g, e, d); }
 function blastArea(g, b, test, d, bd) { // everything a blast touches: shots vanish, each enemy and breakable is hit once per blast
   for (const q of g.ebul) if (q.life > 0 && test(q, 0.3)) { q.life = 0; if (g.parts.length < 600) g.parts.push({ x: q.x, y: q.y, z: q.z, vx: 0, vy: 3, vz: 0, life: 8, max: 8, col: '#ffe14a' }); }
   for (let i = 0, n = g.enemies.length; i < n; i++) { const e = g.enemies[i]; if (e.hp > 0 && e.bh !== b.id && e.z < SPAWN_Z + 6 && test(e, e.type === 'boss' ? 3 : e.r || 0.6)) { e.bh = b.id; bombHit(g, e, d, bd); } }
@@ -203,6 +206,7 @@ export function step(g, inputs) {
   }
   const dt = DT * (g.boss?.dying ? 0.3 : g.shiftT > 0 ? 0.4 : 1); if (g.state === 'play' && !g.boss?.dying) g.stats.ticks++; // the world slows while you roll, so there is time to line up
 
+  { const zt = g.boss || g.mini ? B.zb : B.z1; g.zLim = (g.zLim ?? zt) + (zt - (g.zLim ?? zt)) * 0.04; }
   // ----- players: shift, move, shoot -----
   if (playing) for (const p of P) {
     const inp = inputs[p.i] || {}, pv = p.prev, edge = k => inp[k] && !pv[k];
@@ -221,7 +225,7 @@ export function step(g, inputs) {
       { const k = p.manual ? 0.6 : 0.4; p.ax += (tx - p.ax) * k; p.az += (tz - p.az) * k; } const n = Math.hypot(p.ax, p.az) || 1; p.ax /= n; p.az /= n; }
     else { if (v === 0) { p.z += ax * sp; p.y -= ay * sp; } else if (v === 3) { p.x += ax * sp; p.z -= ay * sp; } else { p.x += ax * sp; p.y -= ay * sp; }
       if (rules.wind) { const w = rules.wind(g); p.x += w[0] * DT; p.y += w[1] * DT; } if (pull) { p.x += pull[0] * DT; p.y += pull[1] * DT; p.z += pull[2] * DT; }
-      p.x = clamp(p.x, -B.x, B.x); p.y = clamp(p.y, B.y0 + (rules.arena ? 0 : groundAt(g, p.z)), B.y1); p.z = clamp(p.z, B.z0, B.z1); } /* the ship rides up over hills */
+      p.x = clamp(p.x, -B.x, B.x); p.y = clamp(p.y, B.y0 + (rules.arena ? 0 : groundAt(g, p.z)), B.y1); p.z = clamp(p.z, B.z0, g.zLim); } /* the ship rides up over hills */
     p.mvx += (clamp((p.x - ox) / sp, -1, 1) - p.mvx) * 0.22; p.mvy += (clamp((p.y - oy) / sp, -1, 1) - p.mvy) * 0.22; // the ship banks when it slides sideways and noses up or down when it climbs or dives
     p.hist.push(p.x, p.y, p.z); if (p.hist.length > 3 * 80) p.hist.splice(0, 3);
     if (p.inv > 0) p.inv--; if (p.over > 0) p.over--;
@@ -246,7 +250,7 @@ export function step(g, inputs) {
       if (p.dmode === 0) { const i = p.hist.length - 3 * (k + 1) * 9; if (i >= 0) { tx = p.hist[i]; ty = p.hist[i + 1]; tz = p.hist[i + 2]; } }
       else if (p.dmode === 1) { const a = g.tick * 0.06 + k * 6.283 / n, c = Math.cos(a) * 1.35, s = Math.sin(a) * 1.35; if (vw === 0) { ty += c; tz += s; } else if (vw === 3) { tx += c; tz += s; } else { tx += c; ty += s; } }
       else if (p.dmode === 2) { const o = ((k + 2) >> 1) * 1.05 * (k % 2 ? 1 : -1); tz += 1.3; if (vw === 0) ty += o; else tx += o; }
-      else { let best = null, bd = 1e9; for (const e of g.enemies) { if (e.hp <= 0 || e.z > 26 || e.z < 0) continue; const dd = Math.hypot(e.x - d.x, e.y - d.y, e.z - d.z); if (dd < bd) { bd = dd; best = e; } } if (best) { tx = best.x; ty = best.y; tz = Math.max(p.z, best.z - 4); } else { tx += (k - n / 2) * 1.2; tz += 1; } }
+      else { let best = null, bd = 1e9; for (const e of g.enemies) { if (e.hp <= 0 || e.z > 34 || e.z < 0) continue; const dd = Math.hypot(e.x - d.x, e.y - d.y, e.z - d.z); if (dd < bd) { bd = dd; best = e; } } if (best) { tx = best.x; ty = best.y; tz = Math.max(p.z, best.z - 4); } else { tx += (k - n / 2) * 1.2; tz += 1; } }
       if (rules.arena) ty = 4.5; d.x += (tx - d.x) * 0.16; d.y += (clamp(ty, 0.4, 9) - d.y) * 0.16; d.z += (tz - d.z) * 0.16;
       if (firing && (g.tick + k * 4) % (od ? 9 : 17) === 0 && g.shots.length < 420) g.shots.push({ x: d.x, y: d.y, z: d.z + 0.3, vx: p.ax * 40, vy: 0, vz: p.az * 40, dmg: 0.6, r: 0.25 * SK, kind: 1, life: 50 });
       if (firing && L >= 2 && (g.tick + k * 5) % 16 === 0) beam(g, d.x, d.y, d.z + 0.3, 0.2, 0.2 * L, '#b06bff', { dx: p.ax, dz: p.az });
@@ -296,11 +300,11 @@ export function step(g, inputs) {
   }
   // ----- shots -----
   for (const s of g.shots) {
-    if (s.kind === 3) { s.t++; s.d += s.vz * dt; const w = waveAt(s, s.d); s.x = w[0]; s.y = w[1]; s.z = w[2]; if (s.t % 4 === 0 && g.parts.length < 500) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: (g.rand() - 0.5) * 2, vy: (g.rand() - 0.5) * 2, vz: 3, life: 10, max: 10, col: WAVECOL[s.rk] }); if (--s.life <= 0 || s.z > 34 || s.z < -4 || Math.abs(s.x) > 13) { s.life = 0; continue; }
+    if (s.kind === 3) { s.t++; s.d += s.vz * dt; const w = waveAt(s, s.d); s.x = w[0]; s.y = w[1]; s.z = w[2]; if (s.t % 4 === 0 && g.parts.length < 500) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: (g.rand() - 0.5) * 2, vy: (g.rand() - 0.5) * 2, vz: 3, life: 10, max: 10, col: WAVECOL[s.rk] }); if (--s.life <= 0 || s.z > 44 || s.z < -4 || Math.abs(s.x) > 13) { s.life = 0; continue; }
       for (const e of g.enemies) if (e.hp > 0 && live(e, vw) && ov(s, e, m)) damage(g, e, s.dmg); for (const o2 of g.obs) if (o2.hp != null && solid(o2, vw) && ov(s, o2, m)) { o2.hp -= s.dmg; o2.hit = 2; } for (const b of g.ebul) if (Math.abs(b.z - s.z) < 0.8 && ov(s, b, m)) b.life = 0; continue; }
     if (s.kind === 4) { s.t++; s.trail.push(s.x, s.y, s.z); if (s.trail.length > 210) s.trail.splice(0, 3); const p = P[s.own || 0];
       if (s.t < 52) { const a = s.t * 0.19 + s.ph, R = 2 + s.t * 0.09; const tx = clamp(p.x + Math.cos(a) * R * 1.3, -7.5, 7.5), ty = clamp(p.y + Math.sin(a * 1.3) * R * 0.7, 0.6, 9), tz = p.z + 2 + s.t * 0.16 + Math.sin(a * 0.7) * 2; s.x += (tx - s.x) * 0.3; s.y += (ty - s.y) * 0.3; s.z += (tz - s.z) * 0.3; }
-      else { let best = null, bd = 1e9; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e.z > 30 || e.z < 0 || e === s.skip) continue; const d = Math.hypot(e.x - s.x, e.y - s.y, e.z - s.z) - (e.type === 'boss' ? 6 : 0); if (d < bd) { bd = d; best = e; } }
+      else { let best = null, bd = 1e9; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e.z > 40 || e.z < 0 || e === s.skip) continue; const d = Math.hypot(e.x - s.x, e.y - s.y, e.z - s.z) - (e.type === 'boss' ? 6 : 0); if (d < bd) { bd = d; best = e; } }
         if (best) { const d = Math.hypot(best.x - s.x, best.y - s.y, best.z - s.z) || 1, sp = 46 * dt; if (d < sp + (best.hx ?? best.r)) { damage(g, best, s.dmg); explode(g, best.x, best.y, best.z, '#7df9ff', 8, 8); g.fx.push('zap'); if (s.chain > 0) { s.chain--; s.dmg *= 0.7; s.skip = best; s.x = best.x; s.y = best.y; s.z = best.z; } else s.life = 0; } else { s.x += (best.x - s.x) / d * sp; s.y += (best.y - s.y) / d * sp; s.z += (best.z - s.z) / d * sp; } }
         else { s.z += 30 * dt; if (s.z > 34) s.life = 0; } }
       if (s.t >= 52) for (const o2 of g.obs) if (solid(o2, vw) && ov(s, o2, m)) { s.life = 1; if (o2.hp != null) { o2.hp -= s.dmg; o2.hit = 3; } break; }
@@ -308,10 +312,10 @@ export function step(g, inputs) {
     if (s.kind === 2 && s.hug) { // not a homing missile: it drops (or climbs) to the nearest surface and runs along it
       if (!s.on) { if (s.y <= 0.55 || s.y >= 9.15 || Math.abs(s.x) >= 8.4) { s.on = 1; s.y = clamp(s.y, 0.55, 9.15); s.x = clamp(s.x, -8.4, 8.4); s.vx = 0; s.vy = 0; s.vz = 5; } } else s.vz = Math.min(26, s.vz + 1.1);
       if (g.tick % 5 === 0 && g.parts.length < 500) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: (g.rand() - 0.5) * 1.5, vy: (g.rand() - 0.5) * 1.5, vz: -4, life: 9, max: 9, col: g.tick % 4 ? '#ff8a2b' : '#ffe14a' }); }
-    else if (s.kind === 2) { let best = null, bd = 1e9; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e.z > 30) continue; const d = Math.hypot((e.x - s.x) * m[0], (e.y - s.y) * m[1], e.z - s.z); if (d < bd) { bd = d; best = e; } }
+    else if (s.kind === 2) { let best = null, bd = 1e9; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e.z > 40) continue; const d = Math.hypot((e.x - s.x) * m[0], (e.y - s.y) * m[1], e.z - s.z); if (d < bd) { bd = d; best = e; } }
       if (best) { const d = bd || 1, a = 2.2; s.vx += (best.x - s.x) / d * a * m[0]; s.vy += (best.y - s.y) / d * a * m[1]; s.vz += (best.z - s.z) / d * a; } else s.vz += 1.2; const sp = Math.hypot(s.vx, s.vy, s.vz), mx = 30; if (sp > mx) { s.vx *= mx / sp; s.vy *= mx / sp; s.vz *= mx / sp; }
       if (g.tick % 5 === 0 && g.parts.length < 500) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: (g.rand() - 0.5) * 1.5, vy: (g.rand() - 0.5) * 1.5, vz: -4, life: 9, max: 9, col: g.tick % 4 ? '#ff8a2b' : '#ffe14a' }); }
-    s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt; if (--s.life <= 0 || s.z > 36 || s.z < -3 || Math.abs(s.x) > 13 || s.y < -1 || s.y > 12) { s.life = 0; continue; }
+    s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt; if (--s.life <= 0 || s.z > 46 || s.z < -3 || Math.abs(s.x) > 13 || s.y < -1 || s.y > 12) { s.life = 0; continue; }
     for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e === s.last) continue; if (ov(s, e, m)) { damage(g, e, s.dmg); if (s.pierce > 0) { s.pierce--; s.last = e; } else s.life = 0;
       if (s.aoe) { explode(g, s.x, s.y, s.z, '#ff8a2b', 16, 9); explode(g, s.x, s.y, s.z, '#ffe14a', 8, 5); g.fx.push('boom'); g.shake = Math.max(g.shake, 2); for (const q of g.enemies) if (q !== e && q.hp > 0 && Math.hypot(q.x - s.x, q.y - s.y, q.z - s.z) < s.aoe + q.r) damage(g, q, s.dmg * 0.5); if (s.split) for (let i = 0; i < 3; i++) g.shots.push({ x: s.x, y: s.y, z: s.z, vx: Math.cos(i * 2.1) * 12, vy: Math.sin(i * 2.1) * 12, vz: 4, dmg: 3, r: 0.35, kind: 2, life: 60, aoe: 1.2 }); }
       else if (g.parts.length < 800) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: 0, vy: 3, vz: -6, life: 8, max: 8, col: '#ffffff' }); break; } }
@@ -329,11 +333,11 @@ export function step(g, inputs) {
     if (o.z + o.hz < -5) o.dead = true;
   }
   // ----- enemy bullets -----
-  for (const b of g.ebul) { b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; if (--b.life <= 0 || b.z < -3 || b.z > 36 || Math.abs(b.x) > (rules.arena ? 15 : 12) || b.y < -1 || b.y > 11) b.life = 0; }
+  for (const b of g.ebul) { b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; if (--b.life <= 0 || b.z < -3 || b.z > 46 || Math.abs(b.x) > (rules.arena ? 15 : 12) || b.y < -1 || b.y > 11) b.life = 0; }
   // ----- pods + rings -----
   if (g.blasts.length) blastStep(g, m);
   for (const q of g.pods) { q.t++; q.z -= dz * 0.75; if (q.z < -3) q.dead = true; for (const p of P) { if (p.dead > 0) continue; const dx = (p.x - q.x) * m[0], dy = (p.y - q.y) * m[1], dzz = p.z - q.z, d = Math.hypot(dx, dy, dzz); if (d < 5) { q.x += dx / (d + 0.01) * 9 * dt; q.y += dy / (d + 0.01) * 9 * dt; q.z += dzz / (d + 0.01) * 9 * dt; }
-    if (d < 1.2 && !q.dead) { q.dead = true; if (q.kind === 'pod') { const o = P[0]; let c = o.cursor; for (let k = 0; k < BAR.length; k++) { c = (c + 1) % BAR.length; if ((c === U.SHIELD ? o.shield : o.up[c]) < BARMAX[c]) break; } o.cursor = c; /* maxed slots are skipped */ g.fx.push('pod'); addScore(g, 50); } else if (q.kind === 'god') startGod(g, p); else if (q.kind === 'bomb') { p.bombs = Math.min(9, p.bombs + 1); pop(g, '+BOMB', p.x, p.y + 1, p.z, '#ff8a2b'); g.fx.push('pod'); } else if (q.kind === 'life') { if (p.lives < 9) { p.lives++; pop(g, '1UP!', p.x, p.y + 1.2, p.z, '#3dffb0', true); } else { g.score += 5000; pop(g, '+5000', p.x, p.y + 1.2, p.z, '#3dffb0', true); } g.fx.push('pod', 'ring', 'say:extra ship'); g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.4, vr: 14, life: 24, max: 24, col: '#b06bff' }); } else if (q.kind === 'gem') { g.chain++; g.chainT = 190; addScore(g, 200, q.x, q.y, q.z, '#7df9ff'); g.fx.push('ring'); } } } }
+    if (d < 1.2 && !q.dead) { q.dead = true; if (q.kind === 'pod') { const o = P[0]; let c = o.cursor; for (let k = 0; k < BAR.length; k++) { c = (c + 1) % BAR.length; if ((c === U.SHIELD ? o.shield : o.up[c]) < BARMAX[c] && (c !== U.WILD || hyperOk(o))) break; } o.cursor = c; /* maxed slots are skipped */ g.fx.push('pod'); addScore(g, 50); } else if (q.kind === 'god') startGod(g, p); else if (q.kind === 'bomb') { p.bombs = Math.min(9, p.bombs + 1); pop(g, '+BOMB', p.x, p.y + 1, p.z, '#ff8a2b'); g.fx.push('pod'); } else if (q.kind === 'life') { if (p.lives < 9) { p.lives++; pop(g, '1UP!', p.x, p.y + 1.2, p.z, '#3dffb0', true); } else { g.score += 5000; pop(g, '+5000', p.x, p.y + 1.2, p.z, '#3dffb0', true); } g.fx.push('pod', 'ring', 'say:extra ship'); g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.4, vr: 14, life: 24, max: 24, col: '#b06bff' }); } else if (q.kind === 'gem') { g.chain++; g.chainT = 190; addScore(g, 200, q.x, q.y, q.z, '#7df9ff'); g.fx.push('ring'); } } } }
   for (const r of g.rings) { if (r.stay) { // a warp: fades in, hangs in front of you for a while, fades out. Only CHASE view lines you up with it
       r.t++; if (r.t > r.life) r.dead = true; if (!r.got && vw === 2 && r.t > 45 && playing) for (const p of P) if (p.dead <= 0 && Math.hypot(p.x - r.x, p.y - r.y) < r.r * 0.9) { r.got = true; r.dead = true; if (r.to) { g.flags.arena = true; g.flags.warpTo = r.to; } else g.flags.warp = true; g.flags.warpNow = true; g.score += 5000; pop(g, 'WARP!', p.x, p.y + 1.5, p.z + 3, '#b06bff', true); g.fx.push('warp', 'say:warp found', r.to ? 'toast:ARENA WARP FOUND|' + (lvd.arenaName || 'BONUS ARENA') : 'toast:WARP FOUND|' + (lvd.warpName || '')); g.flash = 16; explode(g, r.x, r.y, p.z, '#b06bff', 60, 16); p.inv = 240; break; } continue; }
     const pz = r.z; r.z -= dz; if (r.z < -4) r.dead = true; if (r.got) continue; for (const p of P) { if (p.dead > 0) continue; if (pz >= p.z && r.z < p.z && live(r, vw) && Math.hypot((p.x - r.x) * m[0], (p.y - r.y) * m[1]) < r.r) { r.got = true;
@@ -400,7 +404,7 @@ export function autopilot(g, i = 0) {
   const ra = A === 'z' ? [1, 2.5, 4, 5.5, 7, 9] : arena ? [-11, -8.25, -5.5, -2.75, 0, 2.75, 5.5, 8.25, 11] : [-7, -5.25, -3.5, -1.75, 0, 1.75, 3.5, 5.25, 7], rb = arena ? [2, 5.5, 9, 12.5, 16, 19.5, 23, 26.5, 30] : Bx === 'z' ? [1, 2.5, 4, 5.5, 7, 9] : [1, 2.1, 3.2, 4.3, 5.4, 6.5, 7.6, 8.5];
   const spd = (8.5 + g.gear * 1.2) * (rules.inertia ? 0.6 : 1);
   let best = null, bc = 1e9; const c = { x: p.x, y: p.y, z: p.z, hx: 0.6, hy: 0.48, hz: 0.72 }, t = { x: 0, y: 0, z: 0, hx: 0, hy: 0, hz: 0 };
-  let tgt = null, td = 1e9; for (const e of g.enemies) if (e.hp > 0 && live(e, v) && e.z > p.z + 2 && e.z < 26) { const d = e.z + (e.type === 'boss' ? -50 : 0); if (d < td) { td = d; tgt = e; } }
+  let tgt = null, td = 1e9; for (const e of g.enemies) if (e.hp > 0 && live(e, v) && e.z > p.z + 2 && e.z < 34) { const d = e.z + (e.type === 'boss' ? -50 : 0); if (d < td) { td = d; tgt = e; } }
   let pod = null; for (const q of g.pods) if (q.z > p.z - 1 && q.z < 16) { pod = q; break; }
   let shade = null; if (rules.heat) { let bd = 1e9; for (const o of g.obs) if (o.kind === 'shade' && o.z + o.hz > p.z + 1.5) { const d = o.z; if (d < bd) { bd = d; shade = o; } } }
   for (const a of ra) for (const b of rb) {
@@ -425,7 +429,7 @@ export function autopilot(g, i = 0) {
   }
   if (best) { p.ap = { v, a: best.a, b: best.b }; const da = best.a - p[A], db = best.b - p[Bx]; out.mx = Math.abs(da) > 0.15 ? Math.sign(da) : 0; out.my = -(Math.abs(db) > 0.15 ? Math.sign(db) : 0); }
   if (bc > 150 && p.bombs > 0 && !pv.bomb && p.inv <= 0) out.bomb = true;
-  const cu = p.cursor; if (cu >= 0 && !pv.upgrade) { const lo = Math.min(p.up[1], p.up[2], p.up[3], p.up[4], p.up[5]); if (cu === 8 || cu === 7 && lo >= 2 && p.up[7] < 3 || cu === 0 && p.up[0] <= lo * 2 + 1 && p.up[0] < 6 || cu >= 1 && cu <= 5 && p.up[cu] <= lo && p.up[cu] < 3 || cu === 6 && p.shield < 2) out.upgrade = true; }
+  const cu = p.cursor; if (cu >= 0 && !pv.upgrade) { const lo = Math.min(p.up[1], p.up[2], p.up[3], p.up[4], p.up[5]); if (cu === 8 && hyperOk(p) || cu === 7 && lo >= 2 && p.up[7] < 3 || cu === 0 && p.up[0] <= lo * 2 + 1 && p.up[0] < 6 || cu >= 1 && cu <= 5 && p.up[cu] <= lo && p.up[cu] < 3 || cu === 6 && p.shield < 2) out.upgrade = true; }
   if (arena) { let bd = 1e9, be = null; for (const e of g.enemies) if (e.hp > 0 && live(e, v)) { const d = Math.hypot(e.x - p.x, e.z - p.z); if (d < bd) { bd = d; be = e; } } if (be) out.aim = [be.x - p.x, be.z - p.z]; } // the autopilot points its guns by hand, like a right stick
   if (g.tick % 8 === 0) { if (g.overLava && g.gear < 3) { out.gear = true; g.apGear = true; } else if (!g.overLava && g.apGear) { if (g.gear !== 0) out.gear = true; else g.apGear = false; } } // idle mode shifts up through lava and back down after
   return out;

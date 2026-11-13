@@ -1,5 +1,5 @@
 // 2DISO SHIFT — neon vector renderer. Everything is glowing lines; four projections of the same 3D world.
-import { VIEWS, BAR, BARMAX, DRONE_MODES, GEARS, MASK, U, solid, WAVECOL, waveAt, groundAt, SK } from './game.js';
+import { VIEWS, BAR, BARMAX, DRONE_MODES, GEARS, MASK, U, solid, WAVECOL, waveAt, groundAt, SK, hyperOk } from './game.js';
 import { text, textWidth } from './font.js';
 export const W = 960, H = 540;
 const TAU = Math.PI * 2;
@@ -19,7 +19,7 @@ function p1(v, x, y, z) {
   X = 480 + (x - cam.x) / d * 440; Y = 300 - (y - cam.y) / d * 440; S = 440 / d / 34; return ok;
 }
 export const PIV = [[200, 285], [400, 356], [480, 285], [480, 425]]; // zoom-out anchor per view (SIDE, ISO, CHASE, TOP): keeps the field centred instead of leaving dead space at the bottom or the left
-function P(x, y, z) {
+function P(x, y, z) { z *= ZS;
   if (mix >= 1) { OK = p1(vB, x, y, z); if (ZK !== 1) { const q = PIV[vB], k = vB ? ZK : ZK + (1 - ZK) * 0.25; X = q[0] + (X - q[0]) * k; Y = q[1] + (Y - q[1]) * k; S *= k; } /* the side view is the widest, so it pulls back a little less */ if (wob) { const c = Math.cos(wob), s = Math.sin(wob), dx = X - 480, dy = Y - 270; X = 480 + dx * c - dy * s; Y = 270 + dx * s + dy * c; } return; }
   const okA = p1(vA, x, y, z), ax = X, ay = Y, as = S, okB = p1(vB, x, y, z);
   let px = ax + (X - ax) * mix, py = ay + (Y - ay) * mix; S = as + (S - as) * mix; OK = mix < 0.5 ? okA : okB; if (ZK !== 1) { const qa = PIV[vA], qb = PIV[vB], qx = qa[0] + (qb[0] - qa[0]) * mix, qy = qa[1] + (qb[1] - qa[1]) * mix; const ka = vA ? ZK : ZK + (1 - ZK) * 0.25, kb = vB ? ZK : ZK + (1 - ZK) * 0.25, k = ka + (kb - ka) * mix; px = qx + (px - qx) * k; py = qy + (py - qy) * k; S *= k; }
@@ -29,9 +29,10 @@ function P(x, y, z) {
 // ---------- line batching: one path per colour, stroked as a neon tube (wide halo, glow, core) ----------
 // lines and filled faces are sorted into depth layers (far to near) so a solid obstacle hides what is behind it
 const NL = 26, layers = Array.from({ length: NL }, () => new Map()), qlay = Array.from({ length: NL }, () => []); let LAY = 0, OCC = false, buckets = layers[0];
-function depth(x, z) { if (!OCC) return; const d = vOcc === 1 ? z - 0.5 * x : z; LAY = Math.max(2, Math.min(NL - 1, ((40 - d) / 1.8) | 0)); buckets = layers[LAY]; }
+function depth(x, z) { if (!OCC) return; z *= ZS; const d = vOcc === 1 ? z - 0.5 * x : z; LAY = Math.max(2, Math.min(NL - 1, ((40 - d) / 1.8) | 0)); buckets = layers[LAY]; }
 function depth0() { LAY = 0; buckets = layers[0]; }
 let vOcc = 0;
+let ZS = 1; // how much the distance ahead is squeezed on screen: below 1 you see further up the level. Models and rings are stretched back so they keep their shape
 let LW = 1, NG = false, HQ = true, ZK = 1; // LW: tube thickness for what is drawn next. NG: no glow (sparks, smoke). HQ: draw the wide outer halo. ZK: camera zoom (pulls back for bosses)
 function seg(x1, y1, z1, x2, y2, z2, col, a = 1) {
   P(x1, y1, z1); if (!OK) return; const ax = X, ay = Y; P(x2, y2, z2); if (!OK) return;
@@ -88,10 +89,10 @@ function mesh(M, x, y, z, s, yaw, pitch, roll, col, a = 1) {
   const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll), sr = Math.sin(roll);
   for (const pl of M) { let lx = 0, ly = 0, lz = 0; for (let i = 0; i < pl.length; i++) { let [px, py, pz] = pl[i];
     let t = px * cr - py * sr; py = px * sr + py * cr; px = t; t = py * cp - pz * sp; pz = py * sp + pz * cp; py = t; t = px * cy + pz * sy; pz = -px * sy + pz * cy; px = t;
-    px = x + px * s; py = y + py * s; pz = z + pz * s; if (i) seg(lx, ly, lz, px, py, pz, col, a); lx = px; ly = py; lz = pz; } }
+    px = x + px * s; py = y + py * s; pz = z + pz * s / ZS; if (i) seg(lx, ly, lz, px, py, pz, col, a); lx = px; ly = py; lz = pz; } }
 }
 function circle(x, y, z, r, col, a = 1, n = 18, plane = 0, rot = 0) {
-  let lx, ly, lz; for (let i = 0; i <= n; i++) { const t = rot + i / n * TAU, c = Math.cos(t) * r, s = Math.sin(t) * r; const px = plane === 2 ? x : x + c, py = plane === 1 ? y : y + (plane === 2 ? c : s), pz = plane === 0 ? z : z + s; if (i) seg(lx, ly, lz, px, py, pz, col, a); lx = px; ly = py; lz = pz; }
+  let lx, ly, lz; for (let i = 0; i <= n; i++) { const t = rot + i / n * TAU, c = Math.cos(t) * r, s = Math.sin(t) * r; const px = plane === 2 ? x : x + c, py = plane === 1 ? y : y + (plane === 2 ? c : s), pz = plane === 0 ? z : z + s / ZS; if (i) seg(lx, ly, lz, px, py, pz, col, a); lx = px; ly = py; lz = pz; }
 }
 function zig(x1, y1, z1, x2, y2, z2, col, a, n, amp, t) { let lx = x1, ly = y1, lz = z1; for (let i = 1; i <= n; i++) { const f = i / n, j = i < n ? amp : 0, px = x1 + (x2 - x1) * f + (hash(i * 7 + t) - 0.5) * j, py = y1 + (y2 - y1) * f + (hash(i * 13 + t) - 0.5) * j, pz = z1 + (z2 - z1) * f; seg(lx, ly, lz, px, py, pz, col, a); lx = px; ly = py; lz = pz; } }
 
@@ -152,6 +153,7 @@ function drawShip(g, p, t) {
   const roll = -p.mvx * 0.8 + (g.shiftT > 0 ? g.shiftDir * ease(1 - g.shiftT) * TAU : 0), pitch = -p.mvy * 0.55;
   const yaw = Math.atan2(p.ax || 0, p.az ?? 1), fx = p.ax || 0, fz = p.az ?? 1;
   { const flap = SKI === 1 ? Math.sin(t * 0.3) * 0.16 : 0; mesh(M[0], p.x, p.y, p.z, SK, yaw, pitch, roll, c1); mesh(M[1], p.x, p.y + flap * 0.2, p.z, SK, yaw, pitch, roll + flap * 0.25, c2); mesh(M[2], p.x, p.y, p.z, SK, yaw, pitch, roll, c3); }
+  if (g.players[0].up[8]) { for (let k = 0; k < 5; k++) { const q = (t >> 2) + k * 7, h = hash(q * 1.7 + k), h2 = hash(q * 2.9 + k * 3), h3 = hash(q * 4.1), ox = (h - 0.5) * 1.9, oz = (h2 - 0.5) * 2.4, oy = (h3 - 0.5) * 0.7, wx = p.x + fz * ox + fx * oz, wz = p.z - fx * ox + fz * oz, r = 0.07 + 0.13 * ((t & 3) / 3), c = ['#ffffff', '#ffe14a', '#7df9ff', '#ff3df0', '#ffffff'][k]; seg(wx - r, p.y + oy, wz, wx + r, p.y + oy, wz, c); seg(wx, p.y + oy - r, wz, wx, p.y + oy + r, wz, c); seg(wx, p.y + oy, wz - r / ZS, wx, p.y + oy, wz + r / ZS, c); } } // hyperdrive: the ship glitters
   if (SKI === 1) { for (let k = 0; k < 3; k++) { const h = hash(t * 3 + k * 17 + p.i), h2 = hash(t * 5 + k * 31), ox = (h - 0.5) * 1.5, oz = -0.2 - h2 * 0.9, wx = p.x + fz * ox + fx * oz, wz = p.z - fx * ox + fz * oz; seg(wx, p.y, wz, wx - fx * 0.3, p.y + 0.18 + h2 * 0.3, wz - fz * 0.3, k % 2 ? '#ffe14a' : '#ff6a1f', 0.8); } } // embers lifting off the wings
   if (SKI === 2) { LW = 1.3; for (let k = -2; k <= 2; k++) { const ox = k * 0.22, w1 = Math.sin(t * 0.17 + k * 1.3) * 0.16, w2 = Math.sin(t * 0.11 + k * 2.1) * 0.3, l = 0.7 + Math.abs(k) * 0.28, ax = p.x + fz * ox - fx * 0.55, az = p.z - fx * ox - fz * 0.55, bx = ax + fz * w1 - fx * l * 0.5, bz = az - fx * w1 - fz * l * 0.5, cx = ax + fz * w2 - fx * l, cz = az - fx * w2 - fz * l; seg(ax, p.y, az, bx, p.y - 0.04, bz, k % 2 ? '#3dffb0' : '#7a3cff', 0.75); seg(bx, p.y - 0.04, bz, cx, p.y - 0.1, cz, k % 2 ? '#3dffb0' : '#7a3cff', 0.3); } LW = 1; } // the cloak: wisps trailing off the ragged edge
   const fl = 0.35 + (g.speedMul - 0.7) * 1.1 + Math.random() * 0.3; for (const s of [-0.17, 0.17]) { const bx = p.x + fz * s - fx * 0.65, bz = p.z - fx * s - fz * 0.65; seg(bx, p.y, bz, bx - fx * fl, p.y, bz - fz * fl, SKN.jet[0]); seg(bx, p.y, bz, bx - fx * fl * 0.6 - fz * s * 0.6, p.y, bz - fz * fl * 0.6 + fx * s * 0.6, SKN.jet[1], 0.7); }
@@ -164,10 +166,10 @@ function drawShip(g, p, t) {
 let GHg = null; const GH = z => GHg ? groundAt(GHg, z) : 0; // ground height under a point, when the level has hills
 function backdrop(g, th, t) { GHg = g.level.hills && g.level.hills.length && !th.arena ? g : null;
   const gc = th.grid || '#2443c8', off = g.camZ % 3, base = Math.floor(g.camZ / 4), sky = th.sky, dim = vB === 0 ? 0.2 : 0.5;
-  const gx = th.arena ? 13.5 : 9, gz1 = th.arena ? 36 : 30;
+  const gx = th.arena ? 13.5 : 9, gz1 = th.arena ? 36 : 30 / ZS;
   if (!th.nofloor && sky === 'volcano') terrainFloor(g, gc, gx, gz1, th);
-  else if (!th.nofloor) { for (let k = 0; k < (th.arena ? 14 : 12); k++) { const z = -3 - off + k * 3; if (sky === 'sun' || th.trippy) { let lx = -9, ly = Math.sin(z * 0.5 + t * 0.05 - 9 * 0.6) * 0.3; for (let x = -6; x <= 9; x += 3) { const y = Math.sin(z * 0.5 + t * 0.05 + x * 0.6) * 0.3; seg(lx, ly + 0.3 + GH(z), z, x, y + 0.3 + GH(z), z, gc, 0.6); lx = x; ly = y; } } else seg(-gx, GH(z), z, gx, GH(z), z, gc, 0.55); } for (let x = -gx; x <= gx; x += th.arena ? 4.5 : 3) { if (!GHg) seg(x, 0, -3, x, 0, gz1, gc, 0.55); else for (let k = 0; k < 11; k++) { const z = -3 - off + k * 3; seg(x, GH(z), z, x, GH(z + 3), z + 3, gc, 0.55); } } }
-  if (GHg && vB === 0) { NG = true; for (let z = -3; z < 37; z += 0.75) { const a = GH(z), b2 = GH(z + 0.75); if (a > 0.02 || b2 > 0.02) { LW = 2.2; seg(0, a, z, 0, b2, z + 0.75, '#ffffff', 0.75); LW = 1; seg(0, 0, z, 0, a, z, gc, 0.5); } } NG = false; } // side on, a hill is a bright ridge line with hatching under it
+  else if (!th.nofloor) { for (let k = 0; k < (th.arena ? 14 : 16); k++) { const z = -3 - off + k * 3; if (z > gz1 + 3) break; if (sky === 'sun' || th.trippy) { let lx = -9, ly = Math.sin(z * 0.5 + t * 0.05 - 9 * 0.6) * 0.3; for (let x = -6; x <= 9; x += 3) { const y = Math.sin(z * 0.5 + t * 0.05 + x * 0.6) * 0.3; seg(lx, ly + 0.3 + GH(z), z, x, y + 0.3 + GH(z), z, gc, 0.6); lx = x; ly = y; } } else seg(-gx, GH(z), z, gx, GH(z), z, gc, 0.55); } for (let x = -gx; x <= gx; x += th.arena ? 4.5 : 3) { if (!GHg) seg(x, 0, -3, x, 0, gz1, gc, 0.55); else for (let k = 0; k < 11; k++) { const z = -3 - off + k * 3; seg(x, GH(z), z, x, GH(z + 3), z + 3, gc, 0.55); } } }
+  if (GHg && vB === 0) { NG = true; for (let z = -3; z < 37 / ZS; z += 0.75) { const a = GH(z), b2 = GH(z + 0.75); if (a > 0.02 || b2 > 0.02) { LW = 2.2; seg(0, a, z, 0, b2, z + 0.75, '#ffffff', 0.75); LW = 1; seg(0, 0, z, 0, a, z, gc, 0.5); } } NG = false; } // side on, a hill is a bright ridge line with hatching under it
   if (th.arena) { const c = th.arena, pu = 0.7 + 0.3 * Math.sin(t * 0.08); for (const y of [0.02, 4.5]) { const al = y < 1 ? 1 : 0.35 * pu; seg(-13.4, y, -0.4, 13.4, y, -0.4, c, al); seg(13.4, y, -0.4, 13.4, y, 34.2, c, al); seg(13.4, y, 34.2, -13.4, y, 34.2, c, al); seg(-13.4, y, 34.2, -13.4, y, -0.4, c, al); } for (const [x, z] of [[-13.4, -0.4], [13.4, -0.4], [13.4, 34.2], [-13.4, 34.2]]) seg(x, 0, z, x, 4.5, z, c, 0.8); circle(0, 0.02, 17, 3 + Math.sin(t * 0.04), c, 0.4, 24, 1, t * 0.01); circle(0, 0.02, 17, 8, c, 0.2, 30, 1, -t * 0.006); circle(0, 0.02, 17, 12.5, c, 0.12, 36, 1, t * 0.004);  arenaFloor(th.sky, c, t); }
   for (let k = -1; k < 9; k++) { const id = base + k, z = id * 4 - g.camZ + 2; for (const s of [-1, 1]) { const r1 = hash(id * 2 + s), r2 = hash(id + s * 9), x = s * (11 + hash(id * 3 + s) * 2);
     if (sky === 'city') { const h = 2 + r1 * 7; box({ x, y: h / 2, z, hx: 1 + r2 * 0.8, hy: h / 2, hz: 1.5 }, s > 0 ? '#7a2bd6' : '#2b56d6', dim, vB === 0 ? 0 : 2); }
@@ -384,7 +386,7 @@ export function drawWorld(ctx, g, o = {}) {
   const t = g.tick, p0 = g.players[0], th = g.level.theme || {}; SKI = o.skin | 0; SKN = SKINS[SKI] || SKINS[0];
   vA = g.viewFrom; vB = g.view; mix = g.shiftT > 0 ? ease(1 - g.shiftT) : 1; rollA = g.shiftT > 0 ? g.shiftDir * mix * TAU : 0; wob = th.trippy ? Math.sin(t * 0.013) * 0.05 : 0;
   { const al = g.players.filter(q => q.dead <= 0), n = al.length || 1, cx = al.length ? al.reduce((a, q) => a + q.x, 0) / n : p0.x, cy = al.length ? al.reduce((a, q) => a + q.y, 0) / n : p0.y, cz = al.length ? Math.min(...al.map(q => q.z)) : p0.z; cam.x = cx * 0.55; cam.y = cy * 0.55 + 1.9; cam.z = cz - 7.5; } const tags = [];
-  HQ = !(o.q >= 1); { const bz = g.level.rules?.arena ? 0.52 : g.boss && !g.boss.dying && g.boss.z < 30 ? 0.52 : 0.68; ZK += (bz - ZK) * 0.04; if (Math.abs(ZK - bz) < 0.002) ZK = bz; } // the camera pulls back for a boss so there is room to move
+  HQ = !(o.q >= 1); { const bz = g.level.rules?.arena ? 0.52 : g.boss && !g.boss.dying && g.boss.z < 30 ? 0.52 : 0.68; { const zt = g.level.rules?.arena || g.boss || g.mini ? 1 : 1 / 1.3; ZS += (zt - ZS) * 0.04; if (Math.abs(ZS - zt) < 0.002) ZS = zt; } ZK += (bz - ZK) * 0.04; if (Math.abs(ZK - bz) < 0.002) ZK = bz; } // the camera pulls back for a boss so there is room to move
   ctx.save();
   if (g.shake > 0.5 && o.shake !== false) ctx.translate((Math.random() - 0.5) * g.shake, (Math.random() - 0.5) * g.shake);
   ctx.globalCompositeOperation = 'lighter';
@@ -404,7 +406,7 @@ export function drawWorld(ctx, g, o = {}) {
   for (const e of g.enemies) {
     if (e.y <= 0 && e.type !== 'boss') continue; depth(e.x, e.z - (e.hz || 0)); const ghost = e.phase != null && e.phase !== g.view, a = ghost ? (e.haunt ? 0.06 : 0.2) : 1, col = e.hit > 0 && (t / 3 | 0) % 2 === 0 ? '#ff2a2a' : e.col;
     if (e.type === 'boss') { if (e.dying) { const j = e.dying / 150 * 1.7, ox = e.x, oy = e.y; e.x = ox - j; e.y = oy + Math.sin(t * 0.9) * 0.15; drawBoss(g, e, t); e.x = ox + j; e.y = oy - Math.sin(t * 0.9) * 0.15; drawBoss(g, e, t); e.x = ox; e.y = oy; } else drawBoss(g, e, t); continue; }
-    const sh = SHAPES[e.shape]; if (e.group && g.groups[e.group].ord && g.groups[e.group].next === e.gi) { const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0, rr = e.r * 1.7 + Math.sin(t * 0.3) * 0.12, d = rr * 0.72, c = '#ffe14a'; LW = 1.8; circle(e.x, e.y, e.z, rr, c, 0.95, 4, pl, t * 0.05); LW = 1; circle(e.x, e.y, e.z, rr * 1.35, c, 0.4, 12, pl, -t * 0.03); /* target: this one is next in the order */
+    const sh = SHAPES[e.shape]; if (e.group && g.groups[e.group].ord && g.groups[e.group].next === e.gi) { const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0, rr = e.r * 1.7 + Math.sin(t * 0.3) * 0.12, d = rr * 0.72, c = '#ff2a2a'; LW = 1.8; circle(e.x, e.y, e.z, rr, c, 0.95, 4, pl, t * 0.05); LW = 1; circle(e.x, e.y, e.z, rr * 1.35, c, 0.4, 12, pl, -t * 0.03); /* target: this one is next in the order */
       if (pl === 1) { seg(e.x - rr * 1.6, e.y, e.z, e.x - d, e.y, e.z, c); seg(e.x + d, e.y, e.z, e.x + rr * 1.6, e.y, e.z, c); seg(e.x, e.y, e.z - rr * 1.6, e.x, e.y, e.z - d, c); seg(e.x, e.y, e.z + d, e.x, e.y, e.z + rr * 1.6, c); } else { seg(e.x, e.y - rr * 1.6, e.z, e.x, e.y - d, e.z, c); seg(e.x, e.y + d, e.z, e.x, e.y + rr * 1.6, e.z, c); if (pl === 2) { seg(e.x, e.y, e.z - rr * 1.6, e.x, e.y, e.z - d, c); seg(e.x, e.y, e.z + d, e.x, e.y, e.z + rr * 1.6, c); } else { seg(e.x - rr * 1.6, e.y, e.z, e.x - d, e.y, e.z, c); seg(e.x + d, e.y, e.z, e.x + rr * 1.6, e.y, e.z, c); } } }
     if (e.mini) { const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0; LW = 2; circle(e.x, e.y, e.z, e.r * 1.5 + Math.sin(t * 0.15) * 0.15, e.col, 0.8, 14, pl, t * 0.03); LW = 1; circle(e.x, e.y, e.z, e.r * 1.9, '#ffffff', 0.35, 14, pl, -t * 0.02); if (g.level.rules?.arena) circle(e.x, 0.03, e.z, e.r * 1.3, e.col, 0.4, 12, 1); }
     if (e.shape === 'carrier') { mesh(CUBE, e.x, e.y, e.z, e.r * 0.8, t * 0.03, t * 0.02, 0, col, a); mesh(OCT, e.x, e.y, e.z, e.r * 0.45, -t * 0.06, 0, 0, '#ffe14a', a); }
@@ -578,7 +580,8 @@ export function drawHUD(ctx, g, o = {}) {
   for (let i = 0; i < n; i++) { const on = p.cursor === i, lvl = i === U.SHIELD ? p.shield : p.up[i], full = lvl >= BARMAX[i], x = x0 + i * cw;
     ctx.fillStyle = on ? '#ffe14a' : '#0a0f2c'; ctx.globalAlpha = on ? 0.9 : 0.75; ctx.fillRect(x + 2, y0, cw - 4, 22); ctx.globalAlpha = 1; ctx.strokeStyle = on ? '#ffffff' : full ? '#3dffb0' : '#3a4cb8'; ctx.lineWidth = on ? 2 : 1; ctx.strokeRect(x + 2, y0, cw - 4, 22);
     text(ctx, BAR[i], x + cw / 2, y0 + 5, 9, on ? '#140a2a' : full ? '#3dffb0' : lvl ? '#ffffff' : '#7d8bd6', { align: 'center', glow: false, weight: on ? 2 : 1.3 });
-    if (i < 8) for (let k = 0; k < BARMAX[i]; k++) { ctx.fillStyle = k < lvl ? (on ? '#140a2a' : p.god > 0 && i < 6 ? RAINBOW[(k + (t >> 2)) % 7] : '#3dffb0') : (on ? '#b89a20' : p.god > 0 && i < 6 ? '#ffffff' : '#26306e'); ctx.fillRect(x + 8 + k * ((cw - 16) / BARMAX[i]), y0 + 17, (cw - 16) / BARMAX[i] - 2, 2); } }
+    if (i === 8 && !lvl && !hyperOk(p)) { ctx.globalAlpha = 0.6; ctx.fillStyle = '#05061a'; ctx.fillRect(x + 1, y0 + 1, cw - 4, 20); ctx.globalAlpha = 1; } /* locked until the rest is maxed */
+    for (let k = 0; k < BARMAX[i]; k++) { ctx.fillStyle = k < lvl ? (on ? '#140a2a' : p.god > 0 && i < 6 ? RAINBOW[(k + (t >> 2)) % 7] : '#3dffb0') : (on ? '#b89a20' : p.god > 0 && i < 6 ? '#ffffff' : '#26306e'); ctx.fillRect(x + 8 + k * ((cw - 16) / BARMAX[i]), y0 + 17, (cw - 16) / BARMAX[i] - 2, 2); } }
   if (p.cursor >= 0 && (t >> 4) % 2) text(ctx, (o.upgLabel || 'SELECT') + ' = ' + BAR[p.cursor], W / 2, y0 - 14, 9, '#ffe14a', { align: 'center' });
 }
 
