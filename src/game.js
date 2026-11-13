@@ -249,7 +249,7 @@ export function step(g, inputs) {
       p.x = clamp(p.x + ax * sp, -AR.x, AR.x); p.z = clamp(p.z - ay * sp, AR.z0, AR.z1); p.y = 4.5;
       let tx = p.ax, tz = p.az; p.manual = false; if (inp.aim && Math.hypot(inp.aim[0], inp.aim[1]) > 0.3) { const d = Math.hypot(inp.aim[0], inp.aim[1]); tx = inp.aim[0] / d; tz = inp.aim[1] / d; p.manual = true; } else if (Math.hypot(mx, my) > 0.25) { const d = Math.hypot(mx, my); tx = mx / d; tz = -my / d; }
       { const k = p.manual ? 0.6 : 0.4; p.ax += (tx - p.ax) * k; p.az += (tz - p.az) * k; } const n = Math.hypot(p.ax, p.az) || 1; p.ax /= n; p.az /= n; }
-    else { if (v === 0) { p.z += ax * sp; p.y -= ay * sp; } else if (v === 3) { p.x += ax * sp; p.z -= ay * sp; } else { p.x += ax * sp; p.y -= ay * sp; }
+    else { if (v === 0 || (v === 1 && (g.boss || g.mini))) { p.z += ax * sp; p.y -= ay * sp; } /* ISO in a boss or miniboss fight: left / right moves you toward or away from it, so there is room to dodge */ else if (v === 3) { p.x += ax * sp; p.z -= ay * sp; } else { p.x += ax * sp; p.y -= ay * sp; }
       if (rules.wind) { const w = rules.wind(g); p.x += w[0] * DT; p.y += w[1] * DT; } if (pull) { p.x += pull[0] * DT; p.y += pull[1] * DT; p.z += pull[2] * DT; }
       p.x = clamp(p.x, -B.x, B.x); p.y = clamp(p.y, B.y0 + (rules.arena ? 0 : groundAt(g, p.z)), B.y1); p.z = clamp(p.z, B.z0, g.zLim); } /* the ship rides up over hills */
     p.mvx += (clamp((p.x - ox) / sp, -1, 1) - p.mvx) * 0.22; p.mvy += (clamp((p.y - oy) / sp, -1, 1) - p.mvy) * 0.22; // the ship banks when it slides sideways and noses up or down when it climbs or dives
@@ -438,7 +438,7 @@ export function autopilot(g, i = 0) {
   const want = g.recView, pv = p.prev || {};
   if (g.view !== want && g.shiftCd <= 0 && !g.lockShift) { const d = (want - g.view + 4) % 4; if (d === 3 && !g.level.rules?.arena) out.shiftL = !pv.shiftL; else out.shiftR = !pv.shiftR; }
   const v = g.view, m = MASK[v], rules = g.level.rules || {}, sc = rules.arena ? 0 : SCROLL * g.speedMul;
-  const arena = !!rules.arena; let A = v === 0 ? 'z' : 'x', Bx = v === 3 ? 'z' : 'y'; if (arena) { A = 'x'; Bx = 'z'; }
+  const arena = !!rules.arena; let A = v === 0 || (v === 1 && (g.boss || g.mini)) ? 'z' : 'x', Bx = v === 3 ? 'z' : 'y'; if (arena) { A = 'x'; Bx = 'z'; }
   const ra = A === 'z' ? [1, 2.5, 4, 5.5, 7, 9] : arena ? [-11, -8.25, -5.5, -2.75, 0, 2.75, 5.5, 8.25, 11] : [-7, -5.25, -3.5, -1.75, 0, 1.75, 3.5, 5.25, 7], rb = arena ? [2, 5.5, 9, 12.5, 16, 19.5, 23, 26.5, 30] : Bx === 'z' ? [1, 2.5, 4, 5.5, 7, 9] : [1, 2.1, 3.2, 4.3, 5.4, 6.5, 7.6, 8.5];
   const spd = (8.5 + g.gear * 1.2) * (rules.inertia ? 0.6 : 1);
   let best = null, bc = 1e9; const c = { x: p.x, y: p.y, z: p.z, hx: 0.6, hy: 0.48, hz: 0.72 }, t = { x: 0, y: 0, z: 0, hx: 0, hy: 0, hz: 0 };

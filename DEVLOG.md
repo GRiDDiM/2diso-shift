@@ -702,6 +702,10 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 
 - Boss health now scales with your firepower. Each boss's listed health is for a mid-strength loadout, from about 0.8x with hardly any upgrades up to about 1.9x with every gun and drone maxed. A fully upgraded ship no longer melts a boss in seconds, and a ship that lost its upgrades isn't stuck in an endless fight. Minibosses already worked this way.
 
+### 76. Room to dodge in ISO (r82)
+
+- In a boss or miniboss fight in ISO view, left and right now move you toward or away from the boss instead of across the lane, so you can back off or close in to get out of the way. Up and down still change height. Everywhere else ISO works as before.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
