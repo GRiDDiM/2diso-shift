@@ -27,7 +27,7 @@ export function createAudio(opt) {
     ting: () => tone('triangle', 2200, 1800, 0.05, 0.06), zap: () => { noise(0.4, 0.35, 3000, 600, undefined, undefined, 4); tone('sawtooth', 90, 60, 0.4, 0.2); }, charge: () => tone('sawtooth', 110, 660, 0.9, 0.09),
     bossin: () => { tone('sawtooth', 55, 50, 1.6, 0.4); tone('sawtooth', 82, 78, 1.6, 0.25); }, over: () => [392, 330, 262, 196].forEach((f, i) => tone('triangle', f, 0, 0.4, 0.2, ac.currentTime + i * 0.28)),
     clear: () => { [523, 523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => { tone('square', f, 0, i === 7 ? 0.9 : 0.16, 0.12, ac.currentTime + i * 0.13); tone('triangle', f / 2, 0, i === 7 ? 0.9 : 0.16, 0.14, ac.currentTime + i * 0.13); }); }, whoosh: () => noise(1.3, 0.45, 200, 4000, undefined, undefined, 2), buzz: () => { // the GRiDDiM splash: a neon sign humming and crackling as it powers up
-      const t = ac.currentTime, d = 2.6, gn = ac.createGain(), fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = 1400; gn.gain.setValueAtTime(0.0008, t); gn.gain.exponentialRampToValueAtTime(0.11, t + 0.35); gn.gain.setValueAtTime(0.11, t + d - 0.5); gn.gain.exponentialRampToValueAtTime(0.0008, t + d); fl.connect(gn); gn.connect(sfxG);
+      const t = ac.currentTime, d = 1.8, gn = ac.createGain(), fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = 1400; gn.gain.setValueAtTime(0.0008, t); gn.gain.exponentialRampToValueAtTime(0.11, t + 0.35); gn.gain.setValueAtTime(0.11, t + d - 0.5); gn.gain.exponentialRampToValueAtTime(0.0008, t + d); fl.connect(gn); gn.connect(sfxG);
       for (const [f, ty] of [[60, 'sawtooth'], [120, 'square'], [180.6, 'sawtooth']]) { const o = ac.createOscillator(); o.type = ty; o.frequency.value = f; const og = ac.createGain(); og.gain.value = f === 60 ? 0.6 : 0.25; o.connect(og); og.connect(fl); o.start(t); o.stop(t + d + 0.05); }
       const lfo = ac.createOscillator(), lg = ac.createGain(); lfo.frequency.value = 9; lg.gain.value = 0.035; lfo.connect(lg); lg.connect(gn.gain); lfo.start(t); lfo.stop(t + d); // the flicker
       for (let i = 0; i < 9; i++) noise(0.03 + Math.random() * 0.05, 0.12 + Math.random() * 0.15, 2500 + Math.random() * 3000, 800, t + 0.15 + Math.random() * (d - 0.4), sfxG, 0.8); }, // and sparks
@@ -101,7 +101,7 @@ export function createAudio(opt) {
     const go = () => { try { sy.cancel(); pickVoices(); const v = Math.min(1, opt.sfx * 1.1);
       const U = (w, voice, k, r, p) => { const u = new SpeechSynthesisUtterance(w); if (voice) u.voice = voice; u.volume = v * k; u.rate = r; u.pitch = p; return u; };
       const first = U('two dye-so', vox, 1, 0.86, 0.95); /* her */
-      const P = [['Sh, Sh, SHIFT!', 1, 1.15, 0.85], ['shift', 0.5, 1.35, 0.8], ['shift', 0.26, 1.5, 0.75], ['shift', 0.12, 1.65, 0.7]].map(([w, k, r, p], i) => { const u = U(w, voxM, k, r, p); /* him, echoing away */
+      const P = [['SHIFT!', 1, 1.05, 0.85], ['shift', 0.5, 1.35, 0.8], ['shift', 0.26, 1.5, 0.75], ['shift', 0.12, 1.65, 0.7]].map(([w, k, r, p], i) => { const u = U(w, voxM, k, r, p); /* him, echoing away */
         if (i) u.onstart = () => { try { if (ac && ac.state === 'running') tone('sine', 1320 - i * 220, 660 - i * 110, 0.35, 0.1 * k); } catch { } }; return u; });
       setTimeout(() => { sy.speak(first); P.forEach(u => sy.speak(u)); }, 90); } catch { } };
     if (!vox && !pickVoices()) { let done = false; const once = () => { if (!done) { done = true; go(); } }; try { sy.addEventListener('voiceschanged', once, { once: true }); } catch { } setTimeout(once, 900); } else go(); }

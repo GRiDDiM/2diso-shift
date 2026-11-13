@@ -670,6 +670,11 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - The stutter is now "Sh, Sh, SHIFT!", and it and its echoes are spoken faster.
 - Any real click, tap or key press anywhere on the page now switches the sound on. Browsers keep a page silent until you interact with it, and some clicks were not getting through to wake the music.
 
+### 70. Quieter launch (r76)
+
+- The title line is now just a female "2diso", then a male "SHIFT!" echoing away. The stutter is gone: the browser voice kept spelling it out letter by letter.
+- The game's own sound now waits about a second after launch before starting, so the ArcadeGridz app's coin-drop sound isn't cut off.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

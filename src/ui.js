@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r75';
+const VER = 'r76';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -350,7 +350,7 @@ export function mountShift(root, host = {}) {
   let prevIn = {};
   function update(i) {
     sceneT++; if (scene === 'intro' && sceneT < 3 && !logosReady() && performance.now() - (introWait || (introWait = performance.now())) < 5000) sceneT = 0; /* the intro waits (up to 5 s, by the clock, not by frames) for the logo images */
-    if (scene === 'intro') { if ((i.ok && !prevM.ok) || (i.pause && !prevM.pause) || tap || sceneT > 600) { tap = null; showTitle(); titleT = 0; audio.sfx('slam'); } if (sceneT === 1) audio.unlock(); if (sceneT === 6) audio.sfx('buzz'); if (sceneT === 170) audio.sfx('jingle'); if (sceneT === 296) { audio.unlock(); audio.sfx('swoop'); } prevM = i; return; }
+    if (scene === 'intro') { if ((i.ok && !prevM.ok) || (i.pause && !prevM.pause) || tap || sceneT > 600) { tap = null; showTitle(); titleT = 0; audio.sfx('slam'); } if (sceneT === 54) { audio.unlock(); audio.sfx('buzz'); } /* the game's sound starts a beat after launch, so the app's own coin-drop sound gets to finish first */ if (sceneT === 170) audio.sfx('jingle'); if (sceneT === 296) { audio.unlock(); audio.sfx('swoop'); } prevM = i; return; }
     if (scene === 'story') { const st = story, per = st.per || 150; st.t++; const k = st.t / per | 0; if (k < st.lines.length && k !== st.said) { st.said = k; audio.say(st.lines[k].replace('(C)', 'copyright'), true); } if (st.end && st.t < 90) tap = null; if (tap || (st.t >= (st.end ? 90 : 0) && ((i.ok && !prevM.ok) || (i.pause && !prevM.pause))) || st.t > st.lines.length * per + 120) { tap = null; audio.hush(); const f = st.after; story = null; f(); } prevM = i; return; }
     if (scene === 'title') { titleT++; menuInput(i); return; } // no game runs behind the title any more: it is a still, cheap backdrop
     if (scene === 'credits') { if (menus.length) { menuInput(i); return; } cred.y = Math.min(cred.max, cred.y + (i.ok || i.down ? 3 : 0.5)); if (tap) { tap = null; cred.y = Math.min(cred.max, cred.y + 160); }
