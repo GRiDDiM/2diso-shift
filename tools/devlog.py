@@ -5,6 +5,7 @@ s = open(os.path.join(root, 'DEVLOG.md')).read(); out = []
 for ln in s.split('\n'):
     t = ln.strip()
     if not t: out.append(''); continue
+    if t.startswith('!['): continue  # screenshots are for the web devlog
     kind = 'p'
     if t.startswith('# '): kind, t = 'h1', t[2:]
     elif t.startswith('## '): kind, t = 'h2', t[3:]

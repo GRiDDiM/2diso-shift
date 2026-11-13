@@ -269,6 +269,8 @@ BDC's order: loop 2 significantly harder, loop 3 extremely difficult, loop 4 bor
 ### 19. Clean results screens (r25)
 - GAME OVER and the clear screens now hide the HUD, so nothing overlaps the results. The level keeps running behind them, a little brighter than before.
 
+## Day 2 — Thu 12 Nov 2026
+
 ### 20. Enemies you can watch die (r26)
 BDC's note: everything was dying in one shot before you even noticed it.
 
@@ -285,6 +287,8 @@ BDC's note: everything was dying in one shot before you even noticed it.
 ### 22. Traffic from behind, and a building site (r28)
 - **Hover traffic is a CHASE section now.** BDC found it far more fun from behind the ship than from the isometric view, so the level calls for CHASE there.
 - **A construction zone takes the ISO slot on Earth.** Half-built girders at every height, crane loads swinging across the lane on their cables, crate stacks to shoot through for gems and pods, and turrets on the ground. It sits between the firewall gates and the traffic, so the level is a little longer and its par time went up to match.
+
+![The construction zone on Earth, played in the isometric view](shots/earth-construction.jpg)
 
 ### 23. Room to fly, a kinder hitbox, and things that look like what they are (r29)
 - **The ship can fly much further forward.** The forward limit moved out by two thirds, and bosses hold further back near the edge, so there is more room to read their attacks.
@@ -321,6 +325,10 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **More city on Earth.** Infill blocks and antenna masts in the opening stretch, extra towers and signs between the rows in the top-down section, and more on the skyways.
 - **Jupiter's cloud is a net.** Three layers of fine wavy mesh drift past underneath at different speeds, with one more overhead, and the cloud banks themselves have a soft net of threads across them.
 
+![The Mars caves: terrain, spikes and falling rock instead of a grid](shots/mars-caves.jpg)
+
+![Jupiter: fine wavy nets for cloud layers](shots/jupiter-nets.jpg)
+
 ### 28. The boss health bar is back (r35)
 - When the bosses were moved further back in r29, the boss health bar and the weak-spot marker were still waiting for the boss at its old distance, so neither ever appeared. Both now show again and the bar drains as the boss takes damage.
 
@@ -347,6 +355,8 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **1UP pickups.** Enemies now sometimes drop an extra ship: a small green ship turning inside a purple ring with a plus sign beside it. They are rare, but one is always due after enough kills, so every level should show at least one. Picking it up adds a ship (up to nine) with a "1UP!" callout; at nine it pays 5000 points instead.
 - **Ship counter.** The HUD still shows six ship icons, with a "+N" beside them when you hold more.
 
+![An extra ship pickup beside a firewall gate in chase view](shots/extra-ship-pickup.jpg)
+
 ### 33. Bomb upgrades, a bigger playfield and two ship skins (r40)
 
 - **Bombs upgrade.** The power-up bar has a new BOMB slot with three tiers, so spare pods have somewhere to go. The basic bomb is now a short burst around the ship. Tier 1, SWEEP BOMB, is a rectangle that rolls out from the ship over a much bigger area. Tier 2, SCATTER BOMB, sets off eighteen diamond blasts across the screen, half of them on enemies. Tier 3, MEGA NUKE, pulls everything in for half a second and then takes out the whole screen. The tier survives losing a ship, like drones do.
@@ -354,6 +364,27 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **Taller skyline.** Earth's opening run has taller and more varied towers, with blocks hanging from above where the tower below is short.
 - **Hit flash.** The red flash on enemies and bosses strobes slower and lasts longer, so it reads as a flash when you are pouring fire in.
 - **Ship skins.** OPTIONS has a SHIP SKIN setting. FIRE MAGE turns the ship into a firebat with flapping wings and embers, and every weapon into fire: flame darts, a wavering stream of flame, fireball missiles, ember drones. DARK LORD is a wraith stealth ship trailing a ragged cloak, with shadow bolts, a violet beam, soul-green lightning and wisps for drones. Skins only change the look. FIRE MAGE unlocks by beating the second boss and DARK LORD by beating the last one; the options menu previews a locked skin on the title screen.
+
+![Tier 1, the sweep bomb, rolling out from the ship](shots/bomb-sweep.jpg)
+
+![Tier 2, the scatter bomb](shots/bomb-scatter.jpg)
+
+![Tier 3, the mega nuke, pulling in before it goes off](shots/bomb-mega-charge.jpg)
+
+![The Fire Mage skin with every weapon firing](shots/skin-fire-mage.jpg)
+
+![The Dark Lord skin with every weapon firing](shots/skin-dark-lord.jpg)
+
+### 34. Seeing further, hyperdrive and set-and-forget bombs (r41)
+
+- **See further ahead.** The last pass made room around the ship but showed no more of the level ahead, which was the point of asking. Now the distance ahead is squeezed on screen by the same 30%, so about a third more of the level is in view in every view, and the ship can fly a third further up it. Enemies and scenery are placed that much further out so nothing appears inside the picture. Ships, enemies and rings are stretched back so they keep their shape. Boss fights and arenas keep their own camera.
+- **Hyperdrive.** The wildcard slot at the end of the bar is gone. In its place is HYPER, which stays locked until drones, every weapon and the bomb are maxed. One pod then switches hyperdrive on for good: 15% more damage from everything, kept when you lose a ship, and the ship glitters while it is on.
+- **Auto detonate.** A new option sets off a bomb every ten seconds for as long as you have one.
+- **Back to slow.** Losing a ship drops the speed back to SLOW, so the next one is not thrown straight into traffic.
+- **Red targets.** The target marker on the next enemy in a wave is red now; in yellow it looked too much like a pickup.
+- **Skins in the store.** FIRE MAGE and DARK LORD can now also be bought with Sparkz in the site's store, as well as earned by beating the bosses.
+
+![A third more of the level in view, here from above](shots/view-top-further.jpg)
 
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
