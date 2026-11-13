@@ -141,7 +141,7 @@ function bombHit(g, e, d, bd) { if (e.type === 'boss') { if ((e.vuln || []).incl
 function blastArea(g, b, test, d, bd) { // everything a blast touches: shots vanish, each enemy and breakable is hit once per blast
   for (const q of g.ebul) if (q.life > 0 && test(q, 0.3)) { q.life = 0; if (g.parts.length < 600) g.parts.push({ x: q.x, y: q.y, z: q.z, vx: 0, vy: 3, vz: 0, life: 8, max: 8, col: '#ffe14a' }); }
   for (let i = 0, n = g.enemies.length; i < n; i++) { const e = g.enemies[i]; if (e.hp > 0 && e.bh !== b.id && e.z < SPAWN_Z + 6 && test(e, e.type === 'boss' ? 3 : e.r || 0.6)) { e.bh = b.id; bombHit(g, e, d, bd); } }
-  for (const o of g.obs) if (o.hp && o.bh !== b.id && test(o, Math.max(o.hx, o.hz))) { o.bh = b.id; o.hp -= d; o.hit = 3; }
+  for (const o of g.obs) if (o.hp && o.bh !== b.id && test(o, Math.max(o.hx, o.hz))) { o.bh = b.id; o.hp -= d; o.hit = o.kind === 'blob' ? 7 : 3; }
 }
 function nuke(g, p, spend = true) { // the bomb grows with its upgrades: a short burst, a sweeping wall, a scatter of diamonds, then the whole screen
   if (spend) { if (p.bombs <= 0) { g.fx.push('deny'); return; } p.bombs--; }
@@ -328,7 +328,7 @@ export function step(g, inputs) {
     for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e === s.last) continue; if (ov(s, e, m)) { damage(g, e, s.dmg); if (s.pierce > 0) { s.pierce--; s.last = e; } else s.life = 0;
       if (s.aoe) { explode(g, s.x, s.y, s.z, '#ff8a2b', 16, 9); explode(g, s.x, s.y, s.z, '#ffe14a', 8, 5); g.fx.push('boom'); g.shake = Math.max(g.shake, 2); for (const q of g.enemies) if (q !== e && q.hp > 0 && Math.hypot(q.x - s.x, q.y - s.y, q.z - s.z) < s.aoe + q.r) damage(g, q, s.dmg * 0.5); if (s.split) for (let i = 0; i < 3; i++) g.shots.push({ x: s.x, y: s.y, z: s.z, vx: Math.cos(i * 2.1) * 12, vy: Math.sin(i * 2.1) * 12, vz: 4, dmg: 3, r: 0.35, kind: 2, life: 60, aoe: 1.2 }); }
       else if (g.parts.length < 800) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: 0, vy: 3, vz: -6, life: 8, max: 8, col: '#ffffff' }); break; } }
-    if (s.life > 0) for (const o of g.obs) { if (!solid(o, vw)) continue; if (ov(s, o, m)) { s.life = 0; if (o.hp != null) { o.hp -= s.dmg; o.hit = 3; } if (g.parts.length < 800) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: 0, vy: 2, vz: -8, life: 7, max: 7, col: o.col }); break; } }
+    if (s.life > 0) for (const o of g.obs) { if (!solid(o, vw)) continue; if (ov(s, o, m)) { s.life = 0; if (o.hp != null) { o.hp -= s.dmg; o.hit = o.kind === 'blob' ? 7 : 3; } if (g.parts.length < 800) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: 0, vy: 2, vz: -8, life: 7, max: 7, col: o.col }); break; } }
   }
   // ----- obstacles -----
   for (const o of g.obs) {

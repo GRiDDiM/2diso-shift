@@ -35,10 +35,11 @@ function depth0() { LAY = 0; buckets = layers[0]; }
 let vOcc = 0;
 let ZS = 1; // how much the distance ahead is squeezed on screen: below 1 you see further up the level. Models and rings are stretched back so they keep their shape
 let LW = 1, NG = false, HQ = true, ZK = 1; // LW: tube thickness for what is drawn next. NG: no glow (sparks, smoke). HQ: draw the wide outer halo. ZK: camera zoom (pulls back for bosses)
+let NT = false; // lines drawn with NT set keep their true colour even on the trippy planet (hit flashes, health bars)
 function seg(x1, y1, z1, x2, y2, z2, col, a = 1) {
   P(x1, y1, z1); if (!OK) return; const ax = X, ay = Y; P(x2, y2, z2); if (!OK) return;
   if ((ax < -200 && X < -200) || (ax > W + 200 && X > W + 200) || (ay < -200 && Y < -200) || (ay > H + 200 && Y > H + 200)) return;
-  const k = (a >= 1 ? col : col + '|' + (a * 10 | 0)) + (LW !== 1 ? '~' + LW : '') + (NG ? '!' : ''); let b = buckets.get(k); if (!b) { b = { col, a: a >= 1 ? 1 : Math.max(0.05, (a * 10 | 0) / 10), w: LW, ng: NG, d: [] }; buckets.set(k, b); } b.d.push(ax, ay, X, Y);
+  const k = (a >= 1 ? col : col + '|' + (a * 10 | 0)) + (LW !== 1 ? '~' + LW : '') + (NG ? '!' : '') + (NT ? '^' : ''); let b = buckets.get(k); if (!b) { b = { col, a: a >= 1 ? 1 : Math.max(0.05, (a * 10 | 0) / 10), w: LW, ng: NG, nt: NT, d: [] }; buckets.set(k, b); } b.d.push(ax, ay, X, Y);
 }
 const rotCache = new Map();
 function hueRot(hex, deg) { const k = hex + deg; let r = rotCache.get(k); if (r) return r;
@@ -48,7 +49,7 @@ function flush(ctx, glow, trip, L = 0) {
   ctx.lineCap = 'round';
   for (const b of layers[L].values()) {
     const d = b.d; if (!d.length) continue; ctx.beginPath(); for (let i = 0; i < d.length; i += 4) { ctx.moveTo(d[i], d[i + 1]); ctx.lineTo(d[i + 2], d[i + 3]); }
-    ctx.strokeStyle = trip ? hueRot(b.col, trip) : b.col; const w = b.w || 1; if (glow && !b.ng && b.a >= 0.25) { if (HQ && b.a >= 0.5) { ctx.globalAlpha = 0.07 * b.a; ctx.lineWidth = 13 * Math.min(w, 2.2); ctx.stroke(); } ctx.globalAlpha = 0.2 * b.a; ctx.lineWidth = 6 * w; ctx.stroke(); } // faint lines and sparks skip the glow passes: they cost the most and show the least
+    ctx.strokeStyle = trip && !b.nt ? hueRot(b.col, trip) : b.col; const w = b.w || 1; if (glow && !b.ng && b.a >= 0.25) { if (HQ && b.a >= 0.5) { ctx.globalAlpha = 0.07 * b.a; ctx.lineWidth = 13 * Math.min(w, 2.2); ctx.stroke(); } ctx.globalAlpha = 0.2 * b.a; ctx.lineWidth = 6 * w; ctx.stroke(); } // faint lines and sparks skip the glow passes: they cost the most and show the least
     ctx.globalAlpha = b.a; ctx.lineWidth = 1.6 * w; ctx.stroke(); d.length = 0;
   }
   ctx.globalAlpha = 1;
@@ -325,10 +326,13 @@ function drawObs(g, b, t) {
   if (k === 'boulder') { const r = Math.min(b.hx, b.hy), dmg = b.hpMax ? 1 - Math.max(0, b.hp) / b.hpMax : 0; disc(b.x, b.y, b.z, r * 1.05, col, 0.5, 0.12, 10); mesh(ROCK, b.x, b.y, b.z, r * 1.3, (b.vx || 0) ? -b.x * 0.9 : 0.4, 0.3, 0, col, a); if (dmg > 0.3) mesh(ROCK, b.x, b.y, b.z, r * 0.8, 1, 0.5, 0, '#ffe14a', a * dmg); return; }
   if (k === 'crystal') { const h = b.hy, w = Math.min(b.hx, 1.1); fillBox({ x: b.x, y: b.y, z: b.z, hx: w, hy: h, hz: b.hz }, col, 1.2, false); for (const dx of b.hx > 1.5 ? [-b.hx * 0.6, 0, b.hx * 0.6] : [0]) { const x = b.x + dx; for (const [sx, sz] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { seg(x, b.y + h * 1.3, b.z, x + sx * w * 0.7, b.y, b.z + sz * w * 0.7, col, a); seg(x, b.y - h * 1.3, b.z, x + sx * w * 0.7, b.y, b.z + sz * w * 0.7, '#ffffff', a * 0.8); } circle(x, b.y, b.z, w * 0.7, col, a, 4, 1, 0.78); } return; }
   if (k === 'billboard') { const x0 = b.x - b.hx, x1 = b.x + b.hx, y0 = b.y - b.hy, y1 = b.y + b.hy, on = (t >> 4) % 2; fillBox(b, col, 1.2, false); box(b, col, a); seg(b.x, 0, b.z, b.x, y0, b.z, col, a * 0.5); LW = 2; zig(x0 + 0.3, b.y, b.z - b.hz, x1 - 0.3, b.y, b.z - b.hz, on ? '#ffe14a' : '#ffffff', a, 6, b.hy * 0.9, 3); LW = 1; return; }
-  if (k === 'blob') { // a wall of mutant blobs: shoot it until it bursts
-    const x0 = Math.max(-9, b.x - b.hx), x1 = Math.min(9, b.x + b.hx), y0 = Math.max(0.2, b.y - b.hy), y1 = Math.min(9.5, b.y + b.hy), hurt = b.hpMax ? 1 - Math.max(0, b.hp) / b.hpMax : 0, c2 = b.hit > 0 ? '#ffffff' : hurt > 0.5 ? '#ffe14a' : '#b6ff3d', pl = vB === 3 ? 1 : vB === 0 ? 2 : 0; fillBox({ x: (x0 + x1) / 2, y: (y0 + y1) / 2, z: b.z, hx: (x1 - x0) / 2, hy: (y1 - y0) / 2, hz: b.hz }, col, 1.2, false);
-    let i = 0; for (let y = y0 + 1; y < y1; y += 2.1) for (let x = x0 + 1.2 + (i++ % 2) * 1.2; x < x1; x += 2.4) { const r = 1.05 + Math.sin(t * 0.09 + x * 2 + y) * 0.18 + hurt * 0.25; circle(x, y, b.z, r, col, a, 8, pl, x); circle(x, y, b.z, r * 0.45, c2, a, 6, pl, -t * 0.03); }
-    seg(x0, y0, b.z, x1, y0, b.z, col, a); seg(x0, y1, b.z, x1, y1, b.z, col, a); seg(x0, y0, b.z, x0, y1, b.z, col, a); seg(x1, y0, b.z, x1, y1, b.z, col, a); return; }
+  if (k === 'blob') { // a wall of mutant blobs: every blob cycles through the rainbow, flashes red when hit, and a health bar rides on top
+    const x0 = Math.max(-9, b.x - b.hx), x1 = Math.min(9, b.x + b.hx), y0 = Math.max(0.2, b.y - b.hy), y1 = Math.min(9.5, b.y + b.hy), hp = b.hpMax ? Math.max(0, b.hp) / b.hpMax : 1, hurt = 1 - hp, red = b.hit > 0; NT = red; const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0, rb = k2 => RAINBOW[((t >> 2) + k2) % 7];
+    if (FILL) fillBox({ x: (x0 + x1) / 2, y: (y0 + y1) / 2, z: b.z, hx: (x1 - x0) / 2, hy: (y1 - y0) / 2, hz: b.hz }, red ? '#ff2a2a' : rb(0), red ? 1.6 : 0.9, false);
+    let i = 0; for (let y = y0 + 1; y < y1; y += 2.1) for (let x = x0 + 1.2 + (i % 2) * 1.2; x < x1; x += 2.4) { i++; const r = 1.05 + Math.sin(t * 0.09 + x * 2 + y) * 0.18 + hurt * 0.25, c1 = red ? '#ff2a2a' : rb(i), c2 = red ? '#ffffff' : rb(i + 3); circle(x, y, b.z, r, c1, a, 8, pl, x); circle(x, y, b.z, r * 0.45, c2, a, 6, pl, -t * 0.03); if (i % 3 === 0) circle(x, y, b.z, r * 0.75, red ? '#ff8080' : rb(i + 5), a * 0.6, 7, pl, t * 0.05); }
+    const ec = red ? '#ff2a2a' : rb(1); seg(x0, y0, b.z, x1, y0, b.z, ec, a); seg(x0, y1, b.z, x1, y1, b.z, ec, a); seg(x0, y0, b.z, x0, y1, b.z, ec, a); seg(x1, y0, b.z, x1, y1, b.z, ec, a);
+    if (b.hpMax) { const by2 = y1 + 0.55, xm = (x0 + x1) / 2, hw = (x1 - x0) * 0.42, xe = xm - hw + hw * 2 * hp; NG = true; NT = true; LW = 1; seg(xm - hw, by2, b.z, xm + hw, by2, b.z, '#30345a', a); LW = 5; if (hp > 0) seg(xm - hw, by2, b.z, xe, by2, b.z, hp > 0.5 ? '#3dffb0' : hp > 0.25 ? '#ffe14a' : '#ff4d6d', a); LW = 1; for (const xx of [xm - hw, xm + hw]) seg(xx, by2 - 0.25, b.z, xx, by2 + 0.25, b.z, '#ffffff', a * 0.8); NG = false; } // health bar
+    NT = false; return; }
   if (k === 'redfog' || k === 'gas') { // dense fog and big gas clouds: a soft filled body under a fine mesh of wavy threads
     const red = k === 'redfog', pl = vB === 3 ? 1 : vB === 0 ? 2 : 0, W = pl === 2 ? b.hz * (red ? 1 : 1.6) : b.hx, H = pl === 1 ? b.hz * (red ? 1 : 1.4) : b.hy, sd = (b.bx || 0) * 7.1 + b.by * 3.3;
     const F = pl === 0 ? (u, v) => [b.x + u * W, b.y + v * H, b.z - (red ? b.hz : 0)] : pl === 2 ? (u, v) => [b.x, b.y + v * H, b.z + u * W] : (u, v) => [b.x + u * W, b.y, b.z + v * H];

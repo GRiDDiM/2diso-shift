@@ -544,6 +544,12 @@ The cutscenes now tell a story, five lines each, and it carries through to the e
 
 ![The new crawlers](shots/crawlers.jpg)
 
+### 54. Blob walls you can read (r62)
+
+- THE SHIFTER's blob walls cycle through the rainbow, flash solid red every time you hit them, and carry a health bar that goes from green to yellow to red. The red and the bar keep their true colours even on the trippy planet, where everything else shifts hue.
+
+![A blob wall in chase view, and the same wall flashing red as it takes a hit](shots/blob-wall-rainbow.jpg)
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
