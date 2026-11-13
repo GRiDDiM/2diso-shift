@@ -440,6 +440,12 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **The Sun's fog** is drawn the same way in chase and iso: slice after slice of red fog with a rounded hole for the channel.
 - **Rocks look like rocks.** Rocks on every planet bulge in the middle and taper front and back instead of being extruded blocks, with round shaded lobes instead of box fills. The Moon trench is now a ragged line of boulders of different sizes instead of a row of cubes.
 
+### 42. RIVET-9 on comms (r50)
+
+- **Tips come from RIVET-9.** View calls, hazard tips and anomaly alerts now pop up as a little instant-message window in the top left, with his portrait, a title bar and the text typing out. It stays up long enough to read, fades away on its own, and he reads it out loud. If a second message comes in, the first slides down and fades.
+- **He overreacts, on purpose.** His face is an emoji on a visor and changes as he talks: shocked then starry-eyed at an anomaly, panicking with a sweat drop at lava, sharks and lightning, angry eyebrows at a boss, a smug grin when it's time to shift. His mouth flaps while the words come out, he shakes when he's scared, and every message opens with WHOA!!, YIKES!, GET HIM! or OOH!
+- **The big calls stay big.** Stage names, waves and other headline calls stay as centre-screen banners, now in the thick bold font along with the level titles, results screens, boss names, warnings and score pop-ups.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

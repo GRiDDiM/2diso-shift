@@ -472,7 +472,7 @@ export function drawWorld(ctx, g, o = {}) {
     else if (b.kind === 'mega' && b.t < 36) { const c = b.t / 36; for (let k = 0; k < 5; k++) { const r = ((1 - c) * 16 + k * 3.2 - (b.t * 0.35) % 3.2); if (r > 0.3) circle(b.x, b.y, b.z, r, k % 2 ? sk('#ff3df0') : sk('#ffffff'), Math.min(1, c * 1.5 + 0.2), 22, pl, b.t * 0.05); } LW = 2.5; circle(b.x, b.y, b.z, 0.9 + c * 0.8 + Math.sin(b.t) * 0.15, '#ffffff', 1, 14, pl); LW = 1; } }
   for (const s of g.shocks) { depth(s.x, s.z); circle(s.x, s.y, s.z, s.r, s.col, s.life / s.max, 16, vB === 3 ? 1 : vB === 0 ? 2 : 0); }
   { const trip = th.trippy ? ((t * 0.8) % 360 / 30 | 0) * 30 : 0; for (let L = 0; L < NL; L++) { if (FILL) drawQuads(ctx, L); flush(ctx, o.glow !== false && !(o.q >= 2), trip, L); } depth0(); }
-  for (const q of g.pops) { P(q.x, q.y, q.z); if (!OK) continue; text(ctx, q.txt, X, Y, q.big ? 15 : q.sm ? 6.5 : 9, q.col, { align: 'center', alpha: Math.min(1, q.life / 20) * (q.sm ? 0.85 : 1), glow: q.big }); }
+  for (const q of g.pops) { P(q.x, q.y, q.z); if (!OK) continue; text(ctx, q.txt, X, Y, q.big ? 15 : q.sm ? 6.5 : 9, q.col, { bold: true, align: 'center', alpha: Math.min(1, q.life / 20) * (q.sm ? 0.85 : 1), glow: q.big }); }
   for (const e of g.enemies) { if (!(e.hbT > 0) || e.hp <= 0 || e.type === 'boss' || e.mini || e.max < 2) continue; P(e.x, e.y + (e.hy ?? e.r) + 0.45, e.z); if (!OK) continue; const w = 26, f = Math.max(0, e.hp / e.max), a = Math.min(1, e.hbT / 20); ctx.globalAlpha = a; ctx.fillStyle = '#0a0c24'; ctx.fillRect(X - w / 2 - 1, Y - 2, w + 2, 5); ctx.fillStyle = f > 0.5 ? '#3dffb0' : f > 0.25 ? '#ffe14a' : '#ff4d6d'; ctx.fillRect(X - w / 2, Y - 1, w * f, 3); ctx.globalAlpha = 1; } // health bars on whatever is being hit
   for (const q of tags) text(ctx, q[2], q[0], q[1], 7, q[3], { align: 'center', glow: false });
   ctx.restore();
@@ -587,6 +587,64 @@ function drawBoss2(g, b, t) {
 }
 
 // ---------- HUD ----------
+
+// ---------- RIVET-9 on comms: tips, view calls and anomaly alerts pop up top left like an instant message, with his face pulling expressions as he talks ----------
+const BANNER = /^(WAVE |FINAL WAVE|GET READY|REALITY SHIFT|LAVA RISING|ASH FALLING)|\/\//; // the big centre-screen calls stay as banners
+export const isBanner = s => BANNER.test(s);
+const MOODS = [ // what he says first, and which two faces he flips between while he says it
+  [/ANOMALY|WARP/, 'WHOA!!', ['shock', 'starry']],
+  [/LAVA|ROCK|FALL|SHARK|JELLY|STING|TORNADO|LIGHTNING|OVERHEAT|FLASH|HYPER|BLOB|CYCLONE|STORM|EYE|ACID|SPORE/, 'YIKES!', ['scared', 'shock']],
+  [/SHELL|CORE|BOSS|LOCKS/, 'GET HIM!', ['angry', 'grin']],
+  [/SHIFT|VIEW/, 'OOH!', ['grin', 'smug']]];
+export const rivetLine = h => isBanner(h) ? h : mood(h).pre + ' ' + h; // what RIVET-9 says out loud
+const mood = m => { for (const [re, pre, f] of MOODS) if (re.test(m)) return { pre, f }; return { pre: 'HEY!', f: ['happy', 'grin'] }; };
+let RQ = [], RLAST = null, RLT = 0, RG = null;
+function wrapText(str, max) { const out = []; let ln = ''; for (const w of str.split(/\s+/)) { if ((ln + ' ' + w).trim().length > max && ln) { out.push(ln); ln = w; } else ln = (ln + ' ' + w).trim(); } if (ln) out.push(ln); return out; }
+function rivetFace(ctx, cx, cy, s, ex, talk, t, k) { // s = half size of the head. Drawn in screen space with plain canvas strokes
+  const u = s / 10, cyan = '#2ee6ff', ink = (c, w = 1.6) => { ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = w * u * 0.55; ctx.shadowColor = c; ctx.shadowBlur = 6; };
+  const shake = ex === 'scared' ? Math.sin(t * 1.9) * 0.8 : ex === 'angry' ? Math.sin(t * 1.3) * 0.5 : 0, pop = ex === 'shock' && k < 14 ? 1 + (14 - k) / 30 : 1, bob = Math.sin(t * 0.12) * 0.8;
+  ctx.save(); ctx.translate(cx + shake * u, cy + bob); ctx.scale(pop, pop); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // the head: a rounded orange shell with ear bolts and an antenna whose bulb flashes as he talks
+  ink('#ffb070', 1.8); ctx.beginPath(); ctx.roundRect(-9 * u, -8 * u, 18 * u, 16 * u, 4 * u); ctx.globalAlpha = 0.18; ctx.fill(); ctx.globalAlpha = 1; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -8 * u); ctx.lineTo(0, -11.5 * u); ctx.stroke(); ink(talk ? '#ffffff' : '#ff4d6d', 1.6); ctx.beginPath(); ctx.arc(0, -12.5 * u, 1.3 * u, 0, 6.3); ctx.fill();
+  ink('#ffb070', 1.6); for (const sx of [-1, 1]) { ctx.beginPath(); ctx.roundRect(sx * 9 * u - (sx > 0 ? 0 : 2 * u), -3 * u, 2 * u, 6 * u, u); ctx.stroke(); }
+  ink('#ffe14a', 1); ctx.font = `bold ${4 * u}px sans-serif`; ctx.shadowBlur = 0; ctx.fillText('9', 5.2 * u, 7 * u);
+  // the visor, with the emoji face on it
+  ctx.fillStyle = '#04152a'; ctx.beginPath(); ctx.roundRect(-7 * u, -5.5 * u, 14 * u, 10.5 * u, 2.5 * u); ctx.fill(); ink(cyan, 1); ctx.globalAlpha = 0.6; ctx.stroke(); ctx.globalAlpha = 1;
+  const eye = (x, f) => { ctx.save(); ctx.translate(x * u, -1.6 * u); f(); ctx.restore(); }, E = [-3, 3];
+  if (ex === 'happy') { ink(cyan); for (const x of E) eye(x, () => { ctx.beginPath(); ctx.arc(0, 0.6 * u, 1.5 * u, 3.4, 6.0); ctx.stroke(); }); ink('#ff3df0', 1); for (const x of E) { ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc(x * 1.45 * u, 1.6 * u, 0.9 * u, 0, 6.3); ctx.fill(); ctx.globalAlpha = 1; } }
+  else if (ex === 'grin') { ink(cyan); for (const x of E) eye(x, () => { ctx.beginPath(); ctx.arc(0, 0, 1.1 * u, 0, 6.3); ctx.fill(); }); }
+  else if (ex === 'shock') { ink(cyan, 1.3); for (const x of E) eye(x, () => { ctx.beginPath(); ctx.arc(0, 0, 2 * u, 0, 6.3); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, 0.6 * u, 0, 6.3); ctx.fill(); }); }
+  else if (ex === 'scared') { ink(cyan, 1.2); for (const x of E) eye(x, () => { ctx.beginPath(); ctx.arc(0, 0, 1.8 * u, 0, 6.3); ctx.stroke(); ctx.beginPath(); ctx.arc(Math.sin(t * 0.5) * 0.6 * u, 0, 0.45 * u, 0, 6.3); ctx.fill(); });
+    ctx.beginPath(); ctx.moveTo(-5 * u, -4.6 * u); ctx.lineTo(-1.6 * u, -3.6 * u); ctx.moveTo(5 * u, -4.6 * u); ctx.lineTo(1.6 * u, -3.6 * u); ctx.stroke(); ink('#7df9ff', 1); ctx.beginPath(); ctx.moveTo(8 * u, -6 * u); ctx.quadraticCurveTo(9.5 * u, -3 * u, 8 * u, -2.4 * u); ctx.quadraticCurveTo(6.5 * u, -3 * u, 8 * u, -6 * u); ctx.fill(); }
+  else if (ex === 'angry') { ink('#ff4d6d', 1.4); for (const x of E) eye(x, () => { ctx.beginPath(); ctx.arc(0, 0.4 * u, 1 * u, 0, 6.3); ctx.fill(); ctx.beginPath(); ctx.moveTo(-x * 0.7 * u, -2.6 * u); ctx.lineTo(x * 0.6 * u, -1.3 * u); ctx.stroke(); }); }
+  else if (ex === 'starry') { ink('#ffe14a', 1.1); for (const x of E) eye(x, () => { ctx.rotate(t * 0.08); ctx.beginPath(); for (let i = 0; i < 10; i++) { const r = (i % 2 ? 0.8 : 2.1) * u, a = i * 0.628; ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); }); }
+  else if (ex === 'smug') { ink(cyan, 1.3); for (const x of E) eye(x, () => { ctx.beginPath(); ctx.moveTo(-1.5 * u, 0); ctx.lineTo(1.5 * u, 0); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0.2 * u, 0.8 * u, 0, 3.14); ctx.fill(); }); }
+  // the mouth: shaped by the mood, and flapping open while the words are still coming
+  const my = 2.4 * u; ink(ex === 'angry' ? '#ff4d6d' : cyan, 1.3); ctx.beginPath();
+  if (ex === 'shock') { ctx.ellipse(0, my + 0.4 * u, 1.3 * u, (talk ? 2 : 1.5) * u, 0, 0, 6.3); ctx.stroke(); }
+  else if (ex === 'scared') { ctx.moveTo(-3 * u, my); for (let i = 1; i <= 6; i++) ctx.lineTo((-3 + i) * u, my + (i % 2 ? -0.7 : 0.7) * u * (talk ? 1.4 : 1)); ctx.stroke(); }
+  else if (ex === 'angry') { if (talk) { ctx.roundRect(-2.5 * u, my - 0.3 * u, 5 * u, 2 * u, 0.6 * u); ctx.stroke(); ctx.moveTo(-2.5 * u, my + 0.7 * u); ctx.lineTo(2.5 * u, my + 0.7 * u); ctx.stroke(); } else { ctx.moveTo(-2.4 * u, my + 1 * u); ctx.quadraticCurveTo(0, my - 0.4 * u, 2.4 * u, my + 1 * u); ctx.stroke(); } }
+  else if (ex === 'smug') { ctx.moveTo(-2 * u, my + 0.5 * u); ctx.quadraticCurveTo(1 * u, my + 1.4 * u, 3 * u, my - 0.6 * u); ctx.stroke(); }
+  else { const w = ex === 'grin' || ex === 'starry' ? 3.4 : 2.6; if (talk) { ctx.moveTo(-w * u, my - 0.2 * u); ctx.lineTo(w * u, my - 0.2 * u); ctx.quadraticCurveTo(0, my + 3.6 * u, -w * u, my - 0.2 * u); ctx.globalAlpha = 0.5; ctx.fill(); ctx.globalAlpha = 1; ctx.stroke(); } else { ctx.moveTo(-w * u, my); ctx.quadraticCurveTo(0, my + 2.2 * u, w * u, my); ctx.stroke(); } }
+  ctx.restore(); ctx.shadowBlur = 0; }
+function drawRivet(ctx, g, t) {
+  if (RG !== g) { RG = g; RQ = []; RLAST = null; RLT = 0; } // a new run starts with a clear comms window
+  if (g.hintT > 0 && g.hint && !isBanner(g.hint) && (g.hint !== RLAST || g.hintT > RLT)) { const m = mood(g.hint), msg = m.pre + ' ' + g.hint.replace(/ - /g, '. ') + (/[!?.]$/.test(g.hint) ? '' : '!');
+    RQ.unshift({ msg, lines: wrapText(msg, 30), m, k: 0, life: Math.max(260, 120 + msg.length * 3.4) }); RQ.length = Math.min(RQ.length, 2); }
+  RLAST = g.hint; RLT = g.hintT; if (!RQ.length) return;
+  ctx.save(); ctx.globalCompositeOperation = 'source-over'; let y = 70;
+  for (let i = 0; i < RQ.length; i++) { const q = RQ[i]; q.k++; if (q.k > q.life) { RQ.length = i; break; }
+    const a = Math.min(1, q.k / 10, (q.life - q.k) / 40) * (i ? 0.55 : 1), slide = Math.max(0, 10 - q.k) * 4, x = 34 - slide, w = 330, h = Math.max(62, 26 + q.lines.length * 13), shown = Math.floor(q.k * 1.4), talking = shown < q.msg.length;
+    ctx.globalAlpha = a; ctx.fillStyle = 'rgba(6,4,22,0.86)'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 7); ctx.fill(); ctx.strokeStyle = '#ffb070'; ctx.lineWidth = 1.5; ctx.shadowColor = '#ffb070'; ctx.shadowBlur = 8; ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,176,112,0.16)'; ctx.beginPath(); ctx.roundRect(x, y, w, 14, [7, 7, 0, 0]); ctx.fill(); // the title bar, instant message style
+    ctx.fillStyle = '#3dff6a'; ctx.beginPath(); ctx.arc(x + 66, y + 7, 2.4, 0, 6.3); ctx.fill(); text(ctx, 'RIVET-9', x + 72, y + 3.5, 7, '#ffb070', { bold: true, glow: false, alpha: a }); text(ctx, 'INCOMING', x + w - 10, y + 4, 6, '#7d8bd6', { align: 'right', glow: false, alpha: a });
+    ctx.fillStyle = '#04081a'; ctx.beginPath(); ctx.roundRect(x + 6, y + 6, 50, 50, 5); ctx.fill(); ctx.strokeStyle = '#3a4cb8'; ctx.lineWidth = 1; ctx.stroke();
+    const ex = q.m.f[(q.k / 50 | 0) % 2]; rivetFace(ctx, x + 31, y + 33, 21, ex, talking && (q.k >> 2) % 2 === 0, t, q.k % 50);
+    let left = shown; q.lines.forEach((ln, j) => { if (left <= 0) return; const part = ln.slice(0, left); left -= ln.length + 1; text(ctx, part, x + 66, y + 21 + j * 13, 8, j === 0 && part.startsWith(q.m.pre) ? '#ffe14a' : '#ffffff', { bold: true, glow: false, alpha: a }); });
+    if (talking && (q.k >> 3) % 2) { const j = Math.min(q.lines.length - 1, q.lines.findIndex((ln, jj) => q.lines.slice(0, jj + 1).join(' ').length >= shown)); ctx.fillStyle = '#2ee6ff'; ctx.fillRect(x + 66 + textWidth(q.lines[Math.max(0, j)].slice(0, Math.max(0, shown - q.lines.slice(0, Math.max(0, j)).join(' ').length - (j > 0 ? 1 : 0))), 8, true) + 3, y + 21 + Math.max(0, j) * 13, 5, 8); }
+    y += h + 6; }
+  ctx.restore(); }
 export function drawHUD(ctx, g, o = {}) {
   const p = g.players[0], t = g.tick, vw = g.view, m = MASK[vw]; ctx.globalCompositeOperation = 'source-over';
   text(ctx, 'SCORE', 18, 12, 8, '#7d8bd6', { glow: false }); text(ctx, String(g.score).padStart(8, '0'), 18, 25, 16, '#ffffff'); if (o.hi) text(ctx, 'HI ' + String(o.hi).padStart(8, '0'), 150, 12, 8, '#7d8bd6', { glow: false });
@@ -597,24 +655,25 @@ export function drawHUD(ctx, g, o = {}) {
   { const d = (g.recView - vw + 4) % 4, need = d && g.intro <= 0 && !g.level.rules?.arena, bl = (t >> 3) % 2, goL = need && d === 3, goR = need && d !== 3; text(ctx, goL ? '<< L' : '< L', px0 - 8, goL ? 13 : 15, goL ? 13 : 9, goL ? (bl ? '#ffffff' : '#ffe14a') : '#5a66b0', { align: 'right', glow: goL }); text(ctx, goR ? 'R >>' : 'R >', px0 + pw * 4 + 8, goR ? 13 : 15, goR ? 13 : 9, goR ? (bl ? '#ffffff' : '#ffe14a') : '#5a66b0', { glow: goR }); } // the button that gets you to the view you need lights up
   if (!g.level.bonus) for (let i = 0; i < Math.min(p.lives, 6); i++) { const x = W - 26 - i * 24, y = 22; ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 6, y + 7); ctx.lineTo(x, y + 3); ctx.lineTo(x - 6, y + 7); ctx.closePath(); ctx.strokeStyle = '#2ee6ff'; ctx.lineWidth = 1.5; ctx.stroke(); }
   if (!g.level.bonus && p.lives > 6) text(ctx, '+' + (p.lives - 6), W - 26 - 6 * 24 + 8, 26, 8, '#3dffb0', { align: 'right', glow: false });
-  if (g.level.bonus) text(ctx, 'BONUS STAGE', W - 18, 16, 10, '#b06bff', { align: 'right' });
+  if (g.level.bonus) text(ctx, 'BONUS STAGE', W - 18, 16, 10, '#b06bff', { bold: true, align: 'right' });
   if (g.coop) { const q = g.players[1]; text(ctx, q.out ? 'P2 OUT' : 'P2 SHIPS ' + Math.max(0, q.lives), W - 18, 98, 8, '#ffe14a', { align: 'right', glow: false }); }
   if (g.wing) text(ctx, g.wing.dead > 0 ? 'RIVET-9 REBOOTING ' + Math.ceil(g.wing.dead / 60) : 'RIVET-9 WINGMAN', W - 18, 98, 8, g.wing.dead > 0 ? '#7d8bd6' : '#ffb070', { align: 'right', glow: false });
   text(ctx, 'BOMB ' + p.bombs, W - 18, 40, 9, '#ff8a2b', { align: 'right' }); text(ctx, 'DRONES ' + DRONE_MODES[p.dmode], W - 18, 56, 7, '#b06bff', { align: 'right', glow: false });
   // speed gear
   text(ctx, 'SPEED', W - 18, 72, 7, '#7d8bd6', { align: 'right', glow: false }); for (let i = 0; i < GEARS.length; i++) { ctx.fillStyle = i <= g.gear ? '#ffe14a' : '#26306e'; ctx.fillRect(W - 128 + i * 13, 72, 10, 6); } text(ctx, GEARS[g.gear], W - 18, 84, 7, '#ffe14a', { align: 'right', glow: false });
-  if (p.god > 0) text(ctx, 'GOD MODE ' + Math.ceil(p.god / 60), W / 2, 86, 12, RAINBOW[(t >> 2) % 7], { align: 'center' }); else if (p.over > 0) text(ctx, 'OVERDRIVE ' + Math.ceil(p.over / 60), W / 2, 86, 10, '#ffe14a', { align: 'center' });
-  if (g.level.rules?.heat || g.heat > 0.5) { const w = 300, x = W / 2 - w / 2, hot = g.heat > 70; text(ctx, hot && (t >> 3) % 2 ? (g.level.rules?.heat ? 'OVERHEATING - FIND SHADE' : 'OVERHEATING - SHIFT UP AND PUNCH THROUGH') : g.overLava ? 'LAVA - SPEED UP' : 'HEAT', W / 2, 40, 8, hot ? '#ff4d6d' : '#ffb02e', { align: 'center', glow: false }); ctx.strokeStyle = '#ffb02e'; ctx.lineWidth = 1; ctx.strokeRect(x, 54, w, 7); ctx.fillStyle = hot ? '#ff4d6d' : '#ffb02e'; ctx.fillRect(x, 54, w * g.heat / 100, 7);
-    const cool = g.obs.some(ob => ob.kind === 'shade' && Math.abs(p.z - ob.z) < ob.hz && (!m[0] || Math.abs(p.x - ob.x) < ob.hx) && (!m[1] || Math.abs(p.y - ob.y) < ob.hy)); text(ctx, cool ? 'IN SHADE - COOLING' : 'EXPOSED', W / 2, 68, 9, cool ? '#7df9ff' : (t >> 3) % 2 ? '#ff8a2b' : '#ffe14a', { align: 'center', glow: cool }); }
-  const b = g.boss; if (b && b.z <= 29.5 && !b.dying) { const st = g.level.boss.stages[b.stage], w = 360, x = W / 2 - w / 2, n = g.level.boss.stages.length; text(ctx, b.name + ' // ' + st.name, W / 2, 40, 9, st.col, { align: 'center' }); ctx.strokeStyle = st.col; ctx.lineWidth = 1; ctx.strokeRect(x, 54, w, 7); ctx.fillStyle = st.col; ctx.fillRect(x, 54, w * Math.max(0, b.hp) / b.max, 7);
+  if (p.god > 0) text(ctx, 'GOD MODE ' + Math.ceil(p.god / 60), W / 2, 86, 12, RAINBOW[(t >> 2) % 7], { bold: true, align: 'center' }); else if (p.over > 0) text(ctx, 'OVERDRIVE ' + Math.ceil(p.over / 60), W / 2, 86, 10, '#ffe14a', { bold: true, align: 'center' });
+  if (g.level.rules?.heat || g.heat > 0.5) { const w = 300, x = W / 2 - w / 2, hot = g.heat > 70; text(ctx, hot && (t >> 3) % 2 ? (g.level.rules?.heat ? 'OVERHEATING - FIND SHADE' : 'OVERHEATING - SHIFT UP AND PUNCH THROUGH') : g.overLava ? 'LAVA - SPEED UP' : 'HEAT', W / 2, 40, 8, hot ? '#ff4d6d' : '#ffb02e', { bold: true, align: 'center', glow: false }); ctx.strokeStyle = '#ffb02e'; ctx.lineWidth = 1; ctx.strokeRect(x, 54, w, 7); ctx.fillStyle = hot ? '#ff4d6d' : '#ffb02e'; ctx.fillRect(x, 54, w * g.heat / 100, 7);
+    const cool = g.obs.some(ob => ob.kind === 'shade' && Math.abs(p.z - ob.z) < ob.hz && (!m[0] || Math.abs(p.x - ob.x) < ob.hx) && (!m[1] || Math.abs(p.y - ob.y) < ob.hy)); text(ctx, cool ? 'IN SHADE - COOLING' : 'EXPOSED', W / 2, 68, 9, cool ? '#7df9ff' : (t >> 3) % 2 ? '#ff8a2b' : '#ffe14a', { bold: true, align: 'center', glow: cool }); }
+  const b = g.boss; if (b && b.z <= 29.5 && !b.dying) { const st = g.level.boss.stages[b.stage], w = 360, x = W / 2 - w / 2, n = g.level.boss.stages.length; text(ctx, b.name + ' // ' + st.name, W / 2, 40, 9, st.col, { bold: true, align: 'center' }); ctx.strokeStyle = st.col; ctx.lineWidth = 1; ctx.strokeRect(x, 54, w, 7); ctx.fillStyle = st.col; ctx.fillRect(x, 54, w * Math.max(0, b.hp) / b.max, 7);
     for (let i = 0; i < n; i++) { ctx.fillStyle = i >= b.stage ? '#ffffff' : '#30345a'; ctx.fillRect(x + w + 8 + i * 9, 54, 6, 7); }
-    const open = b.vuln.includes(vw); text(ctx, open ? 'CORE EXPOSED' : 'CORE SHIELDED - SHIFT TO ' + VIEWS[st.rec], W / 2, 68, 8, open ? '#3dffb0' : (t >> 3) % 2 ? '#ff4d6d' : '#ffe14a', { align: 'center', glow: false }); }
+    const open = b.vuln.includes(vw); text(ctx, open ? 'CORE EXPOSED' : 'CORE SHIELDED - SHIFT TO ' + VIEWS[st.rec], W / 2, 68, 8, open ? '#3dffb0' : (t >> 3) % 2 ? '#ff4d6d' : '#ffe14a', { bold: true, align: 'center', glow: false }); }
   else if (g.level.len && !g.level.rules?.arena && g.intro <= 0) { // how far through the level you are, with the checkpoints marked
     const x0 = 330, w = 300, y = 50, f = Math.max(0, Math.min(1, g.camZ / g.level.len)); ctx.fillStyle = '#141a40'; ctx.fillRect(x0, y, w, 4); ctx.fillStyle = '#2ee6ff'; ctx.fillRect(x0, y, w * f, 4); ctx.fillStyle = '#ffe14a'; for (const c of g.level.checkpoints || []) if (c < g.level.len) ctx.fillRect(x0 + w * c / g.level.len - 1, y - 2, 2, 8);
     ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(x0 + w * f + 5, y + 2); ctx.lineTo(x0 + w * f - 4, y - 4); ctx.lineTo(x0 + w * f - 4, y + 8); ctx.fill(); text(ctx, (g.level.boss ? 'BOSS' : 'END'), x0 + w + 8, y - 2, 7, '#ff4d6d', { glow: false }); text(ctx, Math.round(f * 100) + '%', x0 - 8, y - 2, 7, '#9fb0ff', { align: 'right', glow: false }); }
-  if (g.mini && g.mini.hp > 0) { const e = g.mini, y = g.ar ? 74 : 66; text(ctx, e.name, W / 2, y - 12, 9, e.col, { align: 'center' }); ctx.fillStyle = '#141a40'; ctx.fillRect(360, y, 240, 6); ctx.fillStyle = e.hit > 0 ? '#ffffff' : e.col; ctx.fillRect(360, y, 240 * Math.max(0, e.hp / e.hpMax), 6); }
-  if (g.ar) { text(ctx, g.ar.wave ? 'WAVE ' + g.ar.wave + ' / ' + g.ar.total : 'GET READY', W / 2, 40, 10, '#ffe14a', { align: 'center' }); text(ctx, g.ar.left + ' LEFT' + (g.recView !== vw && g.ar.left ? '   -   SHIFT TO ' + VIEWS[g.recView] : ''), W / 2, 56, 8, g.recView !== vw && g.ar.left ? '#ffffff' : '#9fb0ff', { align: 'center', glow: false }); }
-  if (g.hintT > 0 && g.hint) { const a = Math.min(1, g.hintT / 25, ((g.hintMax || 230) - g.hintT) / 8 + 0.3); const sz = Math.min(20, 760 / (g.hint.length * 0.94)); const hy2 = g.boss ? 94 : 76; ctx.fillStyle = '#02010a'; ctx.globalAlpha = 0.55 * a; ctx.fillRect(W / 2 - 400, hy2 - 6, 800, sz + 14); ctx.globalAlpha = 1; text(ctx, g.hint, W / 2 + 2, hy2 + 2, sz, '#ff3df0', { align: 'center', alpha: a * 0.5, glow: false }); text(ctx, g.hint, W / 2, hy2, sz, '#ffffff', { align: 'center', alpha: a, tube: true }); }
+  if (g.mini && g.mini.hp > 0) { const e = g.mini, y = g.ar ? 74 : 66; text(ctx, e.name, W / 2, y - 12, 9, e.col, { bold: true, align: 'center' }); ctx.fillStyle = '#141a40'; ctx.fillRect(360, y, 240, 6); ctx.fillStyle = e.hit > 0 ? '#ffffff' : e.col; ctx.fillRect(360, y, 240 * Math.max(0, e.hp / e.hpMax), 6); }
+  if (g.ar) { text(ctx, g.ar.wave ? 'WAVE ' + g.ar.wave + ' / ' + g.ar.total : 'GET READY', W / 2, 40, 10, '#ffe14a', { bold: true, align: 'center' }); text(ctx, g.ar.left + ' LEFT' + (g.recView !== vw && g.ar.left ? '   -   SHIFT TO ' + VIEWS[g.recView] : ''), W / 2, 56, 8, g.recView !== vw && g.ar.left ? '#ffffff' : '#9fb0ff', { bold: true, align: 'center', glow: false }); }
+  drawRivet(ctx, g, t);
+  if (g.hintT > 0 && g.hint && isBanner(g.hint)) { const a = Math.min(1, g.hintT / 25, ((g.hintMax || 230) - g.hintT) / 8 + 0.3); const sz = Math.min(20, 760 / (g.hint.length * 0.94)); const hy2 = g.boss ? 94 : 76; ctx.fillStyle = '#02010a'; ctx.globalAlpha = 0.55 * a; ctx.fillRect(W / 2 - 400, hy2 - 6, 800, sz + 14); ctx.globalAlpha = 1; text(ctx, g.hint, W / 2 + 2, hy2 + 2, sz, '#ff3df0', { align: 'center', alpha: a * 0.5, glow: false, bold: true }); text(ctx, g.hint, W / 2, hy2, sz, '#ffffff', { align: 'center', alpha: a, tube: true, bold: true }); }
   // altitude bar: where you are, what is blocked just ahead (red), and the way through (green)
   { const x = 14, y0 = 430, hgt = 300, Yp = y => y0 - Math.max(0, Math.min(9.6, y)) / 9.6 * hgt, flat = vw === 3; ctx.globalAlpha = flat ? 0.35 : 1; ctx.strokeStyle = '#3a4cb8'; ctx.lineWidth = 1; ctx.strokeRect(x, y0 - hgt, 8, hgt); text(ctx, 'ALT', x - 2, y0 + 6, 6, '#7d8bd6', { glow: false });
     if (!flat) { let near = 1e9; for (const ob of g.obs) if ((solid(ob, vw) || ob.warm > 0 || ob.soon) && ob.z + ob.hz > p.z + 0.4 && ob.z - ob.hz < p.z + 15 && ob.kind !== 'car' && (!m[0] || Math.abs(ob.x - p.x) < ob.hx + 0.5)) near = Math.min(near, ob.z - ob.hz);
