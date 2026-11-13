@@ -3,7 +3,7 @@
 // (C) 2026 GRiDDiM / ArcadeGridz / BDC
 import { createGame, step, autopilot, snapshot, makeWing, VIEWS, BAR, GEARS, INTRO } from './game.js';
 import { LEVELS, ORDER, buildLevel } from './levels.js';
-import { W, H, drawWorld, drawHUD, drawLogo, drawSplash, meshScreen, text, textWidth, SHIP_HULL, SHIP_WING, SHIP_FIN, RAINBOW, VCOL, PIV, logosReady } from './render.js';
+import { W, H, drawWorld, drawHUD, drawLogo, drawTagline, drawSplash, meshScreen, text, textWidth, SHIP_HULL, SHIP_WING, SHIP_FIN, RAINBOW, VCOL, PIV, logosReady } from './render.js';
 import { createAudio } from './audio.js';
 import { DEVLOG, CREDITS } from './devlog.js';
 
@@ -380,7 +380,7 @@ export function mountShift(root, host = {}) {
     if (m.kind === 'title') {
       const k = Math.min(1, titleT / 18), sc = 1 + (1 - k) * (1 - k) * 2.2; if (titleT < 26) ctx.translate((Math.random() - 0.5) * (26 - titleT) * 0.5, (Math.random() - 0.5) * (26 - titleT) * 0.5);
       drawLogo(ctx, 480, 34 - (sc - 1) * 30, sc, t); ctx.setTransform(res, 0, 0, res, 0, 0);
-      text(ctx, 'SHIFT THE VIEW.  SHIFT THE RULES.', 480, 148, 9, '#ffe14a', { align: 'center' });
+      drawTagline(ctx, 480, 146, 10, t);
       ctx.globalCompositeOperation = 'lighter'; const a = t * 0.7, pi = -0.35 + Math.sin(t) * 0.1, rl = Math.sin(t * 0.8) * 0.3; meshScreen(ctx, SHIP_HULL, 742, 330, 86, a, pi, rl, '#ffffff'); meshScreen(ctx, SHIP_WING, 742, 330, 86, a, pi, rl, '#2ee6ff'); meshScreen(ctx, SHIP_FIN, 742, 330, 86, a, pi, rl, '#ff3df0'); ctx.globalCompositeOperation = 'source-over';
       const n = m.items.length, gap = n > 7 ? 29 : n > 6 ? 32 : 36; drawItems(m, 340, 196, n > 7 ? 13 : 15, gap); // the title menu floats over the attract run, no card behind it
       text(ctx, 'GITHUB GAME OFF 2026', 742, 440, 8, '#5a66b0', { align: 'center', glow: false });

@@ -418,6 +418,7 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **The god-mode beam reaches the far edge** of the bigger field again, and so do the laser and the drones' beams.
 - **The wave hits harder** (about half as much again at every rank), and its top rank is gold so it no longer looks like rank 2. The skins got the same fix.
 - **The title voice says it right:** "two-DIE-so", a beat, then "shift".
+- **A cooler tagline.** Under the logo it is now bold and in two colours, "SHIFT THE VIEW" in cyan and "SHIFT THE RULES" leaning in pink, with a lit chevron between them and brackets either side.
 - **PIXIE skin.** The ship becomes a fairy: a glowing body, four butterfly wings that flutter, antennae and a falling trail of glitter. Shots become twinkling stars, missiles little spinning stars, drones fireflies, and every beam and wave turns pastel. Beat the Eye on Jupiter to earn it, or buy it in the Sparkz store.
 
 ## Still to do

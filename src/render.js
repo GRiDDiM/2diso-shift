@@ -622,6 +622,13 @@ function logoWord(ctx, word, x0, y0, u, lean, cols, glow, sc) { const lw = 1.3 *
   ctx.globalAlpha = 1; ctx.strokeStyle = gr; ctx.lineWidth = lw; ctx.stroke();
   ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.55; ctx.lineWidth = Math.max(1, 0.16 * u); ctx.stroke(); // a hot core down the middle of every stroke
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
+// the tagline under the logo: bold, two halves in the two logo colours, a lit chevron between them, brackets either side
+export function drawTagline(ctx, cx, y, size = 10, t = 0) { const a = 'SHIFT THE VIEW', b = 'SHIFT THE RULES', wa = textWidth(a, size, true), wb = textWidth(b, size, true), gap = size * 3.6, W2 = wa + gap + wb, x = cx - W2 / 2;
+  ctx.save(); text(ctx, a, x, y, size, '#2ee6ff', { bold: true }); text(ctx, b, x + wa + gap, y, size, '#ff3df0', { bold: true, italic: true });
+  const mx = x + wa + gap / 2, my = y + size / 2, k = size * 0.42, pu = 0.6 + 0.4 * Math.abs(Math.sin(t * 2)); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = '#ffe14a'; ctx.lineJoin = 'miter'; ctx.lineCap = 'butt';
+  for (const [w, al] of [[size * 0.7, 0.18 * pu], [size * 0.24, 1]]) { ctx.lineWidth = w; ctx.globalAlpha = al; ctx.beginPath(); ctx.moveTo(mx - k * 1.1, my - k); ctx.lineTo(mx - k * 0.1, my); ctx.lineTo(mx - k * 1.1, my + k); ctx.moveTo(mx + k * 0.1 - k * 0.2, my - k); ctx.lineTo(mx + k * 1.1 - k * 0.2, my); ctx.lineTo(mx + k * 0.1 - k * 0.2, my + k); ctx.stroke(); }
+  ctx.globalAlpha = 0.75; ctx.lineWidth = Math.max(1.2, size * 0.16); for (const [ex, d, c] of [[x - size * 1.4, 1, '#2ee6ff'], [x + W2 + size * 1.4, -1, '#ff3df0']]) { ctx.strokeStyle = c; ctx.beginPath(); ctx.moveTo(ex + d * size * 0.7, y - size * 0.25); ctx.lineTo(ex, y - size * 0.25); ctx.lineTo(ex, y + size * 1.25); ctx.lineTo(ex + d * size * 0.7, y + size * 1.25); ctx.stroke(); }
+  ctx.restore(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
 export function drawLogo(ctx, cx, y, sc = 1, t = 0) {
   const u = 12.2 * sc, gap = 3.4 * u, l1 = 0.1, l2 = 0.3, w1 = logoWidth('2DISO', u) + 6 * u * l1, w2 = logoWidth('SHIFT', u) + 6 * u * l2, W2 = w1 + gap + w2, x = cx - W2 / 2, xs = x + w1 + gap, H6 = 6 * u;
   const C1 = ['#ffffff', '#c8fbff', '#2ee6ff', '#2a5bff'], C2 = ['#ffffff', '#ffc4fa', '#ff3df0', '#8a3dff'];
