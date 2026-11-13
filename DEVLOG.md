@@ -556,6 +556,12 @@ The cutscenes now tell a story, five lines each, and it carries through to the e
 - **Bug test: every boss on its own.** The list now has all four bosses and all four warp-stage minibosses as separate entries. Each one drops you in just before the fight and ticks off when you win it.
 - **Bug test: no warps.** Bug test runs of the planets no longer spawn warps, so you can't fly into one by accident and leave the level you are testing.
 
+### 56. Room to fight (r64)
+
+- Warp-stage minibosses used to park close in front of you, leaving little room to back off. They now come in from further away and hold well up the lane, so there is space to dodge and fight.
+- The pop-up cards in the corner grow to fit their text. A long one, like the tick for the MOTHER ROCK test, used to spill out of its card.
+- On the Sun the heat meter drops below a boss or miniboss health bar instead of sitting on top of it.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
