@@ -651,6 +651,12 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 
 ![Glitch](shots/glitch.jpg)
 
+### 67. Shh-shh-SHIFT (r73)
+
+- On the title screen the announcer now says "2diso", then a stuttering SHIFT that echoes away, softer and quicker each time, with a faint electronic ping under each echo.
+- The ship swooping in at the end of the intro has a sound now: air building to a roar as it comes at you, then a falling doppler as it peels away.
+- Fixed the old drawn GRiDDiM splash flashing up for a moment before the real logo: the intro now shows nothing until the logo image has loaded, and it waits by the clock instead of counting frames, which ran out early on fast monitors.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
