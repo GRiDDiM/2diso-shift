@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r65';
+const VER = 'r66';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -355,7 +355,7 @@ export function mountShift(root, host = {}) {
     step(g, ins); prevIn = i; if (!opt.idle && g.tick % 30 === 0) achTick();
     if (ghost) { if (ghost.g.state === 'play' && ghost.k < ghost.runs.length) { step(ghost.g, [dec(ghost.runs[ghost.k])]); if (++ghost.n >= ghost.runs[ghost.k + 1]) { ghost.k += 2; ghost.n = 0; } } else ghost = null; }
     for (const f of g.fx) { if (f.startsWith('say:')) { audio.say(f.slice(4), true); continue; } if (f.startsWith('toast:')) { const [a, b] = f.slice(6).split('|'); toast(a, b); continue; }
-      if (f === 'shift' && g.intro <= 0) audio.say(VIEWS[g.view] + ' view'); if (f === 'hint' && g.hint && !g.hint.includes(' / ')) audio.say(rivetLine(g.hint).replace('//', '.').replace(/ - /g, '. '), true); audio.sfx(f === 'go' ? 'ok' : f === 'gear' ? 'blip' : f);
+      if (f === 'shift' && g.intro <= 0) audio.say(VIEWS[g.view] + ' view'); if (f === 'hint' && g.hint && !g.hint.includes(' / ')) audio.say(rivetLine(g.hint).replace(/\/\//g, '.').replace(/ - /g, '. '), true); audio.sfx(f === 'go' ? 'ok' : f === 'gear' ? 'blip' : f);
       if (f === 'bossin') audio.music('boss'); if (f === 'die' || f === 'bomb' || f === 'boom2' || f === 'perfect') window.ArcadeGridzPad?.rumble?.(f === 'boom2' ? 160 : 260, 0.8); }
     if (!hiShown && !assisted && g.score > LS.get('best', 0) && LS.get('best', 0) > 0) { hiShown = true; toast('NEW HIGH SCORE', 'KEEP IT ROLLING'); audio.sfx('ring'); audio.say('new high score'); }
     // a warp ring: jump to the bonus stage, and come back to this spot afterwards

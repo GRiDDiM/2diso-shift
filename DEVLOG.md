@@ -573,6 +573,12 @@ A proper look at where the time goes. The answer was clear: the game logic costs
 
 On a test machine with no graphics card at 1080p, the same Mars stretch went from 29 frames a second on HIGH to 44 to 48 with dynamic framerate on.
 
+### 58. Everything goes through RIVET-9 (r66)
+
+- No more centre-screen banners. Sector names, waves, minibosses, boss kills, LAVA RISING and the rest now all arrive in RIVET-9's comms window, each with its own opener and face (HERE WE GO!, INCOMING!, UH OH!, YES!!).
+- Flashing status warnings moved there too: overheating, flying over lava, a shielded boss core, leaving the clear channel on the Sun and the arena's view call. He says each one once when it starts instead of it flashing in the middle of the screen. The gauges keep a short plain label.
+- The heat meter no longer sits on top of the level progress bar.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

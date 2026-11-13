@@ -644,10 +644,16 @@ function drawBoss2(g, b, t) {
 // ---------- HUD ----------
 
 // ---------- RIVET-9 on comms: tips, view calls and anomaly alerts pop up top left like an instant message, with his face pulling expressions as he talks ----------
-const BANNER = /^(WAVE |FINAL WAVE|GET READY|LAVA RISING|ASH FALLING)|\/\//; // the big centre-screen calls stay as banners
+const BANNER = /$^/; // nothing is a centre-screen banner any more: every notice goes through RIVET-9's comms window
 export const isBanner = s => BANNER.test(s);
 const MOODS = [ // what he says first, and which two faces he flips between while he says it
   [/REALITY SHIFT/, 'WHOA WHOA WHOA!', ['shock', 'scared']],
+  [/DESTROYED/, 'YES!!', ['starry', 'happy']],
+  [/MINIBOSS/, 'UH OH!', ['shock', 'angry']],
+  [/^(FINAL )?WAVE|GET READY/, 'INCOMING!', ['angry', 'grin']],
+  [/^(SECTOR|BONUS)/, 'HERE WE GO!', ['grin', 'happy']],
+  [/OVERHEAT|RISING|FALLING|SPEED UP/, 'YIKES!', ['scared', 'shock']],
+  [/SHIELDED/, 'HEY!', ['angry', 'smug']],
   [/ANOMALY|WARP/, 'WHOA!!', ['shock', 'starry']],
   [/LAVA|ROCK|FALL|SHARK|JELLY|STING|TORNADO|LIGHTNING|OVERHEAT|FLASH|HYPER|BLOB|CYCLONE|STORM|EYE|ACID|SPORE/, 'YIKES!', ['scared', 'shock']],
   [/SHELL|CORE|BOSS|LOCKS/, 'GET HIM!', ['angry', 'grin']],
@@ -684,10 +690,12 @@ export function rivetFace(ctx, cx, cy, s, ex, talk, t, k) { // s = half size of 
   else if (ex === 'smug') { ctx.moveTo(-2 * u, my + 0.5 * u); ctx.quadraticCurveTo(1 * u, my + 1.4 * u, 3 * u, my - 0.6 * u); ctx.stroke(); }
   else { const w = ex === 'grin' || ex === 'starry' ? 3.4 : 2.6; if (talk) { ctx.moveTo(-w * u, my - 0.2 * u); ctx.lineTo(w * u, my - 0.2 * u); ctx.quadraticCurveTo(0, my + 3.6 * u, -w * u, my - 0.2 * u); ctx.globalAlpha = 0.5; ctx.fill(); ctx.globalAlpha = 1; ctx.stroke(); } else { ctx.moveTo(-w * u, my); ctx.quadraticCurveTo(0, my + 2.2 * u, w * u, my); ctx.stroke(); } }
   ctx.restore(); ctx.shadowBlur = 0; }
+function rivetPush(h) { const m = mood(h), msg = m.pre + ' ' + h.replace(/ - | \/\/ /g, '. ') + (/[!?.]$/.test(h) ? '' : '!'); RQ.unshift({ msg, lines: wrapText(msg, 30), m, k: 0, life: Math.max(260, 120 + msg.length * 3.4) }); RQ.length = Math.min(RQ.length, 2); }
+const RCD = {}; // status warnings (overheating, lava, a shielded core) are said once when they start, then not again for a while
+function rivetWarn(key, on, msg, t, gap = 900) { const c = RCD[key] || (RCD[key] = { on: false, t: -1e9 }); if (on && !c.on && t - c.t > gap) { c.t = t; rivetPush(msg); } c.on = on; }
 function drawRivet(ctx, g, t) {
-  if (RG !== g) { RG = g; RQ = []; RLAST = null; RLT = 0; } // a new run starts with a clear comms window
-  if (g.hintT > 0 && g.hint && !isBanner(g.hint) && (g.hint !== RLAST || g.hintT > RLT)) { const m = mood(g.hint), msg = m.pre + ' ' + g.hint.replace(/ - /g, '. ') + (/[!?.]$/.test(g.hint) ? '' : '!');
-    RQ.unshift({ msg, lines: wrapText(msg, 30), m, k: 0, life: Math.max(260, 120 + msg.length * 3.4) }); RQ.length = Math.min(RQ.length, 2); }
+  if (RG !== g) { RG = g; RQ = []; RLAST = null; RLT = 0; for (const k in RCD) delete RCD[k]; } // a new run starts with a clear comms window
+  if (g.hintT > 0 && g.hint && !isBanner(g.hint) && (g.hint !== RLAST || g.hintT > RLT)) { rivetPush(g.hint); }
   RLAST = g.hint; RLT = g.hintT; if (!RQ.length) return;
   ctx.save(); ctx.globalCompositeOperation = 'source-over'; let y = 70;
   for (let i = 0; i < RQ.length; i++) { const q = RQ[i]; q.k++; if (q.k > q.life) { RQ.length = i; break; }
@@ -718,16 +726,16 @@ export function drawHUD(ctx, g, o = {}) {
   // speed gear
   text(ctx, 'SPEED', W - 18, 72, 7, '#7d8bd6', { align: 'right', glow: false }); for (let i = 0; i < GEARS.length; i++) { ctx.fillStyle = i <= g.gear ? '#ffe14a' : '#26306e'; ctx.fillRect(W - 128 + i * 13, 72, 10, 6); } text(ctx, GEARS[g.gear], W - 18, 84, 7, '#ffe14a', { align: 'right', glow: false });
   if (p.god > 0) text(ctx, 'GOD MODE ' + Math.ceil(p.god / 60), W / 2, 86, 12, RAINBOW[(t >> 2) % 7], { bold: true, align: 'center' }); else if (p.over > 0) text(ctx, 'OVERDRIVE ' + Math.ceil(p.over / 60), W / 2, 86, 10, '#ffe14a', { bold: true, align: 'center' });
-  if (g.level.rules?.heat || g.heat > 0.5) { const w = 300, x = W / 2 - w / 2, hot = g.heat > 70, dy = g.mini || g.boss ? 48 : 0; /* drops below a boss or miniboss bar */ text(ctx, hot && (t >> 3) % 2 ? (g.level.rules?.heat ? 'OVERHEATING - FIND SHADE' : 'OVERHEATING - SHIFT UP AND PUNCH THROUGH') : g.overLava ? 'LAVA - SPEED UP' : 'HEAT', W / 2, 40 + dy, 8, hot ? '#ff4d6d' : '#ffb02e', { bold: true, align: 'center', glow: false }); ctx.strokeStyle = '#ffb02e'; ctx.lineWidth = 1; ctx.strokeRect(x, 54 + dy, w, 7); ctx.fillStyle = hot ? '#ff4d6d' : '#ffb02e'; ctx.fillRect(x, 54 + dy, w * g.heat / 100, 7);
-    const cool = g.obs.some(ob => ob.kind === 'shade' && Math.abs(p.z - ob.z) < ob.hz && (!m[0] || Math.abs(p.x - ob.x) < ob.hx) && (!m[1] || Math.abs(p.y - ob.y) < ob.hy)); text(ctx, cool ? 'IN SHADE - COOLING' : 'EXPOSED', W / 2, 68, 9, cool ? '#7df9ff' : (t >> 3) % 2 ? '#ff8a2b' : '#ffe14a', { bold: true, align: 'center', glow: cool }); }
+  if (g.level.rules?.heat || g.heat > 0.5) { const w = 300, x = W / 2 - w / 2, hot = g.heat > 70, dy = g.mini || g.boss ? 48 : 14; /* drops below a boss or miniboss bar */ rivetWarn('heat', hot, g.level.rules?.heat ? 'OVERHEATING - FIND SHADE' : 'OVERHEATING - SHIFT UP AND PUNCH THROUGH', t); rivetWarn('lava', !!g.overLava && !hot, 'LAVA - SPEED UP', t); text(ctx, 'HEAT', x - 8, 53 + dy, 7, hot && (t >> 3) % 2 ? '#ff4d6d' : '#ffb02e', { bold: true, align: 'right', glow: false }); ctx.strokeStyle = '#ffb02e'; ctx.lineWidth = 1; ctx.strokeRect(x, 54 + dy, w, 7); ctx.fillStyle = hot ? '#ff4d6d' : '#ffb02e'; ctx.fillRect(x, 54 + dy, w * g.heat / 100, 7);
+    const cool = g.obs.some(ob => ob.kind === 'shade' && Math.abs(p.z - ob.z) < ob.hz && (!m[0] || Math.abs(p.x - ob.x) < ob.hx) && (!m[1] || Math.abs(p.y - ob.y) < ob.hy)); rivetWarn('sun', !cool, 'EXPOSED - GET BACK IN THE CLEAR CHANNEL', t, 600); text(ctx, cool ? 'COOLING' : 'EXPOSED', W / 2 + 158, 53 + (g.mini || g.boss ? 48 : 14), 7, cool ? '#7df9ff' : '#ff8a2b', { bold: true, glow: false }); }
   const b = g.boss; if (b && b.z <= 29.5 && !b.dying) { const st = g.level.boss.stages[b.stage], w = 360, x = W / 2 - w / 2, n = g.level.boss.stages.length; text(ctx, b.name + ' // ' + st.name, W / 2, 40, 9, st.col, { bold: true, align: 'center' }); ctx.strokeStyle = st.col; ctx.lineWidth = 1; ctx.strokeRect(x, 54, w, 7); ctx.fillStyle = st.col; ctx.fillRect(x, 54, w * Math.max(0, b.hp) / b.max, 7);
     for (let i = 0; i < n; i++) { ctx.fillStyle = i >= b.stage ? '#ffffff' : '#30345a'; ctx.fillRect(x + w + 8 + i * 9, 54, 6, 7); }
-    const open = b.vuln.includes(vw); text(ctx, open ? 'CORE EXPOSED' : 'CORE SHIELDED - SHIFT TO ' + VIEWS[st.rec], W / 2, 68, 8, open ? '#3dffb0' : (t >> 3) % 2 ? '#ff4d6d' : '#ffe14a', { bold: true, align: 'center', glow: false }); }
+    const open = b.vuln.includes(vw); rivetWarn('core' + st.name, !open, 'CORE SHIELDED - SHIFT TO ' + VIEWS[st.rec] + ' VIEW', t, 420); text(ctx, open ? 'CORE EXPOSED' : 'SHIELDED', W / 2, 68, 8, open ? '#3dffb0' : '#ff4d6d', { bold: true, align: 'center', glow: false }); }
   else if (g.level.len && !g.level.rules?.arena && g.intro <= 0) { // how far through the level you are, with the checkpoints marked
     const x0 = 330, w = 300, y = 50, f = Math.max(0, Math.min(1, g.camZ / g.level.len)); ctx.fillStyle = '#141a40'; ctx.fillRect(x0, y, w, 4); ctx.fillStyle = '#2ee6ff'; ctx.fillRect(x0, y, w * f, 4); ctx.fillStyle = '#ffe14a'; for (const c of g.level.checkpoints || []) if (c < g.level.len) ctx.fillRect(x0 + w * c / g.level.len - 1, y - 2, 2, 8);
     ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(x0 + w * f + 5, y + 2); ctx.lineTo(x0 + w * f - 4, y - 4); ctx.lineTo(x0 + w * f - 4, y + 8); ctx.fill(); text(ctx, (g.level.boss ? 'BOSS' : 'END'), x0 + w + 8, y - 2, 7, '#ff4d6d', { glow: false }); text(ctx, Math.round(f * 100) + '%', x0 - 8, y - 2, 7, '#9fb0ff', { align: 'right', glow: false }); }
   if (g.mini && g.mini.hp > 0) { const e = g.mini, y = g.ar ? 74 : 66; text(ctx, e.name, W / 2, y - 12, 9, e.col, { bold: true, align: 'center' }); ctx.fillStyle = '#141a40'; ctx.fillRect(360, y, 240, 6); ctx.fillStyle = e.hit > 0 ? '#ffffff' : e.col; ctx.fillRect(360, y, 240 * Math.max(0, e.hp / e.hpMax), 6); }
-  if (g.ar) { text(ctx, g.ar.wave ? 'WAVE ' + g.ar.wave + ' / ' + g.ar.total : 'GET READY', W / 2, 40, 10, '#ffe14a', { bold: true, align: 'center' }); text(ctx, g.ar.left + ' LEFT' + (g.recView !== vw && g.ar.left ? '   -   SHIFT TO ' + VIEWS[g.recView] : ''), W / 2, 56, 8, g.recView !== vw && g.ar.left ? '#ffffff' : '#9fb0ff', { bold: true, align: 'center', glow: false }); }
+  if (g.ar) { text(ctx, g.ar.wave ? 'WAVE ' + g.ar.wave + ' / ' + g.ar.total : 'GET READY', W / 2, 40, 10, '#ffe14a', { bold: true, align: 'center' }); text(ctx, (rivetWarn('arena' + g.recView, g.recView !== vw && g.ar.left > 0, 'SHIFT TO ' + VIEWS[g.recView] + ' VIEW', t, 300), g.ar.left + ' LEFT'), W / 2, 56, 8, g.recView !== vw && g.ar.left ? '#ffffff' : '#9fb0ff', { bold: true, align: 'center', glow: false }); }
   drawRivet(ctx, g, t);
   if (g.hintT > 0 && g.hint && isBanner(g.hint)) { const a = Math.min(1, g.hintT / 25, ((g.hintMax || 230) - g.hintT) / 8 + 0.3); const sz = Math.min(20, 760 / (g.hint.length * 0.94)); const hy2 = g.boss ? 94 : 76; ctx.fillStyle = '#02010a'; ctx.globalAlpha = 0.55 * a; ctx.fillRect(W / 2 - 400, hy2 - 6, 800, sz + 14); ctx.globalAlpha = 1; text(ctx, g.hint, W / 2 + 2, hy2 + 2, sz, '#ff3df0', { align: 'center', alpha: a * 0.5, glow: false, bold: true }); text(ctx, g.hint, W / 2, hy2, sz, '#ffffff', { align: 'center', alpha: a, tube: true, bold: true }); }
   // altitude bar: where you are, what is blocked just ahead (red), and the way through (green)
