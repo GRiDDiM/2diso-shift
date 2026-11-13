@@ -579,6 +579,30 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - Flashing status warnings moved there too: overheating, flying over lava, a shielded boss core, leaving the clear channel on the Sun and the arena's view call. He says each one once when it starts instead of it flashing in the middle of the screen. The gauges keep a short plain label.
 - The heat meter no longer sits on top of the level progress bar.
 
+### 59. Clarity mode (r67)
+
+- A new CLARITY switch under VIDEO for when the screen gets busy. The backdrop dims, your own shots, beams and explosions turn translucent, particles and score pops are capped, and enemy bullets always draw on top with a dark backing so they stay readable through everything.
+- Left: normal. Right: clarity on. Top is the Mars boss in TOP view, bottom is Planet X in SIDE view.
+
+![Clarity off (left) and on (right)](shots/clarity-before-after.jpg)
+
+### 60. Six ranks for everything (r67)
+
+- Every weapon, the shield, the bomb and the hyperdrive now have six ranks, the same as drones. The old top ranks are still the top; the new ones in between each add a twist instead of just more damage.
+- MISSILE: Sparkler, Swarm, Shrapnel (hits throw shards), Barrage, Tagger (marked enemies take more damage), Cluster.
+- LASER: Penlight, Focus, Mirror (the beam eats bullets), Lance, Capacitor (every fifth pulse hits hard), Prism.
+- WAVE: Ripple, Wide, Echo (a mirrored second wave), Tidal, Undertow (shoves enemies back), Tsunami.
+- BOLT: Static, Fork, Magnet Coil (pulls pods in), Chain, Blackout (clears nearby bullets), Storm.
+- SPREAD: Double Tap, Twin Fan, Piercer, Star Fan, Railgun, Nova Fan.
+- SHIELD: Film, Barrier, Blowback (losing a layer knocks bullets away), Double Barrier, Afterglow (longer safe time after a hit), Triple Barrier.
+- BOMB: Wide Ring, Sweep Bomb, Backdraft (a second sweep), Scatter Bomb, Vacuum (pulls in every pod), Mega Nuke.
+- HYPERDRIVE still unlocks only once everything else is maxed: Overclock, Magnet, Quicksilver (faster fire), Second Wind (one free save per level), Bomb Forge (bombs refill slowly), Singularity.
+
+### 61. Small fixes (r67)
+
+- God mode and overdrive countdowns now live in RIVET-9's comms window instead of the middle of the screen.
+- Once everything is maxed, pickups stop being upgrade pods. You get the odd bomb, or points.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
