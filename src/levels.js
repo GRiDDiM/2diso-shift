@@ -21,7 +21,7 @@ function kit(id) {
   const fill = (tmpl, from, to, step, clut = 'billboard', gshape = 'tank') => { for (let i = 0, z = from; z < to; z += step, i++) { const v = (zones.find(q => z >= q.z0 && z < q.z1) || {}).view, h = Math.abs(Math.sin(z * 12.9898)) % 1, h2 = Math.abs(Math.sin(z * 78.233)) % 1;
     const o = v === 0 ? { x: 0, y: 2.4 + h * 5, ay: 1.2 + h2 } : v === 3 ? { x: h * 9 - 4.5, ax: 3 + h2 * 2, y: 5 } : { x: h * 6 - 3, y: 3 + h2 * 4, ax: 2.5, ay: 1 };
     if (i % 4 === 1) { const cy = v === 3 ? 5 : 2.2 + h2 * 5, cx = v === 0 ? 0 : h * 10 - 5; obs(z + step / 2, { x: cx, y: cy, hx: 0.8, hy: 0.8, hz: 0.8, col: tmpl.col, kind: clut, hp: 3, score: 60, gem: i % 8 === 1, pod: i % 8 === 5 }); } // and something small to blast in the gaps
-    if (i % 5 === 3 || i % 10 === 8) { const up = i % 10 === 8, yy = up ? 8.9 : 0.75; ground(z + step * 0.3, { type: 'walker', x: h2 * 12 - 6, vx: (h > 0.5 ? 1 : -1) * (1.2 + h2), y: yy, y0: yy, col: tmpl.col, hp: 4, r: 0.85, score: 200, fire: 150, bs: 6, shape: gshape, ceil: up, pod: i % 10 === 3 }); } // ground troops: they walk or drive the floor (and sometimes the ceiling) and shoot
+    if (i % 3 === 1) { const up = i % 6 === 4, yy = up ? 8.9 : 0.75, n = gshape === 'walker' && !up ? 2 : 1; for (let q = 0; q < n; q++) ground(z + step * 0.3 + q * 2.6, { type: 'walker', x: (h2 * 12 - 6) * (q ? -1 : 1), vx: (h > 0.5 ? 1 : -1) * (q ? -1 : 1) * (1.2 + h2), y: yy, y0: yy, col: tmpl.col, hp: 4, r: gshape === 'walker' ? 1.15 : 0.85, score: 200, fire: 150, bs: 6, shape: gshape, ceil: up, pod: i % 9 === 4 && !q }); } // ground troops: they walk or drive the floor (and sometimes the ceiling) and shoot; crawlers come in pairs // ground troops: they walk or drive the floor (and sometimes the ceiling) and shoot
     if (i % 3 === 2) for (let k = 0; k < 3; k++) en(z + k * 2.5, { ...tmpl, type: 'kami', hp: 1, vz: -6, score: 80, x: v === 0 ? 0 : (k - 1) * 3 + o.x * 0.5, y: v === 3 ? 5 : 2.5 + ((k + i) % 3) * 2.2 }); else wing(z, 4 + (i % 2), { ...tmpl, ...o }); } };
   const zone = (z0, z1, view, msg) => zones.push({ z0, z1, view, msg });
   const gate = (z, hx, hy, o = {}) => { const w = o.w || 2.2, h = o.h || 1.9, k = { hz: 0.5, kind: 'gate', col: '#ffe14a', org: 1, ...o }, X = 11, T = 12.5, Bm = -3;
@@ -404,13 +404,27 @@ function asteroids() { // rock-busting frenzy: rocks split, and some carry pods
   const tick = stageMini(K, 'belt', 327);
   return K.done({ name: 'ASTEROID BELT', title: 'THE RUBBLE', bonus: true, tick, endZ: 350, endBonus: 10000, theme: { sky: 'space', grid: '#3a3a5a', nofloor: true } });
 }
-function pluto() { // ice field: shatter a path, thread the spires
-  const K = kit('pluto'), { at, obs, en, zone } = K, ICE = '#9fe9ff', DEEP = '#5ea0ff';
-  zone(-99, 180, ISO, 'BONUS // PLUTO - SHATTER THE ICE SHELF');
-  for (let i = 0; i < 16; i++) { const z = 34 + i * 9; for (let k = 0; k < 4; k++) if ((i + k) % 4 !== 1) obs(z, { x: 0, y: 1.2 + k * 2.3, hx: 8.6, hy: 1.05, hz: 0.9, col: k % 2 ? ICE : DEEP, kind: 'ice', hp: 5, gem: (i + k) % 3 === 0, score: 80 }); }
-  zone(180, 1e9, CHASE, 'CRYSTAL SPIRES - SHIFT TO CHASE VIEW'); K.hill(226, 268, 1.6); K.hill(296, 326, 1.4);
-  for (let i = 0; i < 11; i++) { const z = 196 + i * 13; (i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7.5, -7.5]).forEach((x, k) => (i + k) % 3 === 0 ? obs(z, { x, y: 4.75, hx: 1, hy: 4.75, hz: 1, col: ICE, kind: 'ice', hp: 7, gem: true, score: 120 }) : obs(z, { x, y: 4.75, hx: 0.8, hy: 4.75, hz: 0.8, col: DEEP, kind: 'spire' })); }
-  for (let i = 0; i < 8; i++) en(50 + i * 36, { type: 'kami', x: (i % 3 - 1) * 4, y: 3 + (i % 3) * 2, vz: -7, hp: 2, r: 0.55, col: '#ffffff', score: 150, shape: 'shard', pod: i % 3 === 2 });
+function pluto() { // the cold edge: shatter the shelf, dodge the snowflake comets and the cryo geysers, weave the icicles and the drifting bergs
+  const K = kit('pluto'), { at, obs, en, zone } = K, ICE = '#9fe9ff', DEEP = '#5ea0ff', SNOW = '#ffffff';
+  const flake = (z, x, y, o = {}) => en(z, { type: 'kami', x, y, vz: -9, hp: 2, r: 0.6, col: '#c8f4ff', score: 150, shape: 'flake', ...o }); // a snowflake comet streaking in
+  const cryo = (z, x, ph) => obs(z, { x, y: 4.75, hx: 1.1, hy: 4.75, hz: 1.1, col: ICE, kind: 'cryo', pulse: [80, 120, ph] }); // an ice geyser that blasts and stops
+  const icicle = (z, x, h) => obs(z, { x, y: 9.6 - h / 2, hx: 0.7, hy: h / 2, hz: 0.7, col: ICE, kind: 'icicle' }); // hangs from the roof
+  const spike = (z, x, h) => obs(z, { x, y: h / 2, hx: 0.75, hy: h / 2, hz: 0.75, col: DEEP, kind: 'icicle' }); // and grows from the floor
+  const berg = (z, x, y, w, h, ox = 0) => obs(z, { x, y, hx: w, hy: h, hz: 1.4, col: ICE, kind: 'berg', osc: ox ? { ax: ox, ay: 0.4, w: 0.6, ph: x } : undefined }); // a drifting chunk of ice
+  zone(-99, 120, ISO, 'BONUS // PLUTO - SHATTER THE ICE SHELF');
+  for (let i = 0; i < 7; i++) { const z = 34 + i * 11; for (let k = 0; k < 4; k++) if ((i + k) % 4 !== 1) obs(z, { x: 0, y: 1.2 + k * 2.3, hx: 8.6, hy: 1.05, hz: 0.9, col: k % 2 ? ICE : DEEP, kind: 'ice', hp: 5, gem: (i + k) % 3 === 0, score: 80 }); }
+  for (let i = 0; i < 6; i++) icicle(40 + i * 13, (i % 3 - 1) * 5, 2.2 + (i % 2) * 1.4);
+  for (let i = 0; i < 4; i++) flake(60 + i * 16, (i % 2 ? 4 : -4), 3 + i % 3 * 2);
+  zone(120, 230, CHASE, 'SNOW COMETS - SHIFT TO CHASE VIEW');
+  for (let i = 0; i < 14; i++) flake(128 + i * 7, Math.sin(i * 2.3) * 6, 2 + Math.abs(Math.sin(i * 1.7)) * 6, { vz: -11 - (i % 3) * 2 });
+  for (let i = 0; i < 6; i++) cryo(140 + i * 15, [-5, 0, 5, -2.5, 2.5, 6][i], i * 30);
+  for (let i = 0; i < 7; i++) { const z = 134 + i * 13; icicle(z, (i % 2 ? -1 : 1) * (2 + i % 3 * 2), 3 + (i % 3)); if (i % 2) spike(z + 6, (i % 3 - 1) * 4, 2.5 + i % 2); }
+  for (let i = 0; i < 4; i++) obs(146 + i * 22, { x: (i % 2 ? 1 : -1) * 4, y: 4.75, hx: 0.8, hy: 4.75, hz: 0.8, col: DEEP, kind: 'spire' });
+  K.hill(150, 190, 1.4);
+  zone(230, 1e9, ISO, 'DRIFTING BERGS - SHIFT TO ISO VIEW'); K.hill(240, 270, 1.6);
+  for (let i = 0; i < 7; i++) berg(240 + i * 7, (i % 2 ? 1 : -1) * (3 + i % 3), 1.5 + (i % 3) * 2.6, 1.6 + (i % 2) * 0.8, 1.1, i % 3 === 0 ? 2.5 : 0);
+  for (let i = 0; i < 5; i++) flake(236 + i * 9, (i - 2) * 3, 7.5, { vz: -8 });
+  for (let i = 0; i < 4; i++) en(244 + i * 10, { type: 'kami', x: (i % 3 - 1) * 4, y: 3 + (i % 3) * 2, vz: -7, hp: 2, r: 0.55, col: SNOW, score: 150, shape: 'shard', pod: i % 2 === 1 });
   const tick = stageMini(K, 'pluto', 322);
   return K.done({ name: 'PLUTO', title: 'THE COLD EDGE', bonus: true, tick, endZ: 345, endBonus: 12000, theme: { sky: 'ice', grid: '#2a5a9a' } });
 }

@@ -528,6 +528,22 @@ The cutscenes now tell a story, five lines each, and it carries through to the e
 
 ![The DEVLOG button back on the title menu](shots/title-devlog-button.jpg)
 
+### 53. Ice, land and better crawlers (r61)
+
+- **Pluto rebuilt.** It was the dullest stage. Now the ice shelf has icicles hanging over it, the chase stretch throws snowflake comets at you (six-armed flakes with long icy tails) between cryo geysers that blast columns of ice crystals, icicles hang from above and spikes grow from below, and the last stretch is a field of drifting icebergs in iso view. Snow falls the whole way.
+- **No more boxes round spikes.** Rock spikes and icicles used to sit inside a shaded box that ran right up the point. They are now filled face by face as cones.
+- **Eruptions without the glitch.** Lava geysers, in the level and in THE COLOSSUS fight, used to flash a box while they built up and stand in a box once they blew. Now a ghostly column of rising rings marks where one is about to go, and the eruption is just fire.
+- **Crawlers.** The ground walkers were a ball on four sticks. Now they are six-legged armoured mech crabs with a domed shell, a red eye that tracks you and twin guns, stepping in two sets of three. They are a bit bigger and turn up more often, in pairs.
+- **Earth stands on land.** The city floor used to be a grid over open space with stars showing through. Now it is solid ground: an asphalt road with kerbs, lane lines and zebra crossings, and street lamps along both pavements.
+
+![Pluto: icicles, cryo geysers and spires in chase view](shots/pluto-icicles.jpg)
+
+![Earth on solid ground, with lane lines and street lamps](shots/earth-streets.jpg)
+
+![Mars lava geysers, just fire now](shots/mars-geyser-plumes.jpg)
+
+![The new crawlers](shots/crawlers.jpg)
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
