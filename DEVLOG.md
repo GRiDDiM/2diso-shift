@@ -488,6 +488,13 @@ The cutscenes now tell a story, five lines each, and it carries through to the e
 - **The music slider works.** Each sound bus used to go into one shared compressor that evened the volume back out, so turning the music down barely changed anything. Music and sound effects now each have their own compressor, the sliders come after it, and a limiter at the very end only catches peaks.
 - **SHIP is the first options tab.**
 
+### 51. A cleaner, smoother title screen (r59)
+
+- **Smooth title.** No game plays behind the title any more. The backdrop is now a slow starfield over a rolling neon grid floor, with a pink glow on the horizon, and it costs almost nothing to draw. In a test it went from about 15 to 55 frames a second.
+- **New layout.** Your ship turns in the middle of the screen in the skin you have equipped, and the menu sits under it in two centred rows.
+- **BUG TEST** has moved out of the title and pause menus into Options, on the MORE tab.
+- **The title voice says the whole name again.** In some browsers a line spoken straight after another one was cut gets dropped, so the 2DISO part was being lost and only a rushed SHIFT came through. The title is now one slower line with a real pause in the middle.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

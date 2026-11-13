@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r58';
+const VER = 'r59';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -154,6 +154,7 @@ export function mountShift(root, host = {}) {
         { label: () => 'RIVET-9 ASSIST  ' + onoff(opt.assist), adj: () => setAssist(!opt.assist) },
         { label: () => 'BEST RUN GHOST  ' + onoff(opt.ghost), adj: () => { opt.ghost = !opt.ghost; saveOpt(); if (!opt.ghost) ghost = null; } }] },
       { name: 'MORE', items: [
+        ...(BUGTEST ? [{ label: 'BUG TEST', act: bugMenu }] : []),
         { label: 'CONTROLS', act: () => push({ title: 'CONTROLS', kind: 'controls', items: [{ label: 'BACK', act: popMenu }] }) },
         { label: 'CREDITS', act: () => scrollMenu('CREDITS', CREDITS) }] }];
     const m = push({ title: 'OPTIONS', gap: 28, tabs, tab: 0, items: [] }); setTab(m, 0); }
@@ -171,10 +172,10 @@ export function mountShift(root, host = {}) {
       items.push({ label: 'NEW GAME', act: () => { testRun = false; returnTo = null; coop = false; daily = null; assisted = !!opt.idle || !!opt.assist; loopN = 0; startStory(STORY, () => startLevel('earth', null)); } },
         { label: 'CO-OP', act: () => { testRun = false; returnTo = null; coop = true; daily = null; assisted = true; loopN = 0; startStory(STORY, () => { startLevel('earth', null); toast('CO-OP', 'P1 KEYBOARD   P2 CONTROLLER'); }); } },
         { label: 'BOSS RUSH', act: startRush }, { label: 'BACK', act: popMenu }); const br = LS.get('rush', null); push({ title: 'PLAY', items, notes: br ? ['BOSS RUSH BEST  ' + br.won + ' / ' + RUSH.length + '   ' + mmss(br.time) + '   ' + br.score] : undefined }); };
-    const items = [{ label: 'PLAY', act: play }, ...(BUGTEST ? [{ label: 'BUG TEST', act: bugMenu }] : []), { label: 'OPTIONS', act: optionsMenu }, { label: 'HIGH SCORES', act: scoresMenu }, { label: 'ACHIEVEMENTS', act: () => push({ title: 'ACHIEVEMENTS', kind: 'ach', items: [{ label: 'BACK', act: popMenu }] }) }];
+    const items = [{ label: 'PLAY', act: play }, { label: 'OPTIONS', act: optionsMenu }, { label: 'HIGH SCORES', act: scoresMenu }, { label: 'ACHIEVEMENTS', act: () => push({ title: 'ACHIEVEMENTS', kind: 'ach', items: [{ label: 'BACK', act: popMenu }] }) }];
     if (host.onExit) items.push({ label: 'EXIT GAME', act: () => host.onExit() }); push({ kind: 'title', root: true, items }); }
   function pauseMenu() { if (scene !== 'play' || menus.length || !g || g.state !== 'play') return; audio.sfx('blip'); audio.hush(); audio.music('title'); push({ title: 'PAUSED', pause: true, items: [
-    { label: 'RESUME', act: resume }, ...(BUGTEST ? [{ label: 'BUG TEST', act: bugMenu }] : []), { label: 'MAP', act: () => mapMenu() }, { label: 'OPTIONS', act: optionsMenu },
+    { label: 'RESUME', act: resume }, { label: 'MAP', act: () => mapMenu() }, { label: 'OPTIONS', act: optionsMenu },
     { label: daily ? 'QUIT RUN' : 'SAVE AND QUIT', act: () => { if (!testRun && !daily && !rush) LS.set('save', returnTo ? { ...returnTo, loop: loopN } : { ...snapshot(g), loop: loopN, z: g.boss ? g.checkpoint : Math.max(g.checkpoint, Math.floor(g.camZ - 4)) }); showTitle(); } }] }); } // saves the exact spot (or the pre-boss checkpoint during a boss)
   const track = () => { const L = LEVELS[levelId]; return g?.boss ? 'boss' : L.isArena ? 'arena' : L.isBonus ? 'bonus' : MUSIC[levelId] || 'play'; };
   function resume() { menus.length = 0; audio.music(track()); prevIn = { pause: true, fire: true, upgrade: true, bomb: true, drone: true, shiftL: true, shiftR: true, gear: true }; last = performance.now(); acc = 0; }
@@ -183,6 +184,7 @@ export function mountShift(root, host = {}) {
     const e = k => i[k] && !prevM[k] && (was[k] == null || was[k] >= 5); if (!m) return;
     if (tap) { for (const h of hits) if (tap.x >= h.x && tap.x <= h.x + h.w && tap.y >= h.y && tap.y <= h.y + h.h) { if (h.fn) h.fn(tap); else { m.i = h.i; const it = m.items[h.i]; audio.sfx('ok'); if (it.act) it.act(); else it.adj?.(1); } break; } tap = null; prevM = i; return; }
     if (m.travel && !m.travel.done && performance.now() - m.travel.t0 > 3000) { m.travel.done = true; m.items[0].act(); return; }
+    if (m.kind === 'title') { const n = m.items.length, mv = j => { if (j >= 0 && j < n && j !== m.i) { m.i = j; audio.sfx('move'); } }; if (e('left')) mv(m.i - 1); if (e('right')) mv(m.i + 1); const cols = Math.ceil(n / 2); if (e('up')) mv(m.i - cols); if (e('down')) mv(Math.min(n - 1, m.i + cols)); if (e('ok')) { audio.sfx('ok'); m.items[m.i].act(); } if (e('drone')) { audio.sfx('ok'); scrollMenu('DEVLOG', DEVLOG); } prevM = i; return; } // the title menu is a grid of two rows
     if (m.kind === 'title' && e('drone')) { audio.sfx('ok'); scrollMenu('DEVLOG', DEVLOG); prevM = i; return; } // the jam ribbon's shortcut
     if (m.kind === 'map' && !m.locked) { const n = NODES.length; if (e('left')) { m.sel = (m.sel + n - 1) % n; audio.sfx('move'); } if (e('right')) { m.sel = (m.sel + 1) % n; audio.sfx('move'); } }
     if (m.kind === 'bug') { const n = m.items.length, mv = j => { m.i = j; audio.sfx('move'); }, I = m.i; if (e('left')) mv((I + n - 1) % n); if (e('right')) mv((I + 1) % n);
@@ -271,7 +273,7 @@ export function mountShift(root, host = {}) {
     text(ctx, lastDev === 'touch' ? 'TAP TO SKIP' : lastDev === 'pad' ? padNames()[0] + ' TO SKIP' : 'ENTER TO SKIP', 480, 512, 7, '#5a66b0', { align: 'center', glow: false }); }
 
   // ---------- flow ----------
-  function showTitle() { bug = false; scene = 'title'; sceneT = 0; g = null; loopN = 0; cred = null; rush = null; returnTo = null; coop = false; daily = null; rec = null; ghost = null; attract = createGame({ seed: 7 + (Math.random() * 99 | 0), level: buildLevel(ORDER[Math.random() * 4 | 0]), start: { up: [2, 2, 1, 1, 1, 1, 0, 0] } }); attract.players[0].lives = 99; titleMenu(); audio.music('title'); host.onState?.({ scene }); setTimeout(() => { if (scene === 'title' && menus.length === 1) audio.say('2diso | shift', true); }, 700); } // the title voiceover
+  function showTitle() { bug = false; scene = 'title'; sceneT = 0; g = null; loopN = 0; cred = null; rush = null; returnTo = null; coop = false; daily = null; rec = null; ghost = null; attract = null; titleMenu(); audio.music('title'); host.onState?.({ scene }); setTimeout(() => { if (scene === 'title' && menus.length === 1) audio.say('2diso | shift', true); }, 700); } // the title voiceover
   function startLevel(id, start) { menus.length = 0; story = null; hiShown = false; toasts.length = 0; levelId = id; const L = LEVELS[id];
     const seed = daily ? daily.key * 31 + daily.n++ : (Math.random() * 1e9) | 0, st = { gear: opt.gear, ...(start || {}) }, wing = !!opt.assist && !coop;
     g = createGame({ seed, level: buildLevel(id), start: st, players: coop ? 2 : 1, wing, mut: { ...(daily ? daily.mut : rush ? { rush: true } : { loop: loopN }), ...(bug ? { bug: true } : {}) } }); if (bug) { rec = null; } if (testRun || opt.idle || opt.assist || coop) assisted = true; submitted = false; scene = 'play'; sceneT = 0; warpT = 0; endInfo = null;
@@ -334,7 +336,7 @@ export function mountShift(root, host = {}) {
     sceneT++; if (scene === 'intro' && sceneT < 3 && !logosReady() && (introWait = (introWait || 0) + 1) < 180) sceneT = 0; /* the intro waits (up to 3 s) for the logo images */
     if (scene === 'intro') { if ((i.ok && !prevM.ok) || (i.pause && !prevM.pause) || tap || sceneT > 600) { tap = null; showTitle(); titleT = 0; audio.sfx('slam'); } if (sceneT === 330) audio.sfx('whoosh'); prevM = i; return; }
     if (scene === 'story') { const st = story, per = st.per || 150; st.t++; const k = st.t / per | 0; if (k < st.lines.length && k !== st.said) { st.said = k; audio.say(st.lines[k].replace('(C)', 'copyright'), true); } if (st.end && st.t < 90) tap = null; if (tap || (st.t >= (st.end ? 90 : 0) && ((i.ok && !prevM.ok) || (i.pause && !prevM.pause))) || st.t > st.lines.length * per + 120) { tap = null; audio.hush(); const f = st.after; story = null; f(); } prevM = i; return; }
-    if (scene === 'title') { titleT++; step(attract, [autopilot(attract)]); if (attract.state !== 'play' || attract.camZ > 700) { attract = createGame({ seed: sceneT, level: buildLevel(ORDER[sceneT % 4]), start: { up: [2, 2, 1, 1, 1, 1, 0, 0] } }); attract.players[0].lives = 99; } menuInput(i); return; }
+    if (scene === 'title') { titleT++; menuInput(i); return; } // no game runs behind the title any more: it is a still, cheap backdrop
     if (scene === 'credits') { if (menus.length) { menuInput(i); return; } cred.y = Math.min(cred.max, cred.y + (i.ok || i.down ? 3 : 0.5)); if (tap) { tap = null; cred.y = Math.min(cred.max, cred.y + 160); }
       if ((cred.y >= cred.max && ++cred.hold > 100) || (sceneT > 40 && ((i.pause && !prevM.pause) || (i.back && !prevM.back)))) creditsMenu(); prevM = i; return; }
     if (menus.length) { if (top().kind === 'end' && endInfo) { endInfo.t++; step(g, [{}]); } menuInput(i); return; }
@@ -360,6 +362,17 @@ export function mountShift(root, host = {}) {
   const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); };
   function panel(x, y, w, h, col = '#2ee6ff') { rr(x, y, w, h, 18); ctx.fillStyle = 'rgba(6,5,24,.84)'; ctx.fill(); ctx.strokeStyle = col; ctx.globalAlpha = 0.1; ctx.lineWidth = 10; ctx.stroke(); ctx.globalAlpha = 0.55; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = 1; } // a soft glass card, not a hard box
   // menu items are neon pill buttons, as on the site and in the app: cyan outline at rest, the chosen one lit amber and lifted
+  function drawGrid(m, y0) { const cols = Math.ceil(m.items.length / 2), pw = cols > 2 ? 196 : 230, ph = 30, gx = 16, gy = 12, t = performance.now() / 1000, rows = Math.ceil(m.items.length / cols);
+    m.items.forEach((it, k) => { const r = k / cols | 0, c = k % cols, inRow = Math.min(cols, m.items.length - r * cols), x = 480 - (inRow * pw + (inRow - 1) * gx) / 2 + c * (pw + gx), y = y0 + r * (ph + gy), on = k === m.i, lab = typeof it.label === 'function' ? it.label() : it.label, lift = on ? 2 : 0;
+      rr(x, y - lift, pw, ph, ph / 2); if (on) { ctx.fillStyle = '#ffe14a'; ctx.globalAlpha = 0.22 + 0.06 * Math.sin(t * 5); ctx.lineWidth = 12; ctx.strokeStyle = '#ffe14a'; ctx.stroke(); ctx.globalAlpha = 1; ctx.fill(); ctx.strokeStyle = '#fff2a8'; ctx.lineWidth = 2; ctx.stroke(); }
+      else { ctx.fillStyle = 'rgba(9,6,22,.85)'; ctx.fill(); ctx.strokeStyle = '#2ee6ff'; ctx.globalAlpha = 0.16; ctx.lineWidth = 9; ctx.stroke(); ctx.globalAlpha = 0.85; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1; }
+      text(ctx, lab, x + pw / 2, y - lift + (ph - 14) / 2, 14, on ? '#17101b' : '#2ee6ff', { align: 'center', glow: !on, bold: true }); hits.push({ x, y: y - lift, w: pw, h: ph, i: k }); }); }
+  // the title backdrop: a slow starfield over a neon grid floor, cheap to draw so the title stays smooth
+  function titleBack() { const t = performance.now() / 1000; ctx.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 120; k++) { const z = ((k * 0.137 + t * 0.06) % 1), x = 480 + ((k * 197) % 960 - 480) / (z * 3 + 0.4), y = 200 + ((k * 71) % 400 - 200) / (z * 3 + 0.4); if (x < 0 || x > W || y < 0 || y > 360) continue; ctx.fillStyle = k % 7 ? '#8fa8ff' : '#ff9ef2'; ctx.globalAlpha = Math.min(1, (1 - z) * 0.9); const r = (1 - z) * 2 + 0.6; ctx.fillRect(x, y, r, r); } // stars drifting out from the middle
+    const hy = 330; ctx.strokeStyle = '#2443c8'; ctx.lineWidth = 1; for (let k = -12; k <= 12; k++) { ctx.globalAlpha = 0.5 - Math.abs(k) * 0.025; ctx.beginPath(); ctx.moveTo(480 + k * 22, hy); ctx.lineTo(480 + k * 150, H); ctx.stroke(); }
+    for (let k = 0; k < 9; k++) { const f = ((k + (t * 0.5) % 1) / 9), y = hy + (H - hy) * f * f; ctx.globalAlpha = 0.15 + f * 0.5; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); } // the floor rolls towards you
+    const gr = ctx.createLinearGradient(0, hy - 30, 0, hy + 10); gr.addColorStop(0, 'rgba(255,61,240,0)'); gr.addColorStop(1, 'rgba(255,61,240,0.22)'); ctx.globalAlpha = 1; ctx.fillStyle = gr; ctx.fillRect(0, hy - 30, W, 40); ctx.globalCompositeOperation = 'source-over'; } // a pink glow on the horizon
   function drawItems(m, cx, y, size, gap) { const t = performance.now() / 1000, labs = m.items.map(it => typeof it.label === 'function' ? it.label() : it.label), pill = gap >= 22;
     if (!pill) { labs.forEach((lab, k) => { const on = k === m.i, w = textWidth(lab, size, true), yy = y + k * gap; text(ctx, lab, cx, yy, size, on ? '#ffe14a' : '#8d9be0', { align: 'center', glow: on, bold: true }); if (on) text(ctx, '>', cx - w / 2 - size * 1.4, yy, size, '#ffe14a', { bold: true }); hits.push({ x: cx - w / 2 - 40, y: yy - 6, w: w + 80, h: size + 12, i: k }); }); return; }
     const sz = Math.min(size, gap * 0.42), ph = Math.min(gap - 6, sz * 2.3), pw = Math.max(170, Math.max(...labs.map(l => textWidth(l, sz, true))) + sz * 4.4);
@@ -432,8 +445,8 @@ export function mountShift(root, host = {}) {
       const k = Math.min(1, titleT / 18), sc = 1 + (1 - k) * (1 - k) * 2.2; if (titleT < 26) ctx.translate((Math.random() - 0.5) * (26 - titleT) * 0.5, (Math.random() - 0.5) * (26 - titleT) * 0.5);
       drawLogo(ctx, 480, 34 - (sc - 1) * 30, sc, t); ctx.setTransform(res, 0, 0, res, 0, 0);
       drawTagline(ctx, 480, 146, 10, t);
-      ctx.globalCompositeOperation = 'lighter'; const a = t * 0.7, pi = -0.35 + Math.sin(t) * 0.1, rl = Math.sin(t * 0.8) * 0.3; meshScreen(ctx, SHIP_HULL, 742, 330, 86, a, pi, rl, '#ffffff'); meshScreen(ctx, SHIP_WING, 742, 330, 86, a, pi, rl, '#2ee6ff'); meshScreen(ctx, SHIP_FIN, 742, 330, 86, a, pi, rl, '#ff3df0'); ctx.globalCompositeOperation = 'source-over';
-      const n = m.items.length, gap = n > 7 ? 29 : n > 6 ? 32 : 36; drawItems(m, 340, 196, n > 7 ? 13 : 15, gap); // the title menu floats over the attract run, no card behind it
+      ctx.globalCompositeOperation = 'lighter'; skinPreview(ctx, skinNow(), 480, 272 + Math.sin(t * 1.3) * 6, 96, t, false); ctx.globalCompositeOperation = 'source-over'; // your ship, in your skin, turning in the middle
+      drawGrid(m, 392); // the menu: two centred rows of pills along the bottom
       drawJamRibbon(t);
       text(ctx, lastDev === 'pad' ? padNames()[0] + ' = OK     ' + padNames()[1] + ' = BACK' : lastDev === 'touch' ? 'TAP TO CHOOSE' : 'ENTER = OK     ESC = BACK', 480, 500, 8, '#8d9be0', { align: 'center', glow: false });
       text(ctx, COPY, 480, 520, 7, '#5a66b0', { align: 'center', glow: false }); return; }
@@ -485,13 +498,13 @@ export function mountShift(root, host = {}) {
   }
   function render() {
     ctx.setTransform(res, 0, 0, res, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-    const ro2 = { glow: opt.glow === 'high', shake: opt.shake, fill: opt.fill, ghost: null, q, skin: scene === 'title' && menus.length ? skinView : skinNow() }; /* on the title screen the options menu previews a skin, locked or not */ if (ghost && g && scene === 'play' && ghost.g.players[0].dead <= 0) { const q = ghost.g.players[0]; ro2.ghost = { x: q.x, y: q.y, z: q.z + ghost.g.camZ - g.camZ }; }
+    const ro2 = { glow: opt.glow === 'high' && scene !== 'title' /* the attract run behind the title is dimmed anyway: no glow passes for it */, shake: opt.shake, fill: opt.fill, ghost: null, q, skin: scene === 'title' && menus.length ? skinView : skinNow() }; /* on the title screen the options menu previews a skin, locked or not */ if (ghost && g && scene === 'play' && ghost.g.players[0].dead <= 0) { const q = ghost.g.players[0]; ro2.ghost = { x: q.x, y: q.y, z: q.z + ghost.g.camZ - g.camZ }; }
     if (scene === 'intro') drawIntro();
     else if (scene === 'story') drawStory();
     else if (scene === 'credits') drawCredits();
-    else { ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H); const gg = scene === 'title' ? attract : g;
-      drawWorld(ctx, gg, ro2); ctx.setTransform(res, 0, 0, res, 0, 0); ctx.globalCompositeOperation = 'source-over';
-      if (scene === 'title') { ctx.fillStyle = 'rgba(2,1,10,.66)'; ctx.fillRect(0, 0, W, H); if (titleT < 14) { ctx.fillStyle = '#fff'; ctx.globalAlpha = 1 - titleT / 14; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; } }
+    else { ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H); const gg = g;
+      if (scene === 'title') titleBack(); else drawWorld(ctx, gg, ro2); ctx.setTransform(res, 0, 0, res, 0, 0); ctx.globalCompositeOperation = 'source-over';
+      if (scene === 'title') { if (titleT < 14) { ctx.fillStyle = '#fff'; ctx.globalAlpha = 1 - titleT / 14; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; } }
       else { if (g.shiftT > 0) chroma(9 * Math.sin(Math.PI * g.shiftT), 0.4); else if (g.perfFx > 0) chroma(16 * Math.min(1, g.perfFx / 24), 0.55);
         const ended = menus.length && top().kind === 'end'; /* results screens: no HUD under the text, the level keeps running behind */ if (!ended) drawHUD(ctx, g, { hi: Math.max(LS.get('best', 0), g.score), upgLabel: lastDev === 'touch' ? 'TAP' : lastDev === 'pad' ? padNames()[5] : 'ENTER' }); if (ended) { } else { if (opt.idle) text(ctx, 'IDLE MODE', 150, 26, 8, '#ffe14a', { glow: false }); if (bug) text(ctx, 'BUG TEST  HITS ' + (g.stats.bugHits || 0), 150, 40, 8, '#3dffb0', { glow: false }); else if (testRun) text(ctx, 'TEST RUN', 150, 40, 8, '#ff8a2b', { glow: false }); else if (daily) text(ctx, 'DAILY ' + daily.label + '  ' + daily.help[0] + ' + ' + daily.hurt[0], 150, 40, 7, '#ffe14a', { glow: false }); else if (coop) text(ctx, 'CO-OP', 150, 40, 8, '#3dffb0', { glow: false }); if (rush) { text(ctx, 'BOSS RUSH ' + (rush.i + 1) + ' / ' + RUSH.length, 150, 40, 8, '#ff4d6d', { glow: false }); text(ctx, 'TIME ' + mmss(rush.t / 60), 150, 52, 8, '#ffe14a', { glow: false }); } if (loopN) text(ctx, 'LOOP ' + (loopN + 1), 150, 52, 8, '#ff4d6d', { glow: false }); }
         if (g.boss?.dying) { ctx.fillStyle = '#02010a'; ctx.globalAlpha = 0.9; ctx.fillRect(0, 0, W, 52); ctx.fillRect(0, H - 52, W, 52); ctx.globalAlpha = 1; }
