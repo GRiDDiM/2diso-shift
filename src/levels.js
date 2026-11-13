@@ -95,8 +95,8 @@ function earth() {
 
   zone(-99, 110, SIDE, 'SECTOR 1 // NEO TERRA');
   at(40, g => hint(g, 'L / R  SHIFT VIEW     B  CHANGE SPEED', 240));
-  for (let z = 30; z < 108; z += 9) tower(z, ((z * 7) % 13) - 6, 1.4 + (z % 4) * 0.45);
-  for (let i = 0, z = 34.5; z < 106; z += 9, i++) { if (i % 2) obs(z, { x: ((z * 5) % 11) - 5, y: 2.4, hx: 0.3, hy: 2.4, hz: 0.3, col: C.pylon, kind: 'pylon' }); else tower(z, ((z * 3) % 13) - 6, 2.4 + (i % 3) * 0.4); } // more city: infill blocks and antenna masts between the towers
+  for (let z = 30; z < 108; z += 9) { const h = 1.6 + (z % 5) * 0.75; tower(z, ((z * 7) % 13) - 6, h); if (h < 3 && z > 40) { const d = 1.4 + (z % 3) * 0.7; obs(z + 2, { x: ((z * 11) % 13) - 6, y: 9.5 - d / 2, hx: 1.3, hy: d / 2, hz: 1.3, col: C.pylon, kind: 'tower' }); } }
+  for (let i = 0, z = 34.5; z < 106; z += 9, i++) { if (i % 2) obs(z, { x: ((z * 5) % 11) - 5, y: 2.4, hx: 0.3, hy: 2.4, hz: 0.3, col: C.pylon, kind: 'pylon' }); else tower(z, ((z * 3) % 13) - 6, 2.2 + (i % 4) * 0.8); } // more city: infill blocks and antenna masts between the towers
   sign(48, 2, 7.6); sign(78, -3, 2.6); sign(96, 0, 7.2);
   wing(38, 5, { ...dart, y: 6.5, ay: 1.6, x: 0 }); wing(58, 5, { ...dart, y: 4.2, ay: 1.4, x: -2 }); carrier(72, { y: 6, x: 2 }); wing(86, 6, { ...dart, y: 7, ay: 1.5, x: 3 }); carrier(100, { y: 5, x: -2 });
 

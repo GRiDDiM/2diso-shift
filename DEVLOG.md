@@ -347,6 +347,14 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **1UP pickups.** Enemies now sometimes drop an extra ship: a small green ship turning inside a purple ring with a plus sign beside it. They are rare, but one is always due after enough kills, so every level should show at least one. Picking it up adds a ship (up to nine) with a "1UP!" callout; at nine it pays 5000 points instead.
 - **Ship counter.** The HUD still shows six ship icons, with a "+N" beside them when you hold more.
 
+### 33. Bomb upgrades, a bigger playfield and two ship skins (r40)
+
+- **Bombs upgrade.** The power-up bar has a new BOMB slot with three tiers, so spare pods have somewhere to go. The basic bomb is now a short burst around the ship. Tier 1, SWEEP BOMB, is a rectangle that rolls out from the ship over a much bigger area. Tier 2, SCATTER BOMB, sets off eighteen diamond blasts across the screen, half of them on enemies. Tier 3, MEGA NUKE, pulls everything in for half a second and then takes out the whole screen. The tier survives losing a ship, like drones do.
+- **More room.** The camera is in effect 30% further back with the levels 30% bigger to match: the ship, enemies, shots and pickups are all drawn and collide about a quarter smaller against the same level layouts. Gaps, lanes and gates are that much roomier and buildings that much taller next to the ship. Drone formations, the wingman and the idle-mode pilot were resized to match.
+- **Taller skyline.** Earth's opening run has taller and more varied towers, with blocks hanging from above where the tower below is short.
+- **Hit flash.** The red flash on enemies and bosses strobes slower and lasts longer, so it reads as a flash when you are pouring fire in.
+- **Ship skins.** OPTIONS has a SHIP SKIN setting. FIRE MAGE turns the ship into a firebat with flapping wings and embers, and every weapon into fire: flame darts, a wavering stream of flame, fireball missiles, ember drones. DARK LORD is a wraith stealth ship trailing a ragged cloak, with shadow bolts, a violet beam, soul-green lightning and wisps for drones. Skins only change the look. FIRE MAGE unlocks by beating the second boss and DARK LORD by beating the last one; the options menu previews a locked skin on the title screen.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

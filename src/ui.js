@@ -1,5 +1,5 @@
 // 2DISO SHIFT — front end: input (keyboard, controller, touch), intro, menus, HUD, audio hooks, saves, level flow.
-// mountShift(root, host) works standalone (index.html) and inside a host site that passes { hosted, onExit, submitScore, leaderboard }.
+// mountShift(root, host) works standalone (index.html) and inside a host site that passes { hosted, onExit, submitScore, leaderboard, skins }.
 // (C) 2026 GRiDDiM / ArcadeGridz / BDC
 import { createGame, step, autopilot, snapshot, makeWing, VIEWS, BAR, GEARS, INTRO } from './game.js';
 import { LEVELS, ORDER, buildLevel } from './levels.js';
@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r39';
+const VER = 'r40';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -57,14 +57,18 @@ export function mountShift(root, host = {}) {
 <div class="ds-rotate" hidden><div>TURN YOUR SCREEN SIDEWAYS</div><button type="button">PLAY ANYWAY</button></div></section>`;
   const shell = root.querySelector('.ds-shell'), stage = root.querySelector('.ds-stage'), canvas = root.querySelector('canvas'), ctx = canvas.getContext('2d'), touchEl = root.querySelector('.ds-touch'), stickEl = root.querySelector('.ds-stick'), nubEl = root.querySelector('.ds-nub'), rotEl = root.querySelector('.ds-rotate');
   const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
-  const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: coarse ? 'low' : 'high', shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true, assist: false, ghost: true, crt: false }, LS.get('opt', {})); const saveOpt = () => LS.set('opt', opt);
+  const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: coarse ? 'low' : 'high', shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true, assist: false, ghost: true, crt: false, skin: 0 }, LS.get('opt', {})); const saveOpt = () => LS.set('opt', opt);
+  // ship skins: looks only. Each is earned with an achievement, or owned through the host site's store when it sells them
+  const SKIN = [['PILOT'], ['FIRE MAGE', 'mars', 'DEFEAT THE COLOSSUS', 'shift-fire-mage'], ['DARK LORD', 'x', 'DEFEAT THE SHIFTER', 'shift-dark-lord']];
+  let owned = LS.get('owned', []), forSale = [], skinView = opt.skin | 0; if (host.skins) Promise.resolve().then(() => host.skins()).then(r => { if (r && Array.isArray(r.owned)) { owned = r.owned; LS.set('owned', owned); } if (r && Array.isArray(r.forSale)) forSale = r.forSale; }).catch(() => { });
+  const skinOk = i => !i || !!SKIN[i] && (!!LS.get('ach', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinNow = () => skinOk(opt.skin | 0) ? opt.skin | 0 : 0;
   const audio = createAudio(opt);
   let q = 0, slow = 0, ema = 16; // q: automatic quality step-down when frames run long (0 full, 1 no outer halo + lower res, 2 no glow)
   let destroyed = false, raf = 0, last = performance.now(), acc = 0, scale = 1, res = 1, rotOk = false;
   let scene = 'intro', sceneT = 0, g = null, attract = null, assisted = false, testRun = false, submitted = false, focusPaused = false, lastDev = coarse ? 'touch' : 'kb', titleT = 0, endInfo = null, levelId = 'earth', returnTo = null, warpT = 0, coop = false, daily = null, rec = null, ghost = null, fxC = null, crtPat = null; const mouse = { x: 0, y: 0, t: -1e9, down: false };
   const menus = []; let hits = []; const toasts = []; let rush = null, introWait = 0, story = null, hiShown = false, loopN = 0, endCarry = null, cred = null, achGot = LS.get('ach', {});
   // achievements: kept on this device. Idle mode never unlocks them.
-  function award(id) { if (opt.idle || achGot[id]) return; achGot = LS.get('ach', {}); if (achGot[id]) return; achGot[id] = 1; LS.set('ach', achGot); const d = ACH.find(a => a[0] === id); if (!d) return; toast('ACHIEVEMENT', d[1]); audio.sfx('ring'); }
+  function award(id) { if (opt.idle || achGot[id]) return; achGot = LS.get('ach', {}); if (achGot[id]) return; achGot[id] = 1; LS.set('ach', achGot); const d = ACH.find(a => a[0] === id); if (!d) return; toast('ACHIEVEMENT', d[1]); audio.sfx('ring'); const s = SKIN.find(q => q[1] === id); if (s) toast('SKIN UNLOCKED', s[0] + ' - PICK IT IN OPTIONS'); }
   function achTick() { const p = g.players[0], s = g.stats; if (s.shifts) award('shift'); if (s.perfect) award('perfect'); if (s.order) award('order'); if (g.bestChain >= 50) award('chain50'); if (g.bestChain >= 100) award('chain100'); if (g.flags.warp) award('warp'); if (p.god > 0) award('god'); if (p.up[0] >= 6) award('drones'); if ([1, 2, 3, 4, 5].every(k => p.up[k] >= 3)) award('arsenal'); if (g.score >= 250000) award('score1'); if (g.score >= 1000000) award('score2'); }
   function achEnd(cleared, m) { const L = LEVELS[levelId]; if (opt.idle) return; const kills = LS.get('kills', 0) + g.stats.kills; LS.set('kills', kills); if (kills >= 1000) award('kills'); if (Object.keys(LS.get('warps', {})).length >= 4) award('warp4'); if (!cleared) return;
     if (L.isArena) { award('arena'); const a = LS.get('arenas', {}); a[L.of] = 1; LS.set('arenas', a); if (Object.keys(a).length >= 4) award('arena4'); return; } if (L.isBonus) { award('bonus'); const bd = LS.get('bonusDone', {}); bd[levelId] = 1; LS.set('bonusDone', bd); return; }
@@ -124,7 +128,7 @@ export function mountShift(root, host = {}) {
   function popMenu() { const m = menus.pop(); audio.sfx('back'); prevM = { ...HELD }; lock(); return m; }
   const onoff = v => v ? 'ON' : 'OFF';
   const scrollMenu = (title, lines) => push({ title, kind: 'scroll', lines, off: 0, items: [{ label: 'BACK', act: popMenu }] });
-  function optionsMenu() { push({ title: 'OPTIONS', gap: 25, items: [
+  function optionsMenu() { skinView = skinNow(); push({ title: 'OPTIONS', gap: 24, items: [
     { label: () => 'MUSIC  ' + Math.round(opt.music * 10), adj: d => { opt.music = Math.max(0, Math.min(1, opt.music + d * 0.1)); audio.vol(); saveOpt(); } },
     { label: () => 'SOUND  ' + Math.round(opt.sfx * 10), adj: d => { opt.sfx = Math.max(0, Math.min(1, opt.sfx + d * 0.1)); audio.vol(); saveOpt(); audio.sfx('blip'); } },
     { label: () => 'ANNOUNCER  ' + onoff(opt.voice), adj: () => { opt.voice = !opt.voice; saveOpt(); if (opt.voice) audio.say('announcer on', true); else audio.hush(); } },
@@ -136,6 +140,7 @@ export function mountShift(root, host = {}) {
     { label: () => 'IDLE MODE  ' + onoff(opt.idle), adj: () => setIdle(!opt.idle) },
     { label: () => 'RIVET-9 ASSIST  ' + onoff(opt.assist), adj: () => setAssist(!opt.assist) },
     { label: () => 'BEST RUN GHOST  ' + onoff(opt.ghost), adj: () => { opt.ghost = !opt.ghost; saveOpt(); if (!opt.ghost) ghost = null; } },
+    { label: () => 'SHIP SKIN  ' + SKIN[skinView][0] + (skinOk(skinView) ? '' : '  (LOCKED)'), adj: d => { skinView = (skinView + (d < 0 ? SKIN.length - 1 : 1)) % SKIN.length; audio.sfx('blip'); if (skinOk(skinView)) { opt.skin = skinView; saveOpt(); } else toast('LOCKED', SKIN[skinView][2] + (forSale.includes(SKIN[skinView][3]) ? ' OR BUY IT IN THE SPARKZ STORE' : '')); } },
     { label: () => 'CRT FILTER  ' + onoff(opt.crt), adj: () => { opt.crt = !opt.crt; saveOpt(); } },
     { label: 'CONTROLS', act: () => push({ title: 'CONTROLS', kind: 'controls', items: [{ label: 'BACK', act: popMenu }] }) },
     { label: 'CREDITS', act: () => scrollMenu('CREDITS', CREDITS) },
@@ -372,7 +377,7 @@ export function mountShift(root, host = {}) {
   }
   function render() {
     ctx.setTransform(res, 0, 0, res, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-    const ro2 = { glow: opt.glow === 'high', shake: opt.shake, fill: opt.fill, ghost: null, q }; if (ghost && g && scene === 'play' && ghost.g.players[0].dead <= 0) { const q = ghost.g.players[0]; ro2.ghost = { x: q.x, y: q.y, z: q.z + ghost.g.camZ - g.camZ }; }
+    const ro2 = { glow: opt.glow === 'high', shake: opt.shake, fill: opt.fill, ghost: null, q, skin: scene === 'title' && menus.length ? skinView : skinNow() }; /* on the title screen the options menu previews a skin, locked or not */ if (ghost && g && scene === 'play' && ghost.g.players[0].dead <= 0) { const q = ghost.g.players[0]; ro2.ghost = { x: q.x, y: q.y, z: q.z + ghost.g.camZ - g.camZ }; }
     if (scene === 'intro') drawIntro();
     else if (scene === 'story') drawStory();
     else if (scene === 'credits') drawCredits();
