@@ -31,7 +31,7 @@ export function createGame({ seed = 1, level, start = null, players = 1, wing = 
   const g = { seed, rand: rng(seed), tick: 0, camZ: z0 - INTRO_RUN, level, evi: 0, view: 3, viewFrom: 3, shiftT: 0, shiftDir: 1, shiftCd: 0, intro: INTRO, gear: start?.gear ?? 0,
     players: [], enemies: [], shots: [], ebul: [], obs: [], rings: [], pods: [], parts: [], pops: [], beams: [], shocks: [], blasts: [], blastId: 0, warns: [], forceGear: null, fx: [], groups: {},
     score: start?.score || 0, chain: 0, chainT: 0, bestChain: 0, state: 'play', boss: null, hint: null, hintT: 0, zone: null, recView: 0, heat: 0,
-    flags: { warp: !!start?.warp, arena: !!start?.arena, warpNow: false }, stats: Object.assign({ kills: 0, shifts: 0, deaths: 0, hits: 0, perfect: 0, ticks: 0, order: 0 }, start?.stats), coop: players > 1, mut: mut || {}, loop: mut?.loop || 0, perfT: 0,
+    flags: { warp: !!start?.warp || !!mut?.bug, arena: !!start?.arena || !!mut?.bug, warpNow: false } /* bug test runs have no warps to fall into */, stats: Object.assign({ kills: 0, shifts: 0, deaths: 0, hits: 0, perfect: 0, ticks: 0, order: 0 }, start?.stats), coop: players > 1, mut: mut || {}, loop: mut?.loop || 0, perfT: 0,
     wing: wing && players === 1 ? makeWing() : null, shake: 0, flash: 0, endT: 0, speedMul: 3, checkpoint: z0, cpSnap: null };
   for (let i = 0; i < players; i++) { const p = newPlayer(i, start, players > 1); if (i) p.up = g.players[0].up; for (let k = 0; k < p.up[U.DRONE]; k++) p.drones.push({ x: p.x, y: p.y, z: p.z }); g.players.push(p); }
   g.z0 = z0; while (g.evi < level.events.length && level.events[g.evi].z < z0 - 20) g.evi++;

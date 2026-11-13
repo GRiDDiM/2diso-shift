@@ -550,6 +550,12 @@ The cutscenes now tell a story, five lines each, and it carries through to the e
 
 ![A blob wall in chase view, and the same wall flashing red as it takes a hit](shots/blob-wall-rainbow.jpg)
 
+### 55. Tougher minibosses, a fuller bug test (r63)
+
+- **Warp-stage minibosses last.** LUNAR SENTINEL, SOLAR FLARE, THE MOTHER ROCK and FROST WARDEN went down in about three seconds, too fast to see what they do. They now have four times the health: around 12 seconds with maxed guns and 15 to 20 with weak ones. The arena champions get half again as much.
+- **Bug test: every boss on its own.** The list now has all four bosses and all four warp-stage minibosses as separate entries. Each one drops you in just before the fight and ticks off when you win it.
+- **Bug test: no warps.** Bug test runs of the planets no longer spawn warps, so you can't fly into one by accident and leave the level you are testing.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
