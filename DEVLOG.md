@@ -390,5 +390,4 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
 - Recorded announcer lines instead of the browser voice (it now has a radio chirp and a better voice pick, but it is still the browser).
-- A shared online board for the Daily Run (today it keeps your own best).
 - The itch.io page and the HTML5 build for the jam.
