@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r70';
+const VER = 'r71';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -63,7 +63,7 @@ export function mountShift(root, host = {}) {
 <div class="ds-rotate" hidden><div>TURN YOUR SCREEN SIDEWAYS</div><button type="button">PLAY ANYWAY</button></div></section>`;
   const shell = root.querySelector('.ds-shell'), stage = root.querySelector('.ds-stage'), canvas = root.querySelector('canvas'), ctx = canvas.getContext('2d'), touchEl = root.querySelector('.ds-touch'), stickEl = root.querySelector('.ds-stick'), nubEl = root.querySelector('.ds-nub'), rotEl = root.querySelector('.ds-rotate');
   const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
-  const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: 'high', gfx: null, dyn: true, clarity: false, shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true, assist: false, ghost: true, crt: false, skin: 0, autobomb: false }, LS.get('opt', {})); if (!opt.gfx) opt.gfx = opt.glow === 'low' || coarse ? 'normal' : 'high'; /* graphics: high / normal / low, plus dynamic framerate that steps down on its own when frames run long */ const saveOpt = () => LS.set('opt', opt);
+  const OPT0 = { music: 0.7, sfx: 0.8, glow: 'high', gfx: null, dyn: true, clarity: false, shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true, assist: false, ghost: true, crt: false, skin: 0, autobomb: false, gfx: 'normal' }, opt = Object.assign({}, OPT0, LS.get('opt', {})); if (!opt.gfx) opt.gfx = 'normal'; /* everyone starts on NORMAL: a smooth first minute matters more than the last bit of glow */ /* graphics: high / normal / low, plus dynamic framerate that steps down on its own when frames run long */ const saveOpt = () => LS.set('opt', opt);
   // ship skins: looks only. Each is earned with an achievement, or owned through the host site's store when it sells them
   const SKIN = [['PILOT'], ['FIRE MAGE', 'sun', 'BEAT SOLAR FLARE ON THE SUN', 'shift-fire-mage', 'THE WARP STAGE HIDDEN ON MARS'], ['DARK LORD', 'pluto', 'BEAT FROST WARDEN ON PLUTO', 'shift-dark-lord', 'THE WARP STAGE HIDDEN ON PLANET X'], ['PIXIE', 'belt', 'BEAT THE MOTHER ROCK', 'shift-pixie', 'THE WARP STAGE HIDDEN ON JUPITER']]; // each skin drops from the miniboss of a warp stage
   let owned = LS.get('owned', []), forSale = [], prices = { 'shift-fire-mage': 500, 'shift-pixie': 650, 'shift-dark-lord': 800 }, skinView = opt.skin | 0; if (host.skins) Promise.resolve().then(() => host.skins()).then(r => { if (r && Array.isArray(r.owned)) { owned = r.owned; LS.set('owned', owned); } if (r && Array.isArray(r.forSale)) forSale = r.forSale; if (r && r.prices) Object.assign(prices, r.prices); }).catch(() => { });
@@ -161,8 +161,15 @@ export function mountShift(root, host = {}) {
       { name: 'MORE', items: [
         ...(BUGTEST ? [{ label: 'BUG TEST', act: bugMenu }] : []),
         { label: 'CONTROLS', act: () => push({ title: 'CONTROLS', kind: 'controls', items: [{ label: 'BACK', act: popMenu }] }) },
-        { label: 'CREDITS', act: () => scrollMenu('CREDITS', CREDITS) }] }];
+        { label: 'CREDITS', act: () => scrollMenu('CREDITS', CREDITS) },
+        { label: () => resetArm ? 'PRESS AGAIN TO RESET' : 'RESET TO DEFAULTS', act: resetOpts }] }]; resetArm = false;
     const m = push({ title: 'OPTIONS', gap: 28, tabs, tab: 0, items: [] }); setTab(m, 0); }
+  // RESET TO DEFAULTS: every setting back to how a new player starts (the ship skin you picked stays). Asks once more first
+  let resetArm = false;
+  function resetOpts() { if (!resetArm) { resetArm = true; audio.sfx('blip'); return; } resetArm = false;
+    const keep = opt.skin, idle = opt.idle, assist = opt.assist; Object.assign(opt, OPT0, { skin: keep }); opt.idle = idle; opt.assist = assist;
+    if (idle !== OPT0.idle) setIdle(OPT0.idle); if (assist !== OPT0.assist) setAssist(OPT0.assist); opt.idle = OPT0.idle; opt.assist = OPT0.assist;
+    q = 0; slow = 0; audio.vol(); saveOpt(); fit(); toast('OPTIONS', 'BACK TO DEFAULTS'); audio.sfx('blip'); }
   function setTab(m, k) { m.tab = (k + m.tabs.length) % m.tabs.length; m.items = [{ label: () => '<  ' + m.tabs[m.tab].name + '  >', tabRow: true, adj: d => setTab(m, m.tab + d) }, ...m.tabs[m.tab].items, { label: 'BACK', act: popMenu }]; m.i = Math.min(m.i, m.items.length - 1); }
   function setIdle(v) { opt.idle = v; saveOpt(); if (v) { assisted = true; rec = null; } }
   // RIVET-9 flies as your wingman and rolls into the right view before you do. Runs with him are tagged ASSISTED.

@@ -633,6 +633,12 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 
 ![The Sun's dive, tipped nose-down](shots/sun-dive-tilt.jpg)
 
+### 65. Smooth from the first second (r71)
+
+- New players now start on NORMAL graphics with dynamic framerate on, on every device. HIGH is still one tap away in VIDEO.
+- New RESET TO DEFAULTS under OPTIONS > MORE. Press it twice to confirm. Your chosen ship skin stays.
+- Before the playtest: a full sweep through every level, warp stage, arena and boss at every graphics setting, with clarity on and off, plus every menu. Nothing broke.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
