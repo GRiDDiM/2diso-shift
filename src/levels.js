@@ -88,7 +88,10 @@ function boss(spec) {
   };
   return { update, stages: spec.stages, name: spec.name };
 }
-const spawnBoss = (K, z, o) => K.at(z, g => { g.boss = addEnemy(g, { type: 'boss', x: 0, y: 4.6, z: 42, hx: 2.6, hy: 2.8, hz: 1.8, r: 2.6, hp: 520, col: '#ff3df0', score: 20000, big: true, stage: 0, vuln: [], st: 0, ...o }); g.fx.push('bossin'); });
+// boss health follows your firepower: each boss's listed health is for a mid-strength loadout, from about 0.8x with
+// hardly any upgrades to about 1.9x with every gun and drone maxed. Co-op takes the stronger ship
+export const bossScale = g => { let best = 0; for (const p of g.players) { let w = p.up[0] * 0.5; for (let i = 1; i <= 5; i++) w += [0, 1, 2, 3, 4, 4, 5][Math.min(6, p.up[i])]; /* by rank, so a god mode running at the time does not count */ best = Math.max(best, w); } return Math.max(0.75, Math.min(1.9, 0.6 + 0.045 * best)); };
+const spawnBoss = (K, z, o) => K.at(z, g => { const hp = Math.round((o.hp || 520) * bossScale(g)); g.boss = addEnemy(g, { type: 'boss', x: 0, y: 4.6, z: 42, hx: 2.6, hy: 2.8, hz: 1.8, r: 2.6, col: '#ff3df0', score: 20000, big: true, stage: 0, vuln: [], st: 0, ...o, hp }); g.fx.push('bossin'); });
 
 // =====================================================================================
 // LEVEL 1 — EARTH // NEO TERRA: neon cyber-city

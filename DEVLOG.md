@@ -698,6 +698,10 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - Every shield rank now adds something: one layer, then longer safe time after a hit, a second layer, BLOWBACK, a third layer, and AFTERGLOW for the longest safe time.
 - The Eye on Jupiter has less health. Its lightning walks are shorter, the cyclone pulls more gently and fires fewer sparks, and its storm orbs are softer and shoot less. The pupil's stare comes less often, and its ground strike is one spot with a longer warning instead of three.
 
+### 75. Bosses that match your guns (r81)
+
+- Boss health now scales with your firepower. Each boss's listed health is for a mid-strength loadout, from about 0.8x with hardly any upgrades up to about 1.9x with every gun and drone maxed. A fully upgraded ship no longer melts a boss in seconds, and a ship that lost its upgrades isn't stuck in an endless fight. Minibosses already worked this way.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
