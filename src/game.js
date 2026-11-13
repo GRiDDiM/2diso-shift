@@ -128,14 +128,16 @@ export function damage(g, e, d) {
   if (g.tick - (e.dT || -99) >= 10 && g.pops.length < 70) { e.dT = g.tick; const j = ((g.tick * 7) % 11 - 5) * 0.09; pop(g, '' + Math.max(1, Math.round(e.dAcc * 10)), e.x + j, e.y + (e.hy ?? e.r) * 0.6, e.z, '#ffffff'); g.pops[g.pops.length - 1].sm = true; e.dAcc = 0; }
   if (e.hp <= 0) { if (e.type === 'boss') e.hp = 0; else kill(g, e); }
 }
+// the screen glitching like a dying TV: ticks long, strength 0..1. The UI draws it; the game only says when
+export function glitch(g, t, k) { g.glT = Math.max(g.glT || 0, t); g.glK = Math.max(g.glT > t ? g.glK || 0 : 0, k); }
 function hurt(g, p) {
   if (p.inv > 0 || p.dead > 0) return;
   if (g.mut.bug) { g.stats.bugHits = (g.stats.bugHits || 0) + 1; p.inv = 40; g.fx.push('shield'); g.shake = Math.max(g.shake, 4); return; } // bug test: nothing is lost, the hit is only marked
   g.stats.hits++;
-  if (p.shield > 0 && g.loop < 3) { const s0 = p.shield; p.shield = g.loop >= 2 ? 0 : Math.max(0, p.shield - 2); p.inv = LOOP.inv[lp(g)] * (s0 >= 5 ? 1.6 : 1) | 0; /* shields are counted in half layers: a hit takes a whole layer. AFTERGLOW stretches the safety after it */
+  if (p.shield > 0 && g.loop < 3) { const s0 = p.shield; glitch(g, 14, 0.45); p.shield = g.loop >= 2 ? 0 : Math.max(0, p.shield - 2); p.inv = LOOP.inv[lp(g)] * (s0 >= 5 ? 1.6 : 1) | 0; /* shields are counted in half layers: a hit takes a whole layer. AFTERGLOW stretches the safety after it */
     if (s0 >= 3) { for (const b of g.ebul) if (Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z) < 6) b.life = 0; for (const e of g.enemies) if (e.hp > 0 && e.type !== 'boss' && !e.mini && Math.hypot(e.x - p.x, e.y - p.y, e.z - p.z) < 3.5) damage(g, e, 12); g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.5, vr: 22, life: 16, max: 16, col: '#5ee7ff' }); } /* BLOWBACK */ /* loop 3: one hit strips every layer. loop 4: shields do nothing */ g.fx.push('shield'); explode(g, p.x, p.y, p.z, '#5ee7ff', 12, 7); g.shake = 6; return; }
   if (p.up[8] >= 4 && !p.sw && !g.level.bonus) { p.sw = 1; p.inv = 180; g.flash = 8; g.shake = 8; g.fx.push('shield', 'god'); hint(g, 'SECOND WIND - THAT ONE WOULD HAVE KILLED YOU', 200); for (let i = 0; i < 3; i++) g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.4, vr: 12 + i * 6, life: 22, max: 22, col: i % 2 ? '#ffffff' : '#ffe14a' }); return; } // SECOND WIND: once a level
-  explode(g, p.x, p.y, p.z, '#ffffff', 46, 15); explode(g, p.x, p.y, p.z, '#ff3df0', 30, 10); g.fx.push('die'); g.shake = 14; g.flash = 10; g.chain = 0; g.stats.deaths++;
+  explode(g, p.x, p.y, p.z, '#ffffff', 46, 15); explode(g, p.x, p.y, p.z, '#ff3df0', 30, 10); g.fx.push('die'); g.shake = 14; g.flash = 10; g.chain = 0; g.stats.deaths++; glitch(g, 36, 1);
   if (g.level.bonus && !g.mut.rush) { p.dead = 1e9; g.state = 'over'; g.endT = 0; return; } // a bonus stage just ends; it never costs a ship (in boss rush it costs one like anywhere else)
   p.lives--; p.dead = 70; if (g.gear) { g.gear = 0; g.apGear = false; } /* back to SLOW, so the next ship is not thrown straight into traffic */
   for (let k = 1; k <= 5; k++) p.up[k] = 0; g.players[0].cursor = -1; for (let k = 0, n = g.boss ? 4 : 2; k < n; k++) addPod(g, (k - (n - 1) / 2) * 2.6, 4.6, 13 + k * 2.5); /* a few pods to start rebuilding with, more in a boss fight */ pop(g, 'WEAPONS LOST', p.x, p.y + 2, p.z + 2, '#ff4d6d', true); // a lost ship takes its weapons with it: drones stay, the guns start over
@@ -290,7 +292,9 @@ export function step(g, inputs) {
   const dz = rules.arena ? 0 : playing ? SCROLL * g.speedMul * dt : SCROLL * 0.4 * dt;
   if (playing) {
     g.camZ += dz;
+    if (g.glT > 0 && --g.glT === 0) g.glK = 0;
     if (g.rs?.length && !g.boss && g.intro <= 0 && g.camZ >= g.rs[0]) { g.rs.shift(); g.rsT = 55; hint(g, 'REALITY SHIFT!', 70); g.fx.push('charge'); }
+    if (g.rsT === 22) glitch(g, 34, 0.85);
     if (g.rsT > 0 && --g.rsT === 0) { doShift(g, (g.view + 1 + (g.rsR() * 3 | 0)) % 4, 1, null); g.flash = 6; g.shake = Math.max(g.shake, 6); } // the fold rolls you into some other view: roll back yourself
     if (!g.boss) while (g.evi < lvd.events.length && lvd.events[g.evi].z <= g.camZ) { const e = lvd.events[g.evi++]; if ((e.lim ?? e.z) >= g.z0 - 0.01) e.fn(g); }
     const zn = lvd.zones.find(z => g.camZ + 32 >= z.z0 && g.camZ + 32 < z.z1);

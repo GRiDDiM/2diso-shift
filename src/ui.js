@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r71';
+const VER = 'r72';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -548,12 +548,31 @@ export function mountShift(root, host = {}) {
         const L = LEVELS[levelId]; if (g.intro > 0 || sceneT < INTRO + 110) { const a = g.intro > 0 ? 1 : Math.min(1, (INTRO + 110 - sceneT) / 30); text(ctx, (L.isArena ? 'BONUS ARENA' : L.isBonus ? 'BONUS STAGE' : 'LEVEL ' + L.n) + (loopN ? '   LOOP ' + (loopN + 1) : ''), 480, 178, 14, '#ffe14a', { bold: true, align: 'center', alpha: a }); text(ctx, L.name, 480, 204, 44, VCOL[(L.n || 2) % 4], { bold: true, align: 'center', alpha: a, weight: 4, tube: true }); text(ctx, L.sub, 480, 262, 12, '#ffffff', { bold: true, align: 'center', alpha: a }); if (g.intro > 0) text(ctx, 'HYPERSPACE', 480, 300, 8, '#7d8bd6', { bold: true, align: 'center', alpha: (sceneT >> 3) % 2 ? 1 : 0.4, glow: false }); }
         if (warpT > 0) { ctx.fillStyle = '#b06bff'; ctx.globalAlpha = Math.min(0.85, warpT / 80); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; text(ctx, 'WARP', 480, 240, 40, '#ffffff', { bold: true, align: 'center', weight: 4, tube: true }); } } }
     if (scene !== 'intro' && toasts.length) { let y = menus.length && top().kind === 'end' ? 392 : 114; for (const q of toasts) { q.t++; const tw = Math.max(250, textWidth(q.a, 11) + 32, textWidth(q.b, 7) + 32), k = Math.min(1, q.t / 14, (300 - q.t) / 20), x = W - 18 - tw * Math.max(0, k); if (k <= 0) continue; ctx.fillStyle = 'rgba(4,5,22,.88)'; ctx.fillRect(x, y, tw, 40); ctx.strokeStyle = '#3dffb0'; ctx.lineWidth = 2; ctx.strokeRect(x, y, tw, 40); /* the card grows to fit its text */ ctx.fillStyle = '#3dffb0'; ctx.fillRect(x, y, 5, 40); text(ctx, q.a, x + 16, y + 8, 11, '#ffffff'); text(ctx, q.b, x + 16, y + 26, 7, '#3dffb0', { glow: false }); y += 48; } while (toasts.length && toasts[0].t > 300) toasts.shift(); }
+    if (scene === 'play' && g && !menus.length) { const gk = glitchLevel(); if (gk > 0.04) glitchFx(gk); }
     drawMenu();
     if (opt.crt) { if (!crtPat) { const c = document.createElement('canvas'); c.width = 2; c.height = 3; const x = c.getContext('2d'); x.fillStyle = 'rgba(0,0,0,.34)'; x.fillRect(0, 2, 2, 1); crtPat = ctx.createPattern(c, 'repeat'); }
       ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = crtPat; ctx.fillRect(0, 0, W, H); const vg = ctx.createRadialGradient(480, 270, 250, 480, 270, 590); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.6)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H); }
     const showTouch = lastDev === 'touch' && scene === 'play' && !menus.length; if (touchEl.hidden === showTouch) { touchEl.hidden = !showTouch; if (!showTouch) { tb.clear(); stick = null; nubEl.hidden = true; } }
   }
   // colour split: the frame is drawn again in red and cyan, pulled apart sideways (on shifts and perfect shifts)
+  // GLITCH: the picture breaking up like a dying TV. Reality shifts, hits and the Shifter set it from the game; being on your last ship
+  // with no shield left makes it tick on its own, worse the longer you stay there; invisible wraiths close by fuzz the signal
+  let critT = 0, critB = 0, wrB = 0, glF = 0;
+  function glitchLevel() { let k = g.glT > 0 ? (g.glK || 0) * Math.min(1, g.glT / 8) : 0; const p = g.players[0];
+    if (!g.level.bonus && g.state === 'play' && p && p.lives === 0 && p.shield <= 0 && p.dead <= 0 && !(p.god > 0) && g.intro <= 0) { critT++; if (critB <= 0 && Math.random() < 0.006 + Math.min(0.03, critT / 40000)) critB = 5 + Math.random() * 12 | 0; } else { critT = 0; critB = 0; }
+    if (critB > 0) { critB--; k = Math.max(k, 0.3 + Math.min(0.25, critT / 20000)); }
+    if (g.view !== 1 && g.tick % 6 === 0 && wrB <= 0 && g.enemies.some(e => e.shape === 'wraith' && e.hp > 0 && e.z > 0 && e.z < 15) && Math.random() < 0.18) wrB = 3 + Math.random() * 5 | 0;
+    if (wrB > 0) { wrB--; k = Math.max(k, 0.18); }
+    return opt.shake ? k : k * 0.4; } /* SCREEN SHAKE off tones it right down */
+  function glitchFx(k) { if (!fxC) fxC = document.createElement('canvas'); if (fxC.width !== canvas.width || fxC.height !== canvas.height) { fxC.width = canvas.width; fxC.height = canvas.height; }
+    const f = fxC.getContext('2d'), cw = canvas.width, ch = canvas.height, r = Math.random; glF++;
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; f.globalCompositeOperation = 'copy'; f.drawImage(canvas, 0, 0);
+    if (r() < 0.22 * k) { const dy = ((r() - 0.5) * 2 * k * 26 * res) | 0; ctx.drawImage(fxC, 0, dy); ctx.drawImage(fxC, 0, dy > 0 ? dy - ch : dy + ch); } // the vertical hold slips
+    for (let i = 0, n = 2 + k * 7 | 0; i < n; i++) { const h = Math.max(2, (3 + r() * 42 * k) * res) | 0, y = r() * ch | 0, dx = ((r() - 0.5) * 2 * k * 42 * res) | 0; ctx.drawImage(fxC, 0, y, cw, h, dx, y, cw, h); } // torn lines
+    if (tier() < 3 && k > 0.25) { const d = (k * 7 * res) | 0; for (const [col, dx] of [['#ff0030', -d], ['#00e0ff', d]]) { f.globalCompositeOperation = 'copy'; f.drawImage(canvas, 0, 0); f.globalCompositeOperation = 'multiply'; f.fillStyle = col; f.fillRect(0, 0, cw, ch); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.45 * k; ctx.drawImage(fxC, dx, 0); } ctx.globalCompositeOperation = 'source-over'; } // colour split
+    ctx.globalAlpha = 1; for (let i = 0, n = 10 + k * 50 | 0; i < n; i++) { const v = 120 + r() * 135 | 0; ctx.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',' + (0.15 + r() * 0.5 * k).toFixed(2) + ')'; ctx.fillRect(r() * cw, r() * ch, (4 + r() * 90 * k) * res, Math.max(1, res * (r() < 0.8 ? 1 : 2))); } // static
+    { const by = (glF * 9 * res) % (ch + 60 * res) - 30 * res; ctx.fillStyle = 'rgba(255,255,255,' + (0.05 * k).toFixed(3) + ')'; ctx.fillRect(0, by, cw, 18 * res); ctx.fillStyle = 'rgba(0,0,0,' + (0.18 * k).toFixed(3) + ')'; ctx.fillRect(0, by + 18 * res, cw, 10 * res); } // a rolling band
+    ctx.restore(); }
   function chroma(k, a) { if (tier() > 0 || k < 0.5) return; if (!fxC) fxC = document.createElement('canvas'); if (fxC.width !== canvas.width || fxC.height !== canvas.height) { fxC.width = canvas.width; fxC.height = canvas.height; } const f = fxC.getContext('2d');
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); for (const [col, dx] of [['#ff0030', -k], ['#00e0ff', k]]) { f.globalCompositeOperation = 'copy'; f.drawImage(canvas, 0, 0); f.globalCompositeOperation = 'multiply'; f.fillStyle = col; f.fillRect(0, 0, fxC.width, fxC.height); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.drawImage(fxC, dx * res, 0); } ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
   function frame(now) {

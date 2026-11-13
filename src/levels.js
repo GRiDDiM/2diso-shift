@@ -1,6 +1,6 @@
 // 2DISO SHIFT — every level. Four planets, each with a hidden warp to a bonus stage.
 // Each stretch is built so one view is the way through; the banner and the flashing view pip say which.
-import { addEnemy, addObs, addRing, addPod, bullet, aimed, explode, hint, doShift, pop, near, SPAWN_Z, DT, VIEWS } from './game.js';
+import { glitch, addEnemy, addObs, addRing, addPod, bullet, aimed, explode, hint, doShift, pop, near, SPAWN_Z, DT, VIEWS } from './game.js';
 const SIDE = 0, ISO = 1, CHASE = 2, TOP = 3;
 
 const FAR = 62;
@@ -69,7 +69,7 @@ const fan = (g, b, n, sp = 8, col) => { for (let i = 0; i < n; i++) aimed(g, b, 
 function boss(spec) {
   const update = (g, b, dt) => {
     const S = spec.stages[b.stage], p = g.players[0];
-    if (b.dying) { b.dying++; g.lockShift = true; for (const q of g.players) q.inv = Math.max(q.inv, 40); // the finisher: the fold rolls through all four views while it comes apart
+    if (b.dying) { b.dying++; g.lockShift = true; if (spec.glitchy && (b.dying === 2 || b.dying % 36 === 2)) glitch(g, b.dying === 2 ? 50 : 22, b.dying === 2 ? 1 : 0.8); for (const q of g.players) q.inv = Math.max(q.inv, 40); // the finisher: the fold rolls through all four views while it comes apart
       if (b.dying % 36 === 2 && b.dying < 146) { g.viewFrom = g.view; g.view = (g.view + 1) % 4; g.shiftT = 1; g.shiftDir = 1; g.fx.push('shift', 'boom2'); g.flash = 8; for (let i = 0; i < 3; i++) g.shocks.push({ x: b.x, y: b.y, z: b.z, r: 0.5, vr: 14 + i * 10, life: 30, max: 30, col: ['#ffffff', '#ff3df0', '#2ee6ff'][i] }); }
       if (b.dying % 6 === 0) { explode(g, b.x + (g.rand() - 0.5) * 5, b.y + (g.rand() - 0.5) * 5, b.z + (g.rand() - 0.5) * 3, ['#ff3df0', '#ffe14a', '#2ee6ff', '#ffffff'][b.dying / 6 & 3], 26, 14, spec.splat); g.fx.push('boom2'); g.shake = 12; }
       if (b.dying > 150) { explode(g, b.x, b.y, b.z, '#ffffff', 90, 26, spec.splat); g.flash = 20; g.shake = 22; b.gone = true; g.boss = null; g.lockShift = false; g.score += b.score; g.state = 'clear'; g.endT = 0; g.fx.push('clear', 'say:' + spec.name + ' destroyed. sector clear.', 'toast:LEVEL COMPLETE|' + spec.toast); } return; }
@@ -78,9 +78,10 @@ function boss(spec) {
     b.x = Math.sin(b.st * 0.011) * (S.sway ?? 1.5); b.y = 4.6 + Math.sin(b.st * 0.017) * (S.bob ?? 0.8);
     b.ovk = Math.max(0, Math.min(1, (b.ovk || 0) + (b.ovOn ? 0.05 : -0.03))); b.ovOn = false; if (b.st % 400 === 240) addPod(g, (g.rand() - 0.5) * 10, 2 + g.rand() * 5, b.z - 2); if (b.ovk > 0) { b.x += (b.ovx - b.x) * b.ovk; b.y += (b.ovy - b.y) * b.ovk; } // an attack can take over where the boss is (the Eye turning to face you)
     if (b.hp <= 0) {
-      if (b.stage < spec.stages.length - 1) { b.stage++; b.hp = b.max; b.st = -110; g.obs.length = 0; g.ebul.length = 0; explode(g, b.x, b.y, b.z, S.col, 60, 18, spec.splat); g.shake = 14; g.flash = 8; g.fx.push('boom2'); addPod(g, b.x - 1, b.y, b.z - 2); addPod(g, b.x + 1, b.y, b.z - 3); g.score += 5000; hint(g, 'SHELL DOWN - SHIFT TO ' + VIEWS[spec.stages[b.stage].rec] + ' VIEW', 220); }
+      if (b.stage < spec.stages.length - 1) { b.stage++; b.hp = b.max; b.st = -110; g.obs.length = 0; g.ebul.length = 0; explode(g, b.x, b.y, b.z, S.col, 60, 18, spec.splat); g.shake = 14; g.flash = 8; g.fx.push('boom2'); addPod(g, b.x - 1, b.y, b.z - 2); addPod(g, b.x + 1, b.y, b.z - 3); g.score += 5000; hint(g, 'SHELL DOWN - SHIFT TO ' + VIEWS[spec.stages[b.stage].rec] + ' VIEW', 220); if (spec.glitchy) glitch(g, 45, 0.95); }
       else { b.dying = 1; g.obs.length = 0; g.ebul.length = 0; hint(g, spec.name + ' DESTROYED', 200); } return; }
     if (b.st < 0) return;
+    if (spec.glitchy && b.st % 540 === 270) { glitch(g, 26, 0.7); g.fx.push('charge'); } // the Shifter reaches out of the fight and scrambles the screen
     S.attack(g, b, b.st);
     if (spec.adds && b.st > 90 && b.st % (spec.addEvery || 560) === 0) { const n = 3 + Math.min(3, b.stage); for (let i = 0; i < n; i++) addEnemy(g, { type: 'pop', hp: 3, x: (i - (n - 1) / 2) * 2.4, y: 2.6 + (i % 3) * 2, z: b.z - 2, vz: -6, ax: 1.6, ay: 1, ph: i * 0.7, score: 120, ...spec.adds }); }
     if (b.deflect === 5 && g.tick % 90 < 8) pop(g, 'SHIELDED - SHIFT TO ' + VIEWS[S.rec], p.x, p.y + 1.5, p.z + 3, RED);
@@ -399,7 +400,7 @@ function planetx() {
   spawnBoss(K, 1180, { name: 'THE SHIFTER', look: 'bloom', hp: 4200, col: FLESH, score: 50000 });
   // every stage wants a different view, and between attacks it folds reality and throws you into another one
   const fold = (g, b, t) => { const c = t % 400; if (c === 215) { hint(g, 'REALITY SHIFT!', 70); g.fx.push('charge'); } if (c === 270) { let to = (g.view + 1 + (g.rand() * 3 | 0)) % 4; doShift(g, to, 1, null); g.flash = 6; } };
-  const B = boss({ name: 'THE SHIFTER', toast: 'THE SHIFT IS OVER', splat: true, adds: { shape: 'spore', col: '#b6ff3d', hp: 3, r: 0.6, score: 80 }, addEvery: 480, stages: [
+  const B = boss({ name: 'THE SHIFTER', toast: 'THE SHIFT IS OVER', splat: true, glitchy: true, adds: { shape: 'spore', col: '#b6ff3d', hp: 3, r: 0.6, score: 80 }, addEvery: 480, stages: [
     { name: 'FIRST FACE', vuln: [SIDE], rec: SIDE, col: FLESH, bob: 2, attack(g, b, t) { if (t % 400 === 30) { addObs(g, { rel: true, kind: 'blob', x: 0, y: 4.8, hx: 9, hy: 5, hz: 0.7, z: b.z - 3, vz: -2.6, hp: Math.round(360 * power(g)), col: FLESH, score: 600, pod: g.rand() < 0.3 }); hint(g, 'BLOB WALL - BURST IT BEFORE IT REACHES YOU', 130); g.fx.push('charge'); } if (t % 100 === 80 && t % 400 > 200) fan(g, b, 3, 6.5, ACID); fold(g, b, t); } },
     { name: 'SECOND FACE', vuln: [TOP], rec: TOP, col: BIO, sway: 4, attack(g, b, t) { if (t % 200 === 30) { const safe = g.rand() * 5 | 0; [-6.4, -3.2, 0, 3.2, 6.4].forEach((x, i) => { if (i !== safe && i !== (safe + 1 + (t % 400 < 200 ? 0 : 2)) % 5) addObs(g, { rel: true, kind: 'slam', x, y: 4.75, hx: 1.25, hy: 4.75, hz: 5.5, z: 6, warm: 95, life: 50, col: BIO }); }); g.fx.push('charge'); } if (t % 400 === 120) for (let i = 0; i < 6; i++) addEnemy(g, { type: 'pop', x: -6 + i * 2.4, y: 4.6, z: b.z - 1, vz: -4, ax: 1, hp: 1, r: 0.4, col: ACID, shape: 'spore', score: 40, ph: i }); fold(g, b, t); } },
     { name: 'THIRD FACE', vuln: [CHASE], rec: CHASE, col: ACID, attack(g, b, t) { if (t % 400 === 20) addObs(g, { rel: true, kind: 'blob', x: 0, y: 4.8, hx: 9, hy: 5, hz: 0.7, z: b.z - 3, vz: -2.4, hp: Math.round(480 * power(g)), col: ACID, score: 800 }); if (t % 400 === 150) for (let i = 0; i < 5; i++) addEnemy(g, { type: 'kami', x: -5 + i * 2.5, y: 2.5 + (i % 2) * 4, z: b.z - 2, vz: -6.5, hp: 1, r: 0.45, col: ACID, shape: 'spore', score: 60 }); fold(g, b, t); } },

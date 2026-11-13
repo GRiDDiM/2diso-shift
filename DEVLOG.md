@@ -639,6 +639,18 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - New RESET TO DEFAULTS under OPTIONS > MORE. Press it twice to confirm. Your chosen ship skin stays.
 - Before the playtest: a full sweep through every level, warp stage, arena and boss at every graphics setting, with clarity on and off, plus every menu. Nothing broke.
 
+### 66. The picture breaks up (r72)
+
+- A glitch effect, like an old TV giving out: torn lines, the picture slipping, red and blue splitting apart, static and a rolling band.
+- It hits just before a reality shift throws you into another view, briefly when a shield layer pops, and hard when you lose a ship.
+- On your last ship with no shield left, the screen starts to glitch on its own, and more often the longer you stay like that. Pick up a shield and it calms down.
+- The Shifter attacks the screen itself: between its shells, now and then mid-fight, and in one big burst of static as it dies.
+- Invisible wraiths on Jupiter fuzz the signal when they get close.
+- Turning SCREEN SHAKE off tones the glitch right down.
+- The shield layers around the ship are spaced further apart and only the inner one glows, so you can count them.
+
+![Glitch](shots/glitch.jpg)
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
