@@ -418,14 +418,26 @@ export function drawWorld(ctx, g, o = {}) {
       P(w.x, w.y + 1.1, w.z); if (OK && g.shiftT <= 0) tags.push([X, Y - (vB === 3 ? 30 : 8), 'R9', '#ffb070']); }
     const gh = o.ghost; if (gh && gh.z > -2 && gh.z < 30) { depth(gh.x, gh.z); mesh(SHIP_HULL, gh.x, gh.y, gh.z, 1, 0, 0, 0, '#3dffb0', 0.32); mesh(SHIP_WING, gh.x, gh.y, gh.z, 1, 0, 0, 0, '#3dffb0', 0.2); P(gh.x, gh.y + 0.9, gh.z); if (OK) tags.push([X, Y - 4, 'BEST', '#2a9a70']); } }
   NG = true; for (const q of g.parts) { depth(q.x, q.z); if (q.splat) { seg(q.x, q.y, q.z, q.x - q.vx * 0.05, q.y - q.vy * 0.05 + 0.15, q.z - q.vz * 0.05, q.col, Math.min(1, q.life / q.max * 1.6)); seg(q.x - 0.12, q.y, q.z, q.x + 0.12, q.y, q.z, q.col, Math.min(1, q.life / q.max * 1.6)); } else seg(q.x, q.y, q.z, q.x - q.vx * 0.035, q.y - q.vy * 0.035, q.z - q.vz * 0.035, q.col, Math.min(1, q.life / q.max * 1.6)); }
-  NG = false; for (const s of g.shocks) { depth(s.x, s.z); circle(s.x, s.y, s.z, s.r, s.col, s.life / s.max, 16, vB === 3 ? 1 : vB === 0 ? 2 : 0); }
+  NG = false; for (const b of g.blasts) { const f = b.t / b.life, top = vB === 3, side = vB === 0, pl = top ? 1 : side ? 2 : 0; depth(b.x, b.z);
+    if (b.kind === 'ring') { for (let k = 0; k < 3; k++) circle(b.x, b.y, b.z, Math.max(0.2, b.r - k * 0.9), k ? '#ff8a2b' : '#ffe14a', (1 - f) * (1 - k * 0.3), 20, pl); }
+    else if (b.kind === 'sweep') { const a = Math.min(1, (1 - f) * 2.2), y0 = top ? b.y : b.y - b.hy, y1 = top ? b.y : b.y + b.hy, x0 = side ? b.x : b.x - b.hx, x1 = side ? b.x : b.x + b.hx;
+      for (let k = 0; k < 4; k++) { const s = 1 - k * 0.14, zf = b.z + (b.z1 - b.z) * s, zb = b.z + (b.z0 - b.z) * s, ax = b.x + (x0 - b.x) * s, bx = b.x + (x1 - b.x) * s, ay = b.y + (y0 - b.y) * s, by = b.y + (y1 - b.y) * s, col = k % 2 ? '#ff8a2b' : '#ffe14a', al = a * (1 - k * 0.22); LW = k ? 1.4 : 3;
+        for (const [yy, xx] of [[ay, 0], [by, 0]]) { seg(ax, yy, zb, bx, yy, zb, col, al); seg(bx, yy, zb, bx, yy, zf, col, al); seg(bx, yy, zf, ax, yy, zf, col, al); seg(ax, yy, zf, ax, yy, zb, col, al); }
+        if (!top) for (const xx of [ax, bx]) { seg(xx, ay, zf, xx, by, zf, col, al); seg(xx, ay, zb, xx, by, zb, col, al); } } LW = 1; }
+    else if (b.kind === 'dia') { const a = Math.min(1, (1 - f) * 1.8), r = b.r || 0.3; LW = 2.4; mesh(OCT, b.x, b.y, b.z, r * 1.3, 0, 0, 0, b.col, a); LW = 1.2; mesh(OCT, b.x, b.y, b.z, r * 0.8, 0, 0, 0, '#ffffff', a * 0.8); mesh(OCT, b.x, b.y, b.z, r * 0.4, 0, 0, 0, b.col, a); LW = 1; }
+    else if (b.kind === 'mega' && b.t < 36) { const c = b.t / 36; for (let k = 0; k < 5; k++) { const r = ((1 - c) * 16 + k * 3.2 - (b.t * 0.35) % 3.2); if (r > 0.3) circle(b.x, b.y, b.z, r, k % 2 ? '#ff3df0' : '#ffffff', Math.min(1, c * 1.5 + 0.2), 22, pl, b.t * 0.05); } LW = 2.5; circle(b.x, b.y, b.z, 0.9 + c * 0.8 + Math.sin(b.t) * 0.15, '#ffffff', 1, 14, pl); LW = 1; } }
+  for (const s of g.shocks) { depth(s.x, s.z); circle(s.x, s.y, s.z, s.r, s.col, s.life / s.max, 16, vB === 3 ? 1 : vB === 0 ? 2 : 0); }
   { const trip = th.trippy ? ((t * 0.8) % 360 / 30 | 0) * 30 : 0; for (let L = 0; L < NL; L++) { if (FILL) drawQuads(ctx, L); flush(ctx, o.glow !== false && !(o.q >= 2), trip, L); } depth0(); }
   for (const q of g.pops) { P(q.x, q.y, q.z); if (!OK) continue; text(ctx, q.txt, X, Y, q.big ? 15 : q.sm ? 6.5 : 9, q.col, { align: 'center', alpha: Math.min(1, q.life / 20) * (q.sm ? 0.85 : 1), glow: q.big }); }
   for (const e of g.enemies) { if (!(e.hbT > 0) || e.hp <= 0 || e.type === 'boss' || e.mini || e.max < 2) continue; P(e.x, e.y + (e.hy ?? e.r) + 0.45, e.z); if (!OK) continue; const w = 26, f = Math.max(0, e.hp / e.max), a = Math.min(1, e.hbT / 20); ctx.globalAlpha = a; ctx.fillStyle = '#0a0c24'; ctx.fillRect(X - w / 2 - 1, Y - 2, w + 2, 5); ctx.fillStyle = f > 0.5 ? '#3dffb0' : f > 0.25 ? '#ffe14a' : '#ff4d6d'; ctx.fillRect(X - w / 2, Y - 1, w * f, 3); ctx.globalAlpha = 1; } // health bars on whatever is being hit
   for (const q of tags) text(ctx, q[2], q[0], q[1], 7, q[3], { align: 'center', glow: false });
   ctx.restore();
   if (g.heat > 5) { ctx.fillStyle = '#ff5a1f'; ctx.globalAlpha = Math.min(0.3, g.heat / 100 * 0.3); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
-  if (g.flash > 0) { ctx.fillStyle = '#fff'; ctx.globalAlpha = Math.min(0.6, g.flash / 20); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+  for (const b of g.blasts) if (b.kind === 'mega' && b.t >= 36) { const u = b.t - 36, f = u / (b.life - 36); P(b.x, b.y, b.z + 6); const cx = OK ? X : W / 2, cy = OK ? Y : H / 2; ctx.save(); ctx.globalCompositeOperation = 'lighter'; // the whole screen goes: rings, rays and bars of light rolling out from the blast
+    for (let k = 0; k < 6; k++) { const r = (u - k * 5) * 26; if (r <= 0) continue; ctx.globalAlpha = Math.max(0, 1 - f) * 0.8; ctx.strokeStyle = ['#ffffff', '#ffe14a', '#ff8a2b', '#ff3df0', '#7df9ff', '#ffffff'][k]; ctx.lineWidth = 10 - k; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.283); ctx.stroke(); }
+    ctx.globalAlpha = Math.max(0, 1 - f * 1.3) * 0.5; ctx.strokeStyle = '#ffe14a'; ctx.lineWidth = 3; ctx.beginPath(); for (let k = 0; k < 28; k++) { const a = k / 28 * 6.283 + u * 0.01, r0 = 30 + u * 6, r1 = r0 + 260 + (k % 3) * 120; ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); } ctx.stroke();
+    ctx.globalAlpha = Math.max(0, 1 - f * 1.6) * 0.35; ctx.fillStyle = '#ff8a2b'; for (let k = 0; k < 9; k++) { const y = (k * 67 + u * 9) % H; ctx.fillRect(0, y, W, 5); } ctx.restore(); ctx.globalAlpha = 1; }
+  if (g.flash > 0) { ctx.fillStyle = '#fff'; ctx.globalAlpha = g.flash > 22 ? Math.min(0.95, g.flash / 30) : Math.min(0.6, g.flash / 20); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   if (g.shiftT > 0) { ctx.fillStyle = '#5ee7ff'; ctx.globalAlpha = 0.1 * g.shiftT; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
 }
 const STAGE_COLS = ['#ff3df0', '#2ee6ff', '#ffe14a'];
@@ -541,11 +553,11 @@ export function drawHUD(ctx, g, o = {}) {
       for (const r of g.rings) if (r.kind === 'warp' && !r.got && (r.stay || r.phase === vw && r.z < 17) && r.y > 0) { ctx.fillStyle = '#b06bff'; ctx.fillRect(x - 3, Yp(r.y) - 1, 14, 3); } }
     const py = Yp(p.y); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(x + 22, py - 5); ctx.lineTo(x + 10, py); ctx.lineTo(x + 22, py + 5); ctx.closePath(); ctx.fill(); ctx.fillRect(x - 2, py - 1, 12, 2); ctx.globalAlpha = 1; }
   // upgrade bar
-  const n = BAR.length, cw = 100, x0 = W / 2 - cw * n / 2, y0 = H - 34;
+  const n = BAR.length, cw = 96, x0 = W / 2 - cw * n / 2, y0 = H - 34;
   for (let i = 0; i < n; i++) { const on = p.cursor === i, lvl = i === U.SHIELD ? p.shield : p.up[i], full = lvl >= BARMAX[i], x = x0 + i * cw;
     ctx.fillStyle = on ? '#ffe14a' : '#0a0f2c'; ctx.globalAlpha = on ? 0.9 : 0.75; ctx.fillRect(x + 2, y0, cw - 4, 22); ctx.globalAlpha = 1; ctx.strokeStyle = on ? '#ffffff' : full ? '#3dffb0' : '#3a4cb8'; ctx.lineWidth = on ? 2 : 1; ctx.strokeRect(x + 2, y0, cw - 4, 22);
     text(ctx, BAR[i], x + cw / 2, y0 + 5, 9, on ? '#140a2a' : full ? '#3dffb0' : lvl ? '#ffffff' : '#7d8bd6', { align: 'center', glow: false, weight: on ? 2 : 1.3 });
-    if (i < 7) for (let k = 0; k < BARMAX[i]; k++) { ctx.fillStyle = k < lvl ? (on ? '#140a2a' : p.god > 0 && i < 6 ? RAINBOW[(k + (t >> 2)) % 7] : '#3dffb0') : (on ? '#b89a20' : p.god > 0 && i < 6 ? '#ffffff' : '#26306e'); ctx.fillRect(x + 8 + k * ((cw - 16) / BARMAX[i]), y0 + 17, (cw - 16) / BARMAX[i] - 2, 2); } }
+    if (i < 8) for (let k = 0; k < BARMAX[i]; k++) { ctx.fillStyle = k < lvl ? (on ? '#140a2a' : p.god > 0 && i < 6 ? RAINBOW[(k + (t >> 2)) % 7] : '#3dffb0') : (on ? '#b89a20' : p.god > 0 && i < 6 ? '#ffffff' : '#26306e'); ctx.fillRect(x + 8 + k * ((cw - 16) / BARMAX[i]), y0 + 17, (cw - 16) / BARMAX[i] - 2, 2); } }
   if (p.cursor >= 0 && (t >> 4) % 2) text(ctx, (o.upgLabel || 'SELECT') + ' = ' + BAR[p.cursor], W / 2, y0 - 14, 9, '#ffe14a', { align: 'center' });
 }
 
