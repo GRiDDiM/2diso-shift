@@ -364,13 +364,22 @@ function planetx() {
   const memb = (z, low, ph) => obs(z, low ? { x: 0, y: 1.8, hx: 8.6, hy: 1.8, hz: 1, col: FLESH, kind: 'membrane', osc: { ax: 0, ay: 0.7, w: 1.6, ph } } : { x: 0, y: 7.3, hx: 8.6, hy: 2.2, hz: 1, col: FLESH, kind: 'membrane', osc: { ax: 0, ay: 0.7, w: 1.6, ph } });
 
   zone(-99, 85, SIDE, 'SECTOR 4 // PLANET X - THE BLOOM');
-  blob(78, { pod: true }); at(46, g => hint(g, 'BLOB WALL - SHOOT IT UNTIL IT BURSTS', 220)); mine(60, 0, 3); mine(68, 0, 7);
-  wing(34, 8, { ...spore, y: 5, ay: 2.5, ax: 0 }, 1.4); spitter(52, { x: 0, y: 6 }); wing(64, 8, { ...spore, y: 4, ay: 3 }, 1.4);
+  blob(78, { pod: true }); at(46, g => hint(g, 'BLOB WALL - SHOOT IT UNTIL IT BURSTS', 220)); mine(60, 0, 3); mine(68, 0, 7); mine(40, 0, 2.4); mine(48, 0, 7.4);
+  wing(24, 6, { ...spore, y: 6.5, ay: 1.5, ax: 0 }, 1.4); wing(34, 8, { ...spore, y: 5, ay: 2.5, ax: 0 }, 1.4); spitter(52, { x: 0, y: 6 }); wing(64, 8, { ...spore, y: 4, ay: 3 }, 1.4); spitter(72, { x: 0, y: 3 });
+  for (let z = 30; z < 82; z += 11) eye(z, 0, (z / 11 | 0) % 2 === 0); // eyes on stalks, floor and roof, watching you come in
+  for (let i = 0, z = 32; z < 76; z += 9, i++) obs(z, { x: 0, y: i % 2 ? 8.4 : 1.2, hx: 8.6, hy: 1.2, hz: 0.6, col: i % 2 ? FLESH : BIO, kind: 'membrane', osc: { ax: 0, ay: 0.5, w: 1.4, ph: i } }); // folds of tissue pinching the lane
 
-  zone(85, 285, TOP, 'TENTACLE FOREST - SHIFT TO TOP VIEW'); K.tilt(110, 280, { sway: 0.18, w: 0.009, px: 40, py: 18 }); // the forest breathes: the whole floor heaves and turns
-  for (let i = 0, z = 120; z < 276; z += 13, i++) (i % 2 ? [-5.2, 0, 5.2] : [-2.6, 2.6, 7.6, -7.6]).forEach((x, k) => i % 3 === 2 && k === 1 ? obs(z, { x, y: 4.75, hx: 0.8, hy: 4.75, hz: 0.8, col: FLESH, kind: 'tentacle', osc: { ax: 2.7, ay: 0, w: 2, ph: i } }) : tent(z, x, i + k * 2));
-  for (let z = 152; z < 270; z += 39) { mine(z, -5.2, 4.6); mine(z + 13, 5.2, 4.6); }
-  wing(140, 8, { ...spore, x: 0, ax: 5, y: 5 }, 1.4); spitter(180, { x: 0, y: 6 }); wing(215, 8, { ...spore, x: 0, ax: 6, y: 4 }, 1.4); spitter(252, { x: 2, y: 5 });
+  // THE WRITHING GROVE: a forest of tentacles you fly through in ISO. Some grow from the floor and some hang from the roof, pumping up and down,
+  // so the way through is a gap in height as well as in the lane. Big ones lash right across, eyes on stalks shoot from both ends
+  zone(85, 285, ISO, 'THE WRITHING GROVE - SHIFT TO ISO VIEW'); K.tilt(110, 280, { sway: 0.18, w: 0.009, px: 40, py: 18 }); // the grove breathes: the whole floor heaves and turns
+  { const grow = (z, x, h, roof, ph, col = BIO) => obs(z, { x, y: roof ? 9.6 - h / 2 : h / 2, hx: 0.7, hy: h / 2, hz: 0.7, col, kind: 'tentacle', osc: { ax: 0.5, ay: 1.1, w: 1.5, ph } });
+    const LANES = [-6.4, -2.2, 2.2, 6.4];
+    for (let i = 0, z = 116; z < 276; z += 10, i++) { const roof = i % 2 === 1, open = (i * 3 + (i >> 1)) % 4; // one lane each row stays clear; the rest are tentacles from the floor or the roof
+      LANES.forEach((x, k) => { if (k !== open) grow(z + (k % 2) * 2, x, 4.4 + ((i + k) % 3) * 0.8, roof, i + k * 1.7); });
+      if (i % 5 === 2) obs(z + 5, { x: 0, y: 4.75, hx: 0.8, hy: 4.75, hz: 0.8, col: FLESH, kind: 'tentacle', osc: { ax: 4.6, ay: 0, w: 1.1, ph: i } }); // a big one lashing right across
+      if (i % 3 === 0) eye(z + 5, LANES[open], i % 2 === 0); if (i % 4 === 1) mine(z + 5, LANES[(open + 2) % 4], 4.6); }
+    at(112, g => hint(g, 'TENTACLES FROM THE FLOOR AND THE ROOF - FIND THE GAP IN ISO', 240)); }
+  wing(124, 8, { ...spore, x: 0, ax: 5, y: 5 }, 1.4); spitter(160, { x: 0, y: 6 }); wing(196, 8, { ...spore, x: 0, ax: 6, y: 4 }, 1.4); spitter(226, { x: 3, y: 5 }); wing(250, 8, { ...spore, x: -2, ax: 5, y: 6 }, 1.4); spitter(264, { x: -3, y: 4 });
   K.checkpoints.push(288);
 
   // the Pluto warp is tucked into the roof here, and only exists in CHASE

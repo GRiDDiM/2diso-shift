@@ -711,6 +711,16 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - Boss and miniboss health now follows your firepower during the fight, not just when it starts. Lose your guns to a death and the boss's health and its cap shrink together, so it keeps the same share it had. Upgrade mid-fight and it toughens up the same way. It never just refills or empties.
 - New rule: take a weapon all the way to max rank and it's yours for good. You keep it even when you lose a ship. RIVET-9 tells you when it happens. Spend wisely and your loadout builds up over a run.
 
+### 78. The Writhing Grove (r84)
+
+- Planet X had too much top-down, so the tentacle forest is now THE WRITHING GROVE, flown in ISO. Tentacles grow from the floor and hang from the roof, pumping up and down, so the gap is in height as well as across the lane. Big ones lash right across, eyes on stalks fire from the floor and the roof, and there's more to shoot.
+- Tentacles are redrawn: three tapering, curling strands with rings of suckers and a glowing tip, rooted on the floor or hanging from the roof.
+- The opening stretch of Planet X is busier: folds of tissue pinching the lane, eyes on stalks, more spores and an extra spitter.
+- Cutscene animations keep moving while a line of dialogue finishes; only the next line waits.
+- The glitch effect is cheaper to draw, and glitch frames no longer count towards dynamic framerate, so a burst of glitching can't knock the graphics setting down with a hitch, like the one at the final boss's phase change.
+
+![The Writhing Grove](shots/writhing-grove.jpg)
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
