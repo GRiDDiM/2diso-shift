@@ -7,16 +7,16 @@ const FAR = 62;
 // ---------- builder kit ----------
 function kit(id) {
   const ev = [], zones = [], checkpoints = [], hills = []; let gid = 0; const hill = (z0, z1, h) => hills.push([z0, z1, h]);
-  const at = (z, fn) => ev.push({ z: z - SPAWN_Z, fn });
-  const far = (z, fn, ob) => ev.push({ z: z - FAR, lim: z - SPAWN_Z, fn, oz: ob ? z : null }); // scenery is placed well beyond the old horizon and fades in, so nothing pops up in your face
+  const at = (z, fn) => ev.push({ z: z - SPAWN_Z, src: z, fn });
+  const far = (z, fn, ob) => ev.push({ z: z - FAR, lim: z - SPAWN_Z, src: z, fn, oz: ob ? z : null }); // scenery is placed well beyond the old horizon and fades in, so nothing pops up in your face
   const obs = (z, o) => { far(z, g => addObs(g, { ...o, z: z - g.camZ }), true); if (o.ghost) ev[ev.length - 1].keep = true; }; // ghosts (fog, clouds, channels) are not cleared around a change of view
   const ring = (z, r) => far(z, g => addRing(g, { ...r, z: z - g.camZ }));
   const en = (z, o) => at(z, g => addEnemy(g, o));
   const ground = (z, o) => far(z, g => addEnemy(g, { rel: false, z: z - g.camZ, y: 0.5, y0: 0.5, type: 'turret', ...o }));
-  const wing = (z, n, o, gap = 2.2) => { const gr = id + (++gid); if (gid % 3 === 1) ev.push({ z: z - SPAWN_Z - 7, fn: g => g.warns.push({ x: o.x ?? 0, y: o.y ?? 4.5, t: 80, col: o.col || '#ff4d6d' }) }); /* every third wave flashes a warning where it will come in */ for (let i = 0; i < n; i++) at(z + i * gap, g => addEnemy(g, { type: 'pop', group: gr, gn: n, hp: 2, ph: i * 0.5, ...o })); };
+  const wing = (z, n, o, gap = 2.2) => { const gr = id + (++gid); if (gid % 3 === 1) ev.push({ z: z - SPAWN_Z - 7, src: z, fn: g => g.warns.push({ x: o.x ?? 0, y: o.y ?? 4.5, t: 80, col: o.col || '#ff4d6d' }) }); /* every third wave flashes a warning where it will come in */ for (let i = 0; i < n; i++) at(z + i * gap, g => addEnemy(g, { type: 'pop', group: gr, gn: n, hp: 2, ph: i * 0.5, ...o })); };
   const untilChase = z => { const c = zones.filter(q => q.view === CHASE && q.z0 > z + 20).sort((a, b) => a.z0 - b.z0)[0]; return c ? c.z0 - 45 : null; }; // a warp closes before the next stretch that is played in chase anyway, so nobody falls into it by accident and skips that stretch
-  const warp2 = (z, x, y) => ev.push({ z, fn: g => { if (g.flags.arena) return; addRing(g, { x, y, z: 10, r: 2, kind: 'warp', to: 'arena', stay: true, t: 0, life: 1200, until: untilChase(z) }); hint(g, 'ANOMALY DETECTED - SHIFT TO CHASE VIEW AND FLY INTO IT', 320); g.fx.push('ring', 'say:anomaly detected'); } }); // the second warp: it leads to this planet's arena
-  const warp = (z, x, y) => ev.push({ z, fn: g => { if (g.flags.warp) return; addRing(g, { x, y, z: 10, r: 2, kind: 'warp', stay: true, t: 0, life: 1200, until: untilChase(z) }); hint(g, 'ANOMALY DETECTED - SHIFT TO CHASE VIEW AND FLY INTO IT', 320); g.fx.push('ring', 'say:anomaly detected'); } });
+  const warp2 = (z, x, y) => ev.push({ z, src: z, fn: g => { if (g.flags.arena) return; addRing(g, { x, y, z: 10, r: 2, kind: 'warp', to: 'arena', stay: true, t: 0, life: 1200, until: untilChase(z) }); hint(g, 'ANOMALY DETECTED - SHIFT TO CHASE VIEW AND FLY INTO IT', 320); g.fx.push('ring', 'say:anomaly detected'); } }); // the second warp: it leads to this planet's arena
+  const warp = (z, x, y) => ev.push({ z, src: z, fn: g => { if (g.flags.warp) return; addRing(g, { x, y, z: 10, r: 2, kind: 'warp', stay: true, t: 0, life: 1200, until: untilChase(z) }); hint(g, 'ANOMALY DETECTED - SHIFT TO CHASE VIEW AND FLY INTO IT', 320); g.fx.push('ring', 'say:anomaly detected'); } });
   // extra waves: every `step` units a flight of the level's own enemy, shaped for the view that stretch is played in, with divers in between
   const fill = (tmpl, from, to, step, clut = 'billboard', gshape = 'tank') => { for (let i = 0, z = from; z < to; z += step, i++) { const v = (zones.find(q => z >= q.z0 && z < q.z1) || {}).view, h = Math.abs(Math.sin(z * 12.9898)) % 1, h2 = Math.abs(Math.sin(z * 78.233)) % 1;
     const o = v === 0 ? { x: 0, y: 2.4 + h * 5, ay: 1.2 + h2 } : v === 3 ? { x: h * 9 - 4.5, ax: 3 + h2 * 2, y: 5 } : { x: h * 6 - 3, y: 3 + h2 * 4, ax: 2.5, ay: 1 };
@@ -28,10 +28,18 @@ function kit(id) {
     obs(z, { x: (-X + hx - w) / 2, y: 4.75, hx: (hx - w + X) / 2, hy: 7.75, ...k }); obs(z, { x: (X + hx + w) / 2, y: 4.75, hx: (X - hx - w) / 2, hy: 7.75, ...k });
     obs(z, { x: hx, y: (T + hy + h) / 2, hx: w, hy: (T - hy - h) / 2, ...k }); obs(z, { x: hx, y: (hy - h + Bm) / 2, hx: w, hy: (hy - h - Bm) / 2, ...k });
     obs(z, { x: hx, y: hy, hx: w, hy: h, hz: 0.5, ghost: true, kind: 'safe', osc: k.osc, org: ++gid, gcol: k.col }); if (!o.noRing && !k.osc) ring(z, { x: hx, y: hy, r: 1.5 }); };
-  const done = extra => { // nothing solid sits right around a change of view: you get a clear run to make the shift
+  // cut(z0, z1): drop a stretch of a level after it is written. Everything in it goes, everything past it slides back
+  const cuts = [], cut = (a, b) => cuts.push([a, b]);
+  const cmap = (z, keep) => { for (const [a, b] of cuts) if (z >= a && z < b) { if (!keep) return null; z = a; } return z - cuts.reduce((t, [a, b]) => t + (b <= z ? b - a : 0), 0); };
+  const applyCuts = () => { if (!cuts.length) return;
+    for (let i = ev.length - 1; i >= 0; i--) { const e = ev[i]; if (e.src == null) continue; const nz = cmap(e.src); if (nz == null) { ev.splice(i, 1); continue; } const d = nz - e.src; e.z += d; if (e.lim != null) e.lim += d; if (e.oz != null) e.oz += d; }
+    for (let i = zones.length - 1; i >= 0; i--) { const q = zones[i]; q.z0 = q.z0 < -90 ? q.z0 : cmap(q.z0, true); if (q.z1 < 1e8) q.z1 = cmap(q.z1, true); if (q.z1 <= q.z0) zones.splice(i, 1); }
+    for (let i = checkpoints.length - 1; i >= 0; i--) { const c = cmap(checkpoints[i]); if (c == null) checkpoints.splice(i, 1); else checkpoints[i] = c; }
+    for (let i = hills.length - 1; i >= 0; i--) { const h = hills[i]; h[0] = cmap(h[0], true); h[1] = cmap(h[1], true); if (h[1] - h[0] < 4) hills.splice(i, 1); } };
+  const done = extra => { applyCuts(); if (extra.endZ) extra.endZ = cmap(extra.endZ, true); // nothing solid sits right around a change of view: you get a clear run to make the shift
     for (let i = ev.length - 1; i >= 0; i--) { const e = ev[i]; if (e.oz != null && !e.keep && zones.some((q, k) => k > 0 && e.oz > q.z0 - 30 && e.oz < q.z0 + 8)) ev.splice(i, 1); }
     ev.sort((a, b) => a.z - b.z); return { id, events: ev, zones, checkpoints, hills, len: extra.endZ || zones.find(q => q.z1 > 1e8)?.z0 || 0, ...extra }; };
-  return { at, obs, ring, en, ground, wing, zone, gate, warp, warp2, fill, hill, checkpoints, done };
+  return { at, obs, ring, en, ground, wing, zone, gate, warp, warp2, fill, hill, checkpoints, cut, done };
 }
 
 // ---------- boss engine: stages that are only open from one view, attacks that fill the screen in the wrong one ----------
@@ -156,6 +164,7 @@ function earth() {
     { name: 'GRIDLOCK', vuln: [TOP], rec: TOP, col: '#2ee6ff', sway: 4, attack(g, b, t) { if (t % 330 === 40) sheetV(g, -5 + g.rand() * 10, 1.9, { warm: 150 }); if (t % 330 === 220) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'pop', x: -5 + i * 3.3, y: 4.6, z: b.z - 1, vz: -5, ax: 1.5, hp: 2, col: '#ff3df0', ph: i }); if (t % 165 === 120) for (let i = -2; i <= 2; i++) bullet(g, b.x, 4.6, b.z - 2, i * 2.2, 0, -6); } },
     { name: 'CORE BREACH', vuln: [CHASE, ISO], rec: CHASE, col: '#ffe14a', attack(g, b, t) { if (t % 270 === 30) throwGate(g, b, { vz: -5.5 }); if (t % 22 === 0 && t % 270 > 200) { const a = t * 0.09; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3, Math.sin(a) * 3, -6, '#ff3df0'); } } }] });
   K.fill(dart, 125, 1400, 50, 'billboard');
+  K.cut(270, 318); K.cut(455, 545); K.cut(745, 792); K.cut(940, 986); K.cut(1130, 1200); // Earth ran long: shorter skyscrapers, skyways and hover traffic
   return K.done({ name: 'EARTH', title: 'NEO TERRA', boss: B, warpName: 'THE MOON', theme: { sky: 'city', grid: '#2443c8' } });
 }
 
@@ -193,7 +202,7 @@ function mars() {
   // the Sun warp sits down inside a crater: nothing but TOP view can reach it
   zone(300, 520, SIDE, 'FIRE ARCS - SHIFT TO SIDE VIEW');
   for (let i = 0, z = 334; z < 420; z += 15, i++) arc(z, i % 2 ? 6.6 : 2.6, { osc: { ax: 0, ay: 1.5, w: 2, ph: i } });
-  K.warp(42, -3, 6); K.warp2(306, 3, 5); K.hill(28, 52, 1.6); K.hill(62, 86, 2); K.hill(590, 642, 1.7); K.hill(798, 852, 1.4); K.hill(128, 176, 1.9); K.hill(214, 268, 2.3); K.hill(890, 930, 1.3); /* dunes and ridges */ fall(424, 0); fall(446, 85); fall(468, 170); at(398, g => hint(g, 'LAVAFALLS - WAIT FOR THEM TO STOP', 200));
+  K.warp(42, -3, 6); K.warp2(306, 3, 5); K.hill(28, 52, 1.6); K.hill(62, 86, 2); K.hill(590, 642, 1.7); K.hill(968, 1022, 1.4); K.hill(128, 176, 1.9); K.hill(214, 268, 2.3); K.hill(1060, 1100, 1.3); /* dunes and ridges */ fall(424, 0); fall(446, 85); fall(468, 170); at(398, g => hint(g, 'LAVAFALLS - WAIT FOR THEM TO STOP', 200));
   for (let i = 0, z = 472; z < 512; z += 15, i++) arc(z, i % 2 ? 2.4 : 6.8, { osc: { ax: 0, ay: 1.6, w: 2.4, ph: i * 2 } });
   worm(350, 0); worm(388, 0, 7); wing(410, 5, { ...ember, y: 5, ay: 1.2 }); forge(436, { x: 0, y: 6.5, ax: 1 }); worm(486, 0, 7);
   K.checkpoints.push(523);
@@ -211,13 +220,29 @@ function mars() {
   at(546, g => hint(g, 'WATCH THE ROOF - ROCKS FALL', 200));
   K.checkpoints.push(733);
 
-  zone(730, 950, CHASE, 'MAGMA TUBES - SHIFT TO CHASE VIEW');
-  [[0, 4.5], [3.5, 5.5], [-3.5, 3.5], [0, 6], [4, 3.4], [-4, 5.6], [0, 4], [3, 6]].forEach(([x, y], i) => { const z = 766 + i * 23; gate(z, x, y, { col: FIRE, kind: 'gate', osc: i > 2 ? { ax: 1.3, ay: 0, w: 1.5, ph: i } : null }); if (i % 2) wing(z + 11, 3, { ...ember, x: x * 0.5, y, ax: 1.5 }); else if (i % 4 === 2) forge(z + 10, { x: 0, y: 5 }); else boulder(z + 11, -6, 1.1, { vx: 3, wrap: 9, hp: 9, gem: true }); if (i % 3 !== 2) river(z + 12, i % 2 ? 3 : -3, i); });
-  at(910, g => addPod(g, 0, 5, SPAWN_Z, 'god'));
-  K.checkpoints.push(954);
+  // THE LABYRINTH: a maze of lava rock seen from above, and the forge holds you at SLOW the whole way. One gap per row is the way on;
+  // the extra gaps lead into side pockets with gems and pods, walled off at the far end by rock you have to blast through
+  zone(730, 900, TOP, 'THE LABYRINTH - SHIFT TO TOP VIEW');
+  at(736 + SPAWN_Z, g => { g.gearWas = g.gear; g.forceGear = 0; hint(g, 'THE LABYRINTH - THE FORGE HOLDS YOU AT SLOW. FIND THE WAY THROUGH', 260); g.fx.push('gear'); });
+  at(894 + SPAWN_Z, g => { g.forceGear = null; g.gear = Math.min(2, g.gearWas ?? 1); g.fx.push('gear'); });
+  { const E = k => -8.6 + k * 3.44, P = [2, 0, 1, 4, 3, 0, 2, 4, 1, 3], DEC = { 0: 3, 2: 0, 4: 4, 6: 1, 8: 4 }, Z0 = 750, ST = 12.5;
+    const wall = (z, a, b) => obs(z, { x: (E(a) + E(b)) / 2, y: 4.75, hx: (E(b) - E(a)) / 2, hy: 4.75, hz: 0.6, col: ROCK, kind: 'rockwall' });
+    P.forEach((open, r) => { const z = Z0 + r * ST, shut = []; for (let c = 0; c < 5; c++) shut.push(c !== open && DEC[r] !== c);
+      const pk = DEC[r - 1]; if (pk != null) { shut[pk] = false; boulder(z, (E(pk) + E(pk + 1)) / 2, 4.75, { hx: 1.72, hy: 4.75, hz: 0.6, hp: 16, score: 200 }); } // the end of a pocket: blast it
+      for (let c = 0; c < 5;) { if (!shut[c]) { c++; continue; } let e = c; while (e < 5 && shut[e]) e++; wall(z, c, e); c = e; }
+      if (DEC[r] != null && r + 1 < P.length) { const d = DEC[r], lo = Math.min(open, P[r + 1]), edge = d < lo ? d + 1 : d; // a divider between the pocket and the way on
+        obs(z + ST / 2, { x: E(edge), y: 4.75, hx: 0.35, hy: 4.75, hz: ST / 2 - 0.4, col: ROCK, kind: 'rockwall' });
+        boulder(z + ST / 2, (E(d) + E(d + 1)) / 2, 1.1, { gem: true, hp: 5 }); if (r % 4 === 0) boulder(z + ST / 2 + 3, (E(d) + E(d + 1)) / 2, 3.4, { pod: true, hp: 5 }); }
+      if (DEC[r] != null && r % 4 === 2) volcano(z + ST / 2 + 2, (E(DEC[r]) + E(DEC[r] + 1)) / 2); }); // a stone head guarding some of the pockets
+    wing(760, 4, { ...ember, x: 0, ax: 5, y: 5 }); wing(814, 4, { ...ember, x: 0, ax: 5, y: 5 }); forge(860, { x: 0, y: 6 }); }
+  K.checkpoints.push(904);
+  zone(900, 1120, CHASE, 'MAGMA TUBES - SHIFT TO CHASE VIEW');
+  [[0, 4.5], [3.5, 5.5], [-3.5, 3.5], [0, 6], [4, 3.4], [-4, 5.6], [0, 4], [3, 6]].forEach(([x, y], i) => { const z = 936 + i * 23; gate(z, x, y, { col: FIRE, kind: 'gate', osc: i > 2 ? { ax: 1.3, ay: 0, w: 1.5, ph: i } : null }); if (i % 2) wing(z + 11, 3, { ...ember, x: x * 0.5, y, ax: 1.5 }); else if (i % 4 === 2) forge(z + 10, { x: 0, y: 5 }); else boulder(z + 11, -6, 1.1, { vx: 3, wrap: 9, hp: 9, gem: true }); if (i % 3 !== 2) river(z + 12, i % 2 ? 3 : -3, i); });
+  at(1080, g => addPod(g, 0, 5, SPAWN_Z, 'god'));
+  K.checkpoints.push(1124);
 
-  zone(950, 1e9, TOP, 'WARNING // THE COLOSSUS WAKES');
-  spawnBoss(K, 1000, { name: 'THE COLOSSUS', look: 'colossus', hp: 2400, col: STONE });
+  zone(1120, 1e9, TOP, 'WARNING // THE COLOSSUS WAKES');
+  spawnBoss(K, 1170, { name: 'THE COLOSSUS', look: 'colossus', hp: 2400, col: STONE });
   // THE COLOSSUS: a giant alien stone head. It makes the ground erupt, floods the lane with lava and ash, then spits rings of fire and its own small heads.
   const B = boss({ name: 'THE COLOSSUS', toast: 'MARS COOLED', adds: { shape: 'ember', col: '#ff8a2b', hp: 3, r: 0.6 }, addEvery: 540, stages: [
     { name: 'ERUPTION', vuln: [TOP], rec: TOP, col: STONE, sway: 2.5, bob: 0.3, attack(g, b, t) {
@@ -229,7 +254,7 @@ function mars() {
       if (c === 150 || c === 410) { const lowArc = c === 150; for (let i = 0; i < 7; i++) addEnemy(g, { type: 'pop', x: 0, y: 0, y0: lowArc ? 6.6 : 2.6, ay: 2, w: 2.2, ph: -i * 0.45, z: b.z - 2 + i * 0.9, vz: -6, hp: 2, r: 0.6, col: i ? FIRE : '#ffe14a', shape: 'worm', score: 80 }); }
       if (t % 120 === 100) fan(g, b, 2, 7); } },
     { name: 'THE GAZE', vuln: [CHASE, ISO], rec: CHASE, col: '#ff8a2b', attack(g, b, t) { if (t % 150 === 20) fireRing(g, b, FIRE); if (t % 300 === 95) fireRing(g, b, '#ffe14a', 12, 1.5, 3); if (t % 240 === 170) for (let i = 0; i < 2; i++) addEnemy(g, { type: 'kami', x: b.x + (i ? 3 : -3), y: b.y + (i ? 1.5 : -1.5), z: b.z - 2, vz: -8, hp: 3, r: 0.7, col: STONE, score: 150, shape: 'head' }); } }] });
-  K.fill(ember, 105, 950, 42, 'boulder', 'walker');
+  K.fill(ember, 105, 730, 42, 'boulder', 'walker'); K.fill(ember, 905, 1120, 42, 'boulder', 'walker');
   return K.done({ name: 'MARS', title: 'THE FORGE', boss: B, warpName: 'THE SUN', theme: { sky: 'volcano', grid: '#8a2a12', cave: [522, 728] } });
 }
 
@@ -360,9 +385,9 @@ function planetx() {
   // every stage wants a different view, and between attacks it folds reality and throws you into another one
   const fold = (g, b, t) => { const c = t % 400; if (c === 215) { hint(g, 'REALITY SHIFT!', 70); g.fx.push('charge'); } if (c === 270) { let to = (g.view + 1 + (g.rand() * 3 | 0)) % 4; doShift(g, to, 1, null); g.flash = 6; } };
   const B = boss({ name: 'THE SHIFTER', toast: 'THE SHIFT IS OVER', splat: true, adds: { shape: 'spore', col: '#b6ff3d', hp: 3, r: 0.6, score: 80 }, addEvery: 480, stages: [
-    { name: 'FIRST FACE', vuln: [SIDE], rec: SIDE, col: FLESH, bob: 2, attack(g, b, t) { if (t % 400 === 30) { addObs(g, { rel: true, kind: 'blob', x: 0, y: 4.8, hx: 9, hy: 5, hz: 0.7, z: b.z - 3, vz: -2.6, hp: Math.round(420 * power(g)), col: FLESH, score: 600, pod: g.rand() < 0.3 }); hint(g, 'BLOB WALL - BURST IT BEFORE IT REACHES YOU', 130); g.fx.push('charge'); } if (t % 100 === 80 && t % 400 > 200) fan(g, b, 3, 6.5, ACID); fold(g, b, t); } },
+    { name: 'FIRST FACE', vuln: [SIDE], rec: SIDE, col: FLESH, bob: 2, attack(g, b, t) { if (t % 400 === 30) { addObs(g, { rel: true, kind: 'blob', x: 0, y: 4.8, hx: 9, hy: 5, hz: 0.7, z: b.z - 3, vz: -2.6, hp: Math.round(360 * power(g)), col: FLESH, score: 600, pod: g.rand() < 0.3 }); hint(g, 'BLOB WALL - BURST IT BEFORE IT REACHES YOU', 130); g.fx.push('charge'); } if (t % 100 === 80 && t % 400 > 200) fan(g, b, 3, 6.5, ACID); fold(g, b, t); } },
     { name: 'SECOND FACE', vuln: [TOP], rec: TOP, col: BIO, sway: 4, attack(g, b, t) { if (t % 200 === 30) { const safe = g.rand() * 5 | 0; [-6.4, -3.2, 0, 3.2, 6.4].forEach((x, i) => { if (i !== safe && i !== (safe + 1 + (t % 400 < 200 ? 0 : 2)) % 5) addObs(g, { rel: true, kind: 'slam', x, y: 4.75, hx: 1.25, hy: 4.75, hz: 5.5, z: 6, warm: 95, life: 50, col: BIO }); }); g.fx.push('charge'); } if (t % 400 === 120) for (let i = 0; i < 6; i++) addEnemy(g, { type: 'pop', x: -6 + i * 2.4, y: 4.6, z: b.z - 1, vz: -4, ax: 1, hp: 1, r: 0.4, col: ACID, shape: 'spore', score: 40, ph: i }); fold(g, b, t); } },
-    { name: 'THIRD FACE', vuln: [CHASE], rec: CHASE, col: ACID, attack(g, b, t) { if (t % 400 === 20) addObs(g, { rel: true, kind: 'blob', x: 0, y: 4.8, hx: 9, hy: 5, hz: 0.7, z: b.z - 3, vz: -2.4, hp: Math.round(560 * power(g)), col: ACID, score: 800 }); if (t % 400 === 150) for (let i = 0; i < 5; i++) addEnemy(g, { type: 'kami', x: -5 + i * 2.5, y: 2.5 + (i % 2) * 4, z: b.z - 2, vz: -6.5, hp: 1, r: 0.45, col: ACID, shape: 'spore', score: 60 }); fold(g, b, t); } },
+    { name: 'THIRD FACE', vuln: [CHASE], rec: CHASE, col: ACID, attack(g, b, t) { if (t % 400 === 20) addObs(g, { rel: true, kind: 'blob', x: 0, y: 4.8, hx: 9, hy: 5, hz: 0.7, z: b.z - 3, vz: -2.4, hp: Math.round(480 * power(g)), col: ACID, score: 800 }); if (t % 400 === 150) for (let i = 0; i < 5; i++) addEnemy(g, { type: 'kami', x: -5 + i * 2.5, y: 2.5 + (i % 2) * 4, z: b.z - 2, vz: -6.5, hp: 1, r: 0.45, col: ACID, shape: 'spore', score: 60 }); fold(g, b, t); } },
     { name: 'TRUE FACE', vuln: [ISO], rec: ISO, col: '#ffffff', attack(g, b, t) { if (t % 400 === 20) fireRing(g, b, ACID, 18, 2.3, 4); if (t % 400 === 120) { const p = near(g, b); for (let i = -1; i <= 1; i++) strike(g, p.x + i * 2.8, p.z + (i ? 1.2 : 0), { col: FLESH }); g.fx.push('charge'); } if (t % 12 === 0 && t % 400 > 150 && t % 400 < 205) { const a = t * 0.1; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3.2, Math.sin(a) * 3.2, -6.5, ACID); } fold(g, b, t); } }] });
   K.fill(spore, 100, 880, 38, 'blob', 'walker'); K.hill(126, 176, 1.8); K.hill(214, 262, 1.6);
   return K.done({ name: 'PLANET X', title: 'THE BLOOM', boss: B, warpName: 'PLUTO', final: true, theme: { sky: 'bio', grid: '#6a1e8a', trippy: true, splat: true } });
@@ -454,10 +479,10 @@ const ARENA_MINI = {
       if (t % (90 * rage | 0) === 10) { const a0 = Math.atan2(p.z - e.z, p.x - e.x); for (let i = -2; i <= 2; i++) bullet(g, e.x, 4.5, e.z, Math.cos(a0 + i * 0.22) * 6.5, 0, Math.sin(a0 + i * 0.22) * 6.5, '#b6ff3d'); g.fx.push('eshot'); } } } };
 // the warp stages: the miniboss flies in at the very end and the stage only clears when it is gone
 const STAGE_MINI = {
-  moon: { name: 'LUNAR SENTINEL', shape: 'sat', col: '#2ee6ff', hp: 150, r: 1.8, ai(g, e, t) { if (t % 110 === 60) { for (const s of [-0.25, 0, 0.25]) aimed(g, e, 6, s, '#2ee6ff'); g.fx.push('eshot'); } if (t % 330 === 250) fireRing(g, e, '#ffffff', 10, 1.8, 3); } },
-  sun: { name: 'SOLAR FLARE', shape: 'plasma', col: '#ffe14a', hp: 170, r: 2, ai(g, e, t) { if (t % 150 === 60) fireRing(g, e, '#ff8a2b', 14, 2.4, 4); if (t % 150 === 135) fireRing(g, e, '#ffe14a', 10, 1.4, 3); } },
+  moon: { name: 'LUNAR SENTINEL', shape: 'sat', col: '#2ee6ff', hp: 40, r: 1.8, ai(g, e, t) { if (t % 110 === 60) { for (const s of [-0.25, 0, 0.25]) aimed(g, e, 6, s, '#2ee6ff'); g.fx.push('eshot'); } if (t % 330 === 250) fireRing(g, e, '#ffffff', 10, 1.8, 3); } },
+  sun: { name: 'SOLAR FLARE', shape: 'plasma', col: '#ffe14a', hp: 95, r: 2, ai(g, e, t) { if (t % 150 === 60) fireRing(g, e, '#ff8a2b', 14, 2.4, 4); if (t % 150 === 135) fireRing(g, e, '#ffe14a', 10, 1.4, 3); } },
   belt: { name: 'THE MOTHER ROCK', shape: 'rock', col: '#b0b0d0', hp: 190, r: 2.4, ai(g, e, t) { if (t % 100 === 50) addEnemy(g, { type: 'rock', x: e.x + (g.rand() - 0.5) * 4, y: e.y + (g.rand() - 0.5) * 3, z: e.z - 1, vz: -5.5, vx: (g.rand() - 0.5) * 2, vy: (g.rand() - 0.5) * 2, hp: 3, r: 0.9, col: '#8a8ab0', shape: 'rock', score: 60, size: 2 }); if (t % 200 === 150) { for (const s of [-0.2, 0.2]) aimed(g, e, 6, s, '#ffffff'); g.fx.push('eshot'); } } },
-  pluto: { name: 'FROST WARDEN', shape: 'shard', col: '#7df9ff', hp: 180, r: 2, ai(g, e, t) { if (t % 170 === 60) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'kami', x: e.x + (i - 1.5) * 2.2, y: e.y + (i % 2 ? 1.4 : -1.4), z: e.z - 1, vz: -6, hp: 1, r: 0.45, col: '#ffffff', shape: 'shard', score: 60 }); if (t % 170 === 140) { for (const s of [-0.3, 0, 0.3]) aimed(g, e, 6.5, s, '#7df9ff'); g.fx.push('eshot'); } } } };
+  pluto: { name: 'FROST WARDEN', shape: 'shard', col: '#7df9ff', hp: 90, r: 2, ai(g, e, t) { if (t % 170 === 60) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'kami', x: e.x + (i - 1.5) * 2.2, y: e.y + (i % 2 ? 1.4 : -1.4), z: e.z - 1, vz: -6, hp: 1, r: 0.45, col: '#ffffff', shape: 'shard', score: 60 }); if (t % 170 === 140) { for (const s of [-0.3, 0, 0.3]) aimed(g, e, 6.5, s, '#7df9ff'); g.fx.push('eshot'); } } } };
 function stageMini(K, id, z) { const M = STAGE_MINI[id], spawn = g => { g.mini = addEnemy(g, { type: 'pop', mini: true, name: M.name, ai: M.ai, x: 0, x0: 0, y: 4.8, y0: 4.8, ax: 3, ay: 1.6, w: 0.6, z: 36, vz: -4, hp: Math.round(M.hp * 4 * power(g)), hpMax: Math.round(M.hp * 4 * power(g)), r: M.r, col: M.col, shape: M.shape, score: 0, big: true, hold: 27 }); hint(g, 'MINIBOSS // ' + M.name, 200); g.fx.push('charge', 'say:miniboss'); }; spawn.mini = true; K.at(z, spawn); return g => { const e = g.mini; if (e && e.hp > 0 && e.z <= 27) { e.vz = 0; } runMini(g); }; } // minibosses hold well up the lane, so there is room to back off and dodge
 const ARENAS = {
   earth: { name: 'GRID ZERO', title: 'NEO TERRA ARENA', theme: { sky: 'city', grid: '#2443c8' }, col: '#2ee6ff',
@@ -473,7 +498,7 @@ const ARENAS = {
     grunt: { col: '#b6ff3d', sp: 3.6, hp: 1, shape: 'spore', r: 0.42, wob: 4 }, fast: { col: '#ff3df0', sp: 5.8, hp: 1, shape: 'spore', r: 0.42, wob: 7 }, gun: { col: '#ff3df0', hp: 8, shape: 'spitter', fire: 125, fan: 4, bcol: '#b6ff3d', bs: 7 }, champ: { col: '#ff3df0', shape: 'spitter', name: 'BROOD MOTHER' },
     hazard(g) { [[-7, 7], [7, 14], [-4, 23], [6, 29]].forEach(([x, z], i) => addObs(g, { rel: true, kind: 'tentacle', x, y: 4.75, z, hx: 0.75, hy: 4.75, hz: 0.75, col: '#3dffb0', osc: { ax: 1.6, ay: 0, w: 1.2, ph: i * 2 } })); } } };
 // each wave: [grunts, fast, gunners, phase grunts]; wave 5 adds the champion
-const WAVES = [[14, 0, 0, 0], [14, 8, 2, 0], [12, 8, 3, 8], [16, 10, 4, 10], [14, 14, 4, 10]];
+const WAVES = [[8, 0, 0, 0], [8, 5, 1, 0], [7, 4, 2, 5], [9, 5, 2, 6], [8, 7, 3, 6]]; // sized for about a minute per arena
 function arena(of) {
   const T = ARENAS[of], K = kit('arena-' + of); K.zone(-99, 1e9, TOP, 'BONUS ARENA // ' + T.name);
   const edge = g => { const a = g.rand() * 6.283, x = Math.cos(a) * 18, z = 17 + Math.sin(a) * 22; return [Math.max(-13.5, Math.min(13.5, x)), Math.max(-0.5, Math.min(34.5, z))]; };
@@ -484,7 +509,7 @@ function arena(of) {
     if (A.q.length) { if (g.tick % 30 === 0) for (let i = 0; i < 2 && A.q.length; i++) { const [spec, extra] = A.q.shift(); spawn(g, spec, extra); } return; } // enemies pour in from the edges a few at a time
     runMini(g); if (alive.length) { A.t = 0; return; }
     if (++A.t < 75) return; A.t = 0;
-    if (A.wave >= WAVES.length && !A.mini) { A.mini = true; const M = ARENA_MINI[of]; g.mini = addEnemy(g, { type: 'seek', sp: 0, keep: 1e6, mini: true, name: M.name, ai: M.ai, x: 0, y: 4.5, z: 30, hp: Math.round(M.hp * 1.5 * power(g)), hpMax: Math.round(M.hp * 1.5 * power(g)), r: M.r, col: M.col, shape: M.shape, score: 0, big: true }); hint(g, 'MINIBOSS // ' + M.name, 200); g.fx.push('charge', 'say:miniboss'); g.obs.length = 0; return; }
+    if (A.wave >= WAVES.length && !A.mini) { A.mini = true; const M = ARENA_MINI[of]; g.mini = addEnemy(g, { type: 'seek', sp: 0, keep: 1e6, mini: true, name: M.name, ai: M.ai, x: 0, y: 4.5, z: 30, hp: Math.round(M.hp * 1.15 * power(g)), hpMax: Math.round(M.hp * 1.15 * power(g)), r: M.r, col: M.col, shape: M.shape, score: 0, big: true }); hint(g, 'MINIBOSS // ' + M.name, 200); g.fx.push('charge', 'say:miniboss'); g.obs.length = 0; return; }
     if (A.wave >= WAVES.length) { g.state = 'clear'; g.endT = 0; if (!g.mut.rush) { g.score += 15000; g.fx.push('clear', 'say:arena clear', 'toast:ALL WAVES CLEARED|+15000'); } return; }
     const w = WAVES[A.wave++], hpx = 1 + A.wave * 0.25; hint(g, 'WAVE ' + A.wave + ' / ' + WAVES.length + (A.wave === 3 ? '   WHITE ONES: SHIFT TO ISO' : ''), 150); g.fx.push('charge'); if (A.wave === 1) T.hazard(g);
     const add = (n, spec, extra) => { for (let i = 0; i < n; i++) A.q.push([spec, { ...extra, hp: Math.round((extra.hp || spec.hp) * hpx) }]); };

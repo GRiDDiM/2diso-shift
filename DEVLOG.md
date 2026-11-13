@@ -603,6 +603,15 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - God mode and overdrive countdowns now live in RIVET-9's comms window instead of the middle of the screen.
 - Once everything is maxed, pickups stop being upgrade pods. You get the odd bomb, or points.
 
+### 62. The Labyrinth, and tighter pacing (r68)
+
+- Mars has a new stretch between the caves and the magma tubes: THE LABYRINTH, a maze of lava rock seen from above. The forge locks your speed at SLOW the whole way through. One gap in each row is the way on. The other gaps lead into side pockets with gems and pods, sealed at the far end by rock you have to blast through.
+- Earth was the longest level by a wide margin, so parts of the skyscrapers, skyways, firewall gates, construction zone and hover traffic are gone. It is now about a minute shorter.
+- Warp stages now run about a minute and a half: their minibosses have less health. Bonus arenas have smaller waves and a lighter champion, so each one takes about a minute.
+- The blob walls in the final boss fight have a bit less health.
+
+![The Labyrinth on Mars](shots/mars-labyrinth.jpg)
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
