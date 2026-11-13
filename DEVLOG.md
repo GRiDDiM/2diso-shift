@@ -404,6 +404,12 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **Loadout manager in BUG TEST.** Set drones, each weapon, bomb tier, hyperdrive, shields, bombs and ships by hand; every test, Boss Rush included, starts with that loadout. MAX EVERYTHING and EMPTY are one press each.
 - **A shorter pause menu.** Idle mode and the RIVET-9 assist only live in OPTIONS now.
 
+### 38. A new logo (r46)
+
+- **A display face of its own.** The title logo is no longer set in the in-game font. It has its own geometric letters, built from chamfered strokes with a dark keyline, a hot core and a chrome gradient. 2DISO leans a little in cyan and blue; SHIFT leans hard in pink and violet.
+- **SHIFT is sliced.** A seam runs through SHIFT and its top half sits shifted sideways, as if the view was caught mid-roll. Every couple of seconds it jolts further.
+- **New tagline.** "Shift the view. Shift the rules."
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

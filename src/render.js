@@ -594,20 +594,44 @@ export function meshScreen(ctx, M, cx, cy, s, yaw, pitch, roll, col, glow = true
   ctx.strokeStyle = col; ctx.lineJoin = 'round'; if (glow) { ctx.globalAlpha = 0.09; ctx.lineWidth = Math.min(22, Math.max(9, s * 0.12)); ctx.stroke(); ctx.globalAlpha = 0.25; ctx.lineWidth = Math.min(12, Math.max(4, s * 0.06)); ctx.stroke(); } ctx.globalAlpha = 1; ctx.lineWidth = Math.min(3, Math.max(1.4, s * 0.02)); ctx.stroke();
 }
 // the title: a stacked neon sign. 2DISO in cyan tube, SHIFT in italics tearing off to the right, with depth, speed lines and a light sweep
+// the title logo: a geometric display face built from chamfered strokes (no font files). 2DISO leans a little, SHIFT leans hard
+// and is sliced through the middle, its top half shifted sideways, like a view caught mid-roll
+const LG = { '2': [[[0, 0], [3, 0], [4, 1], [4, 2], [3, 3], [1, 3], [0, 4], [0, 6], [4, 6]]], D: [[[0, 0], [3, 0], [4, 1], [4, 5], [3, 6], [0, 6]], 1], I: [[[0, 0], [0, 6]]],
+  S: [[[4, 0], [1, 0], [0, 1], [0, 2], [1, 3], [3, 3], [4, 4], [4, 5], [3, 6], [0, 6]]], O: [[[1, 0], [3, 0], [4, 1], [4, 5], [3, 6], [1, 6], [0, 5], [0, 1]], 1],
+  H: [[[0, 0], [0, 6]], [[4, 0], [4, 6]], [[0, 3], [4, 3]]], F: [[[3.4, 0], [0, 0], [0, 6]], [[0, 3], [2.6, 3]]], T: [[[0, 0], [4, 0]], [[2, 0], [2, 6]]] };
+const LGW = c => c === 'I' ? 0 : c === 'F' ? 3.1 : 4;
+function logoWidth(word, u) { let w = 0; for (let k = 0; k < word.length; k++) w += (LGW(word[k]) + (k ? 1.9 : 0)) * u; return w; }
+function logoPath(ctx, word, x0, y0, u, lean) { ctx.beginPath(); let x = x0;
+  for (const ch of word) { const g = LG[ch]; const closed = g[1] === 1, strokes = closed ? [g[0]] : g;
+    for (const st of strokes) { st.forEach(([gx, gy], k) => { const px = x + gx * u + (6 - gy) * u * lean, py = y0 + gy * u; if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py); }); if (closed) ctx.closePath(); }
+    x += (LGW(ch) + 1.9) * u; } }
+function logoWord(ctx, word, x0, y0, u, lean, cols, glow, sc) { const lw = 1.3 * u;
+  ctx.lineJoin = 'miter'; ctx.miterLimit = 4; ctx.lineCap = 'butt'; logoPath(ctx, word, x0, y0, u, lean);
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.strokeStyle = '#02010a'; ctx.lineWidth = lw + 7 * sc; ctx.stroke(); // a dark keyline so it reads over anything
+  ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = glow; ctx.globalAlpha = 0.14; ctx.lineWidth = lw + 22 * sc; ctx.stroke(); ctx.globalAlpha = 0.3; ctx.lineWidth = lw + 9 * sc; ctx.stroke();
+  ctx.globalCompositeOperation = 'source-over'; const gr = ctx.createLinearGradient(0, y0 - lw / 2, 0, y0 + 6 * u + lw / 2); cols.forEach((c, k) => gr.addColorStop(k / (cols.length - 1), c));
+  ctx.globalAlpha = 1; ctx.strokeStyle = gr; ctx.lineWidth = lw; ctx.stroke();
+  ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.55; ctx.lineWidth = Math.max(1, 0.16 * u); ctx.stroke(); // a hot core down the middle of every stroke
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
 export function drawLogo(ctx, cx, y, sc = 1, t = 0) {
-  const s1 = 70 * sc, w1 = textWidth('2DISO', s1), s2 = 70 * sc, w2 = textWidth('SHIFT', s2) + s2 * 0.3, gap = 30 * sc, x = cx - (w1 + gap + w2) / 2, xs = x + w1 + gap, wt = 6 * sc;
-  ctx.globalCompositeOperation = 'lighter';
-  for (let k = 7; k >= 1; k--) { const a = 0.26 - k * 0.03; text(ctx, '2DISO', x + k * 2.2 * sc, y + k * 2.2 * sc, s1, '#1b2f9a', { weight: wt, alpha: a, glow: false }); text(ctx, 'SHIFT', xs + k * 2.2 * sc, y + k * 2.2 * sc, s2, '#6a1280', { italic: true, weight: wt, alpha: a, glow: false }); }
-  ctx.lineCap = 'round'; for (let k = 0; k < 7; k++) { const yy = y + 6 * sc + k * 9.6 * sc, len = (60 + ((k * 37 + t * 140) % 90)) * sc, x0 = xs + (6 - k) * 2.6 * sc; const gr = ctx.createLinearGradient(x0 - len, 0, x0, 0); gr.addColorStop(0, 'rgba(255,61,240,0)'); gr.addColorStop(1, 'rgba(255,61,240,.55)'); ctx.strokeStyle = gr; ctx.lineWidth = 2 * sc; ctx.beginPath(); ctx.moveTo(x0 - len, yy); ctx.lineTo(x0 - 6 * sc, yy); ctx.stroke(); }
-  const fl = (Math.sin(t * 31) > 0.96 || Math.sin(t * 7.3) > 0.985) ? 0.55 : 1;
-  text(ctx, '2DISO', x - 3 * sc, y, s1, '#ff3df0', { weight: wt, alpha: 0.3, glow: false }); text(ctx, '2DISO', x + 3 * sc, y, s1, '#ffe14a', { weight: wt, alpha: 0.22, glow: false });
-  text(ctx, '2DISO', x, y, s1, '#2ee6ff', { weight: wt, core: '#eaffff', tube: true, alpha: fl });
-  text(ctx, 'SHIFT', xs - 4 * sc, y, s2, '#2ee6ff', { italic: true, weight: wt, alpha: 0.35, glow: false }); text(ctx, 'SHIFT', xs + 4 * sc, y, s2, '#ffe14a', { italic: true, weight: wt, alpha: 0.22, glow: false });
-  text(ctx, 'SHIFT', xs, y, s2, '#ff3df0', { italic: true, weight: wt, core: '#fff0ff', tube: true });
-  const sw = ((t * 0.45) % 1.6) * (w1 + gap + w2 + 200 * sc) - 100 * sc; ctx.save(); ctx.beginPath(); ctx.moveTo(x + sw, y - 10); ctx.lineTo(x + sw + 46 * sc, y - 10); ctx.lineTo(x + sw + 16 * sc, y + s1 + 10); ctx.lineTo(x + sw - 30 * sc, y + s1 + 10); ctx.closePath(); ctx.clip(); text(ctx, '2DISO', x, y, s1, '#ffffff', { weight: wt * 1.2, glow: false }); text(ctx, 'SHIFT', xs, y, s2, '#ffffff', { italic: true, weight: wt * 1.2, glow: false }); ctx.restore();
-  const uy = y + s1 + 16 * sc, uw = w1 + gap + w2; for (let i = 0; i < 4; i++) { ctx.strokeStyle = VCOL[i]; ctx.lineWidth = 3 * sc; ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.moveTo(x + uw * i / 4 + 5 * sc, uy); ctx.lineTo(x + uw * (i + 1) / 4 - 5 * sc, uy); ctx.stroke(); ctx.globalAlpha = 0.2; ctx.lineWidth = 9 * sc; ctx.stroke(); } ctx.globalAlpha = 1;
-  const hi = (t * 1.2 | 0) % 4; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3 * sc; ctx.beginPath(); ctx.moveTo(x + uw * hi / 4 + 5 * sc, uy); ctx.lineTo(x + uw * (hi + 1) / 4 - 5 * sc, uy); ctx.stroke();
-  ctx.globalCompositeOperation = 'source-over';
+  const u = 12.2 * sc, gap = 3.4 * u, l1 = 0.1, l2 = 0.3, w1 = logoWidth('2DISO', u) + 6 * u * l1, w2 = logoWidth('SHIFT', u) + 6 * u * l2, W2 = w1 + gap + w2, x = cx - W2 / 2, xs = x + w1 + gap, H6 = 6 * u;
+  const C1 = ['#ffffff', '#c8fbff', '#2ee6ff', '#2a5bff'], C2 = ['#ffffff', '#ffc4fa', '#ff3df0', '#8a3dff'];
+  ctx.save();
+  // speed lines streaming off the back of SHIFT
+  ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; for (let k = 0; k < 6; k++) { const yy = y + u * (0.4 + k * 1.04), len = (50 + ((k * 41 + t * 160) % 110)) * sc, x1 = xs - 6 * sc + (6 - (yy - y) / u) * u * l2 - 8 * sc; const g = ctx.createLinearGradient(x1 - len, 0, x1, 0); g.addColorStop(0, 'rgba(255,61,240,0)'); g.addColorStop(1, 'rgba(255,61,240,.5)'); ctx.strokeStyle = g; ctx.lineWidth = 2.2 * sc; ctx.globalAlpha = 1; ctx.beginPath(); ctx.moveTo(x1 - len, yy); ctx.lineTo(x1, yy); ctx.stroke(); }
+  logoWord(ctx, '2DISO', x, y, u, l1, C1, '#2ee6ff', sc);
+  // SHIFT, sliced: the top half sits shifted to the right, and now and then it jolts
+  const cut = y + 2.85 * u, jolt = ((t * 0.5) % 1) < 0.06 ? 1.6 : 1, dx = (0.85 + 0.12 * Math.sin(t * 2.3)) * u * jolt;
+  ctx.save(); ctx.beginPath(); ctx.rect(xs - 40 * sc, cut + 1.2 * sc, w2 + 80 * sc, H6 + 40 * sc); ctx.clip(); logoWord(ctx, 'SHIFT', xs, y, u, l2, C2, '#ff3df0', sc); ctx.restore();
+  ctx.save(); ctx.beginPath(); ctx.rect(xs - 40 * sc + dx, y - 40 * sc, w2 + 80 * sc, cut - 1.2 * sc - (y - 40 * sc)); ctx.clip(); logoWord(ctx, 'SHIFT', xs + dx, y, u, l2, C2, '#ff3df0', sc); ctx.restore();
+  ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.9; ctx.lineWidth = 1.4 * sc; ctx.beginPath(); ctx.moveTo(xs - 18 * sc, cut); ctx.lineTo(xs + w2 + dx + 22 * sc, cut); ctx.stroke(); ctx.strokeStyle = '#ff3df0'; ctx.globalAlpha = 0.35; ctx.lineWidth = 6 * sc; ctx.stroke(); // the seam
+  // a sheen that sweeps across now and then
+  const sw = ((t * 0.4) % 1.7) * (W2 + 240 * sc) - 120 * sc; ctx.save(); ctx.beginPath(); ctx.moveTo(x + sw, y - 14 * sc); ctx.lineTo(x + sw + 40 * sc, y - 14 * sc); ctx.lineTo(x + sw + 6 * sc, y + H6 + 14 * sc); ctx.lineTo(x + sw - 34 * sc, y + H6 + 14 * sc); ctx.closePath(); ctx.clip(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6;
+  logoPath(ctx, '2DISO', x, y, u, l1); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.3 * u; ctx.lineJoin = 'miter'; ctx.stroke(); logoPath(ctx, 'SHIFT', xs, y, u, l2); ctx.stroke(); logoPath(ctx, 'SHIFT', xs + dx, y, u, l2); ctx.stroke(); ctx.restore();
+  // the four view colours underneath, one lit at a time
+  const uy = y + H6 + 19 * sc; ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'butt'; for (let i = 0; i < 4; i++) { const a = x + W2 * i / 4 + 4 * sc, b = x + W2 * (i + 1) / 4 - 4 * sc; ctx.strokeStyle = VCOL[i]; ctx.globalAlpha = 0.9; ctx.lineWidth = 3 * sc; ctx.beginPath(); ctx.moveTo(a, uy); ctx.lineTo(b - 10 * sc, uy); ctx.lineTo(b - 14 * sc, uy + 4 * sc); ctx.stroke(); ctx.globalAlpha = 0.2; ctx.lineWidth = 9 * sc; ctx.stroke(); }
+  const hi = (t * 1.2 | 0) % 4; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 1; ctx.lineWidth = 3 * sc; ctx.beginPath(); ctx.moveTo(x + W2 * hi / 4 + 4 * sc, uy); ctx.lineTo(x + W2 * (hi + 1) / 4 - 14 * sc, uy); ctx.stroke();
+  ctx.restore(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
 }
 // the real GRiDDiM and ArcadeGridz logos, when their image files sit beside the game; the drawn ones are the fallback
 const LOGO = typeof Image === 'undefined' ? [] : ['logo-griddim.png', 'logo-arcadegridz.png'].map(f => { const im = new Image(); try { im.src = new URL('./' + f, import.meta.url).href + new URL(import.meta.url).search; } catch (e) { } return im; }), LOGO_ON = [null, null];
