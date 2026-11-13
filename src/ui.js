@@ -20,11 +20,11 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r47';
+const VER = 'r48';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
-const PAR = { earth: 340, mars: 240, jupiter: 200, x: 230 }, mmss = s => (s / 60 | 0) + ':' + String(s % 60 | 0).padStart(2, '0'); // par times: slow speed all the way will not make them
+const PAR = { earth: 340, mars: 240, jupiter: 262, x: 290 }, mmss = s => (s / 60 | 0) + ':' + String(s % 60 | 0).padStart(2, '0'); // par times: slow speed all the way will not make them
 const RANK = ['-', 'D', 'C', 'B', 'A', 'S', 'SS', 'SSS'], bits = m => { let n = 0; for (let k = 0; k < 7; k++) if (m >> k & 1) n++; return n; };
 const MUSIC = { earth: 'play', mars: 'mars', jupiter: 'jupiter', x: 'x' };
 // the daily run: one seed for everybody, plus one helpful and one hurtful twist picked from the date
@@ -446,7 +446,7 @@ export function mountShift(root, host = {}) {
   function frame(now) {
     if (destroyed) return; raf = requestAnimationFrame(frame);
     let dt = (now - last) / 1000; last = now; if (dt > 0.25) dt = 0.25; if (focusPaused) return;
-    if (scene === 'play' && !menus.length && q < 2) { ema += (dt * 1000 - ema) * 0.05; if (ema > 25) { if (++slow > 80) { q++; slow = 0; ema = 16; fit(); } } else slow = Math.max(0, slow - 1); } acc += dt; let n = 0;
+    if (scene === 'play' && !menus.length) { ema += (dt * 1000 - ema) * 0.05; if (ema > 21 && q < 2) { if (++slow > 60) { q++; slow = 0; ema = 16; fit(); } } else if (ema < 17.5 && q > 0) { if (--slow < -900) { q--; slow = 0; fit(); } } else if (slow > 0) slow--; else if (slow < 0 && ema >= 17.5) slow = 0; } /* drop quality fast when frames run long, earn it back after 15 smooth seconds */ acc += dt; let n = 0;
     while (acc >= 1 / 60 && n < 5) { acc -= 1 / 60; n++; const i = readInput(); update(i); if (tap && scene !== 'intro' && scene !== 'story' && !menus.length) tap = null; } if (n === 5) acc = 0;
     render();
   }

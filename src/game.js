@@ -29,7 +29,7 @@ export const makeWing = v => ({ x: -1.6, y: 5.2, z: 1.6, view: v ?? 3, from: v ?
 export function createGame({ seed = 1, level, start = null, players = 1, wing = false, mut = null } = {}) {
   const z0 = start?.z || 0;
   const g = { seed, rand: rng(seed), tick: 0, camZ: z0 - INTRO_RUN, level, evi: 0, view: 3, viewFrom: 3, shiftT: 0, shiftDir: 1, shiftCd: 0, intro: INTRO, gear: start?.gear ?? 0,
-    players: [], enemies: [], shots: [], ebul: [], obs: [], rings: [], pods: [], parts: [], pops: [], beams: [], shocks: [], blasts: [], blastId: 0, fx: [], groups: {},
+    players: [], enemies: [], shots: [], ebul: [], obs: [], rings: [], pods: [], parts: [], pops: [], beams: [], shocks: [], blasts: [], blastId: 0, warns: [], forceGear: null, fx: [], groups: {},
     score: start?.score || 0, chain: 0, chainT: 0, bestChain: 0, state: 'play', boss: null, hint: null, hintT: 0, zone: null, recView: 0, heat: 0,
     flags: { warp: !!start?.warp, arena: !!start?.arena, warpNow: false }, stats: Object.assign({ kills: 0, shifts: 0, deaths: 0, hits: 0, perfect: 0, ticks: 0, order: 0 }, start?.stats), coop: players > 1, mut: mut || {}, loop: mut?.loop || 0, perfT: 0,
     wing: wing && players === 1 ? makeWing() : null, shake: 0, flash: 0, endT: 0, speedMul: 3, checkpoint: z0, cpSnap: null };
@@ -218,7 +218,7 @@ export function step(g, inputs) {
     if (edge('upgrade')) buy(g, p);
     if (edge('bomb')) nuke(g, p);
     if (edge('drone')) { p.dmode = (p.dmode + 1) % 4; pop(g, 'DRONES: ' + DRONE_MODES[p.dmode], p.x, p.y + 1, p.z, '#b06bff'); g.fx.push('blip'); }
-    if (edge('gear')) { g.gear = (g.gear + 1) % GEARS.length; const up = g.gear > 0; pop(g, (up ? 'SHIFTING UP - ' : 'SHIFTING DOWN - ') + GEARS[g.gear], p.x, p.y + 1.2, p.z + 2, up ? '#ffe14a' : '#5ee7ff', true); g.fx.push('gear', up ? 'say:shifting up' : 'say:shifting down'); }
+    if (edge('gear') && g.forceGear == null) { g.gear = (g.gear + 1) % GEARS.length; const up = g.gear > 0; pop(g, (up ? 'SHIFTING UP - ' : 'SHIFTING DOWN - ') + GEARS[g.gear], p.x, p.y + 1.2, p.z + 2, up ? '#ffe14a' : '#5ee7ff', true); g.fx.push('gear', up ? 'say:shifting up' : 'say:shifting down'); }
     const sp = (8.5 + g.gear * 1.2) * DT, mx = clamp(inp.mx || 0, -1, 1), my = clamp(inp.my || 0, -1, 1), v = g.view, ox = p.x, oy = p.y;
     let ax = mx, ay = my; if (rules.inertia) { p.ivx += (mx - p.ivx) * 0.045; p.ivy += (my - p.ivy) * 0.045; ax = p.ivx; ay = p.ivy; }
     if (rules.arena) { // free flight over a fixed arena; the guns fire the way the ship is facing, and it faces the way it moves
@@ -261,6 +261,7 @@ export function step(g, inputs) {
     p.prev = inp;
   }
   if (g.wing) wingStep(g, dt, playing);
+  if (g.forceGear != null) g.gear = g.forceGear; for (const w of g.warns) w.t--; if (g.warns.length) g.warns = g.warns.filter(w => w.t > 0); // a forced speed (the hyper run) and the flashing wave warnings
 
   // ----- scroll + level script -----
   g.speedMul += (GEARMUL[g.gear] * (g.mut.turbo ? 1.25 : 1) * LOOP.scroll[lp(g)] * (g.overLava ? 0.6 : 1) - g.speedMul) * 0.06;
@@ -279,7 +280,7 @@ export function step(g, inputs) {
       if (over && !g.overLava) { pop(g, 'LAVA - SPEED UP', p.x, p.y + 1.3, p.z + 2, '#ff8a2b', true); g.fx.push('gear'); } g.overLava = over; g.heat = clamp((g.heat || 0) + (over ? 0.46 : -0.4), 0, 100);
       if (g.heat >= 100 && p.dead <= 0) { g.heat = 45; g.cause = 'lava'; hurt(g, p); pop(g, 'OVERHEAT', p.x, p.y + 1, p.z, '#ff4d6d', true); } }
     if (rules.heat && g.camZ > 26 && !g.mini && !g.mut.rush) { /* no cooking during the miniboss: there is no shade left by then */ const p = P[0], m = MASK[g.view]; let shade = false; for (const o of g.obs) if (o.kind === 'shade' && ov({ x: p.x, y: p.y, z: p.z, r: 0.1 }, o, m)) { shade = true; break; }
-      g.heat = clamp(g.heat + (shade ? -1.2 : 0.3), 0, 100); if (g.heat >= 100 && p.dead <= 0) { g.heat = 45; hurt(g, p); pop(g, 'OVERHEAT', p.x, p.y + 1, p.z, '#ff4d6d', true); } }
+      g.heat = clamp(g.heat + (shade ? -1.2 : 0.42), 0, 100); if (g.heat >= 100 && p.dead <= 0) { g.heat = 45; hurt(g, p); pop(g, 'OVERHEAT', p.x, p.y + 1, p.z, '#ff4d6d', true); } }
     if (lvd.tick) lvd.tick(g);
   }
   const vw = g.view, m = MASK[vw];
@@ -325,7 +326,7 @@ export function step(g, inputs) {
   }
   // ----- obstacles -----
   for (const o of g.obs) {
-    if (!o.rel) o.z -= dz; o.bx += o.vx * dt; o.by += o.vy * dt; o.z += o.vz * dt; if (o.hit > 0) o.hit--;
+    if (!o.rel) o.z -= o.par ? dz * (1 - o.par) : dz; /* gas clouds drift at half the scroll, so the deck slides past behind them */ o.bx += o.vx * dt; o.by += o.vy * dt; o.z += o.vz * dt; if (o.hit > 0) o.hit--;
     if (o.wrap && Math.abs(o.bx) > o.wrap) o.bx = -Math.sign(o.bx) * o.wrap;
     if (o.osc) { const a = g.tick * 0.02 * o.osc.w + o.osc.ph; o.x = o.bx + o.osc.ax * Math.sin(a); o.y = o.by + o.osc.ay * Math.sin(a); } else { o.x = o.bx; o.y = o.by; }
     if (o.drop != null && !o.dead) { if (o.z < o.drop) o.vy -= 0.3; if (o.by - o.hy <= 0.05) { o.dead = true; explode(g, o.x, 0.6, o.z, o.col, 14, 8); g.fx.push('boom'); g.shake = Math.max(g.shake, 3); } } // a rock in the cave roof lets go as you get near and smashes on the floor
@@ -341,7 +342,7 @@ export function step(g, inputs) {
   for (const q of g.pods) { q.t++; q.z -= dz * 0.75; if (q.z < -3) q.dead = true; for (const p of P) { if (p.dead > 0) continue; const dx = (p.x - q.x) * m[0], dy = (p.y - q.y) * m[1], dzz = p.z - q.z, d = Math.hypot(dx, dy, dzz); if (d < 5) { q.x += dx / (d + 0.01) * 9 * dt; q.y += dy / (d + 0.01) * 9 * dt; q.z += dzz / (d + 0.01) * 9 * dt; }
     if (d < 1.2 && !q.dead) { q.dead = true; if (q.kind === 'pod') { const o = P[0]; let c = o.cursor; for (let k = 0; k < BAR.length; k++) { c = (c + 1) % BAR.length; if ((c === U.SHIELD ? o.shield : o.up[c]) < BARMAX[c] && (c !== U.WILD || hyperOk(o))) break; } o.cursor = c; /* maxed slots are skipped */ g.fx.push('pod'); addScore(g, 50); } else if (q.kind === 'god') startGod(g, p); else if (q.kind === 'bomb') { p.bombs = Math.min(9, p.bombs + 1); pop(g, '+BOMB', p.x, p.y + 1, p.z, '#ff8a2b'); g.fx.push('pod'); } else if (q.kind === 'life') { if (p.lives < 9) { p.lives++; pop(g, '1UP!', p.x, p.y + 1.2, p.z, '#3dffb0', true); } else { g.score += 5000; pop(g, '+5000', p.x, p.y + 1.2, p.z, '#3dffb0', true); } g.fx.push('pod', 'ring', 'say:extra ship'); g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.4, vr: 14, life: 24, max: 24, col: '#b06bff' }); } else if (q.kind === 'gem') { g.chain++; g.chainT = 190; addScore(g, 200, q.x, q.y, q.z, '#7df9ff'); g.fx.push('ring'); } } } }
   for (const r of g.rings) { if (r.stay) { // a warp: fades in, hangs in front of you for a while, fades out. Only CHASE view lines you up with it
-      r.t++; if (r.t > r.life) r.dead = true; if (!r.got && vw === 2 && r.t > 45 && playing) for (const p of P) if (p.dead <= 0 && Math.hypot(p.x - r.x, p.y - r.y) < r.r * 0.9) { r.got = true; r.dead = true; if (r.to) { g.flags.arena = true; g.flags.warpTo = r.to; } else g.flags.warp = true; g.flags.warpNow = true; g.score += 5000; pop(g, 'WARP!', p.x, p.y + 1.5, p.z + 3, '#b06bff', true); g.fx.push('warp', 'say:warp found', r.to ? 'toast:ARENA WARP FOUND|' + (lvd.arenaName || 'BONUS ARENA') : 'toast:WARP FOUND|' + (lvd.warpName || '')); g.flash = 16; explode(g, r.x, r.y, p.z, '#b06bff', 60, 16); p.inv = 240; break; } continue; }
+      r.t++; if (r.t > r.life) r.dead = true; if (!r.got && vw === 2 && r.t > 45 && playing) for (const p of P) if (p.dead <= 0 && Math.hypot(p.x - r.x, p.y - r.y) < r.r * 1.15) { r.got = true; r.dead = true; if (r.to) { g.flags.arena = true; g.flags.warpTo = r.to; } else g.flags.warp = true; g.flags.warpNow = true; g.score += 5000; pop(g, 'WARP!', p.x, p.y + 1.5, p.z + 3, '#b06bff', true); g.fx.push('warp', 'say:warp found', r.to ? 'toast:ARENA WARP FOUND|' + (lvd.arenaName || 'BONUS ARENA') : 'toast:WARP FOUND|' + (lvd.warpName || '')); g.flash = 16; explode(g, r.x, r.y, p.z, '#b06bff', 60, 16); p.inv = 240; break; } continue; }
     const pz = r.z; r.z -= dz; if (r.z < -4) r.dead = true; if (r.got) continue; for (const p of P) { if (p.dead > 0) continue; if (pz >= p.z && r.z < p.z && live(r, vw) && Math.hypot((p.x - r.x) * m[0], (p.y - r.y) * m[1]) < r.r) { r.got = true;
     if (r.kind === 'warp') { g.flags.warp = true; g.flags.warpNow = true; g.score += 5000; pop(g, 'WARP!', p.x, p.y + 1.5, p.z + 3, '#b06bff', true); g.fx.push('warp', 'say:warp found', 'toast:WARP FOUND|' + (lvd.warpName || '')); g.flash = 16; explode(g, r.x, r.y, p.z, '#b06bff', 60, 16); p.inv = 240; }
     else { g.chain += 2; g.chainT = 190; addScore(g, 300, r.x, r.y, p.z, '#3dffb0'); g.fx.push('ring'); } } } }

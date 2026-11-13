@@ -421,6 +421,19 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **A cooler tagline.** Under the logo it is now bold and in two colours, "SHIFT THE VIEW" in cyan and "SHIFT THE RULES" leaning in pink, with a lit chevron between them and brackets either side.
 - **PIXIE skin.** The ship becomes a fairy: a glowing body, four butterfly wings that flutter, antennae and a falling trail of glitter. Shots become twinkling stars, missiles little spinning stars, drones fireflies, and every beam and wave turns pastel. Beat the Eye on Jupiter to earn it, or buy it in the Sparkz store.
 
+### 40. Red fog, gas clouds and a hyper run (r48)
+
+- **The Sun, rebuilt.** The solar panels are gone. The Sun's atmosphere is now thick red plasma fog with one clear winding channel through it; stay in the channel to stay cool. Solar flares are bigger, with five twisting strands, bright knots and glowing feet.
+- **Jupiter's gas clouds.** Big clouds drawn as a fine wavy mesh drift by slower than the level, so enemies and obstacles slip behind them for a moment.
+- **Jupiter recoloured and longer.** Greens, purples and fuchsia instead of brown, more enemies everywhere, and a new chase section, THE DEEP, full of sharks and jellyfish to dodge.
+- **Mars eruptions** are now columns of fire instead of lines.
+- **Planet X hyper run.** A section near the end locks you at HYPER speed. Walls flash where they are about to appear, then turn solid.
+- **Warnings.** Some enemy waves flash on screen just before they arrive, and the gold warps now come with an ANOMALY DETECTED call and a hint, plus a slightly bigger catch area.
+- **Bosses** call in waves of their level's enemies during the fight, and in chase view they are drawn bigger so you can see their faces.
+- **Solid enemies.** Every enemy has a shaded body behind its outline, so nothing is just a pair of crossed lines any more.
+- **More hills and ramps** on every planet, and the bonus stages lean on chase and iso views.
+- **Smoother.** Quality steps down sooner when frames slow down and comes back once things settle.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
