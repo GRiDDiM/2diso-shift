@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r55';
+const VER = 'r56';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -171,7 +171,7 @@ export function mountShift(root, host = {}) {
       items.push({ label: 'NEW GAME', act: () => { testRun = false; returnTo = null; coop = false; daily = null; assisted = !!opt.idle || !!opt.assist; loopN = 0; startStory(STORY, () => startLevel('earth', null)); } },
         { label: 'CO-OP', act: () => { testRun = false; returnTo = null; coop = true; daily = null; assisted = true; loopN = 0; startStory(STORY, () => { startLevel('earth', null); toast('CO-OP', 'P1 KEYBOARD   P2 CONTROLLER'); }); } },
         { label: 'BOSS RUSH', act: startRush }, { label: 'BACK', act: popMenu }); const br = LS.get('rush', null); push({ title: 'PLAY', items, notes: br ? ['BOSS RUSH BEST  ' + br.won + ' / ' + RUSH.length + '   ' + mmss(br.time) + '   ' + br.score] : undefined }); };
-    const items = [{ label: 'PLAY', act: play }, ...(BUGTEST ? [{ label: 'BUG TEST', act: bugMenu }] : []), { label: 'OPTIONS', act: optionsMenu }, { label: 'HIGH SCORES', act: scoresMenu }, { label: 'ACHIEVEMENTS', act: () => push({ title: 'ACHIEVEMENTS', kind: 'ach', items: [{ label: 'BACK', act: popMenu }] }) }, { label: 'DEVLOG', act: () => scrollMenu('DEVLOG', DEVLOG) }];
+    const items = [{ label: 'PLAY', act: play }, ...(BUGTEST ? [{ label: 'BUG TEST', act: bugMenu }] : []), { label: 'OPTIONS', act: optionsMenu }, { label: 'HIGH SCORES', act: scoresMenu }, { label: 'ACHIEVEMENTS', act: () => push({ title: 'ACHIEVEMENTS', kind: 'ach', items: [{ label: 'BACK', act: popMenu }] }) }];
     if (host.onExit) items.push({ label: 'EXIT GAME', act: () => host.onExit() }); push({ kind: 'title', root: true, items }); }
   function pauseMenu() { if (scene !== 'play' || menus.length || !g || g.state !== 'play') return; audio.sfx('blip'); audio.hush(); audio.music('title'); push({ title: 'PAUSED', pause: true, items: [
     { label: 'RESUME', act: resume }, ...(BUGTEST ? [{ label: 'BUG TEST', act: bugMenu }] : []), { label: 'MAP', act: () => mapMenu() }, { label: 'OPTIONS', act: optionsMenu },
@@ -183,6 +183,7 @@ export function mountShift(root, host = {}) {
     const e = k => i[k] && !prevM[k] && (was[k] == null || was[k] >= 5); if (!m) return;
     if (tap) { for (const h of hits) if (tap.x >= h.x && tap.x <= h.x + h.w && tap.y >= h.y && tap.y <= h.y + h.h) { if (h.fn) h.fn(tap); else { m.i = h.i; const it = m.items[h.i]; audio.sfx('ok'); if (it.act) it.act(); else it.adj?.(1); } break; } tap = null; prevM = i; return; }
     if (m.travel && !m.travel.done && performance.now() - m.travel.t0 > 3000) { m.travel.done = true; m.items[0].act(); return; }
+    if (m.kind === 'title' && e('drone')) { audio.sfx('ok'); scrollMenu('DEVLOG', DEVLOG); prevM = i; return; } // the jam ribbon's shortcut
     if (m.kind === 'map' && !m.locked) { const n = NODES.length; if (e('left')) { m.sel = (m.sel + n - 1) % n; audio.sfx('move'); } if (e('right')) { m.sel = (m.sel + 1) % n; audio.sfx('move'); } }
     if (m.kind === 'bug') { const n = m.items.length, mv = j => { m.i = j; audio.sfx('move'); }, I = m.i; if (e('left')) mv((I + n - 1) % n); if (e('right')) mv((I + 1) % n);
       if (e('down')) mv(I < 9 ? I + 3 : I < 12 ? 12 + ((I % 3) >> 1) : I < 16 ? I + 2 : I === 16 ? 0 : 2); if (e('up')) mv(I < 3 ? 16 + (I >> 1) : I < 12 ? I - 3 : I < 14 ? 9 + (I - 12) * 2 : I - 2); }
@@ -408,6 +409,23 @@ export function mountShift(root, host = {}) {
     for (const ln of m.lines) { if (!ln) { y += 9; total += 9; continue; } const k = ln[0].replace('+', ''), cont = ln[0].endsWith('+'), s = ST[k] || ST.p; if (y > 60 && y < 440) text(ctx, (k === 'b' && !cont ? '- ' : k === 'q' && !cont ? "> " : k === 'b' || k === 'q' ? '  ' : '') + ln[1], k === 'q' ? 96 : 76, y, s[0], s[1], { glow: k[0] === 'h' }); y += s[2]; total += s[2]; }
     hits.push({ x: 50, y: 86, w: 860, h: 170, fn: () => { m.off = Math.max(0, m.off - 120); } }, { x: 50, y: 256, w: 860, h: 170, fn: () => { m.off += 120; } });
     ctx.restore(); m.off = Math.min(m.off, Math.max(0, total - 300)); const f = total > 320 ? m.off / (total - 300) : 0; if (total > 320) { ctx.fillStyle = '#26306e'; ctx.fillRect(896, 90, 4, 330); ctx.fillStyle = '#2ee6ff'; ctx.fillRect(896, 90 + f * 280, 4, 50); text(ctx, lastDev === 'touch' ? 'DRAG THE STICK AREA UP / DOWN' : 'UP / DOWN TO SCROLL', 480, 432, 7, '#5a66b0', { align: 'center', glow: false }); } }
+  // the jam banner: a neon pennant hanging in the top right corner of the title screen. Click, tap or press the drone button to read the devlog
+  function drawJamRibbon(t) { const key = lastDev === 'touch' ? 'TAP' : lastDev === 'pad' ? padNames()[3] : 'C', pulse = 0.5 + 0.5 * Math.sin(t * 3);
+    jamHover = performance.now() - (mouse.t || 0) < 4000 && mouse.x > 848 && mouse.x < 948 && mouse.y < 190; canvas.style.cursor = jamHover ? 'pointer' : ''; const hot = jamHover;
+    const x = 852, w = 92, h = 166, tail = 22, cx = x + w / 2, sw = Math.sin(t * 1.4) * 0.012; ctx.save(); ctx.translate(cx, 0); ctx.rotate(sw); ctx.translate(-cx, 0); // it sways a little on its hook
+    const path = () => { ctx.beginPath(); ctx.moveTo(x, -4); ctx.lineTo(x + w, -4); ctx.lineTo(x + w, h); ctx.lineTo(cx, h - tail); ctx.lineTo(x, h); ctx.closePath(); };
+    const gr = ctx.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#2a0b45'); gr.addColorStop(1, hot ? '#c42fd0' : '#7a1f9e'); path(); ctx.fillStyle = gr; ctx.shadowColor = '#ff3df0'; ctx.shadowBlur = 14 + pulse * 12; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ff3df0'; ctx.lineWidth = 2; ctx.stroke(); ctx.strokeStyle = '#ffe14a'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.lineDashOffset = -t * 10; ctx.beginPath(); ctx.moveTo(x + 5, 0); ctx.lineTo(x + 5, h - 6); ctx.moveTo(x + w - 5, 0); ctx.lineTo(x + w - 5, h - 6); ctx.stroke(); ctx.setLineDash([]); // stitching down both sides
+    const sh = ((t * 0.5) % 2.4) * h - 20; if (sh < h) { ctx.save(); path(); ctx.clip(); const g2 = ctx.createLinearGradient(0, sh - 30, 0, sh + 30); g2.addColorStop(0, 'rgba(255,255,255,0)'); g2.addColorStop(0.5, 'rgba(255,255,255,0.22)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g2; ctx.fillRect(x, sh - 30, w, 60); ctx.restore(); } // a glint sliding down
+    text(ctx, 'GITHUB', cx, 12, 8, '#ffffff', { align: 'center', bold: true, glow: false });
+    text(ctx, 'GAME OFF', cx, 26, 10, '#ffffff', { align: 'center', bold: true, glow: true });
+    text(ctx, '2026', cx, 42, 20, '#ffe14a', { align: 'center', bold: true, tube: true });
+    ctx.fillStyle = '#ff3df0'; ctx.fillRect(x + 16, 72, w - 32, 1.5);
+    text(ctx, 'THEME', cx, 80, 6, '#d6a8ff', { align: 'center', bold: true, glow: false }); text(ctx, 'SHIFT', cx, 90, 11, '#2ee6ff', { align: 'center', bold: true, glow: true });
+    rr(x + 10, 112, w - 20, 22, 11); ctx.fillStyle = hot || pulse > 0.6 ? '#ffe14a' : 'rgba(255,225,74,0.18)'; ctx.fill(); ctx.strokeStyle = '#ffe14a'; ctx.lineWidth = 1.5; ctx.stroke();
+    text(ctx, 'DEVLOG', cx, 116, 8, hot || pulse > 0.6 ? '#17101b' : '#ffe14a', { align: 'center', bold: true, glow: false }); text(ctx, key === 'TAP' ? 'TAP' : 'PRESS ' + key, cx, 142, 6.5, '#ffd0fb', { align: 'center', bold: true, glow: false });
+    ctx.restore(); hits.push({ x: 848, y: 0, w: 100, h: 190, fn: () => { audio.sfx('ok'); scrollMenu('DEVLOG', DEVLOG); } }); }
+  let jamHover = false;
   function drawMenu() {
     hits = []; const m = top(); if (!m) return; const t = performance.now() / 1000;
     if (m.kind === 'title') {
@@ -416,7 +434,7 @@ export function mountShift(root, host = {}) {
       drawTagline(ctx, 480, 146, 10, t);
       ctx.globalCompositeOperation = 'lighter'; const a = t * 0.7, pi = -0.35 + Math.sin(t) * 0.1, rl = Math.sin(t * 0.8) * 0.3; meshScreen(ctx, SHIP_HULL, 742, 330, 86, a, pi, rl, '#ffffff'); meshScreen(ctx, SHIP_WING, 742, 330, 86, a, pi, rl, '#2ee6ff'); meshScreen(ctx, SHIP_FIN, 742, 330, 86, a, pi, rl, '#ff3df0'); ctx.globalCompositeOperation = 'source-over';
       const n = m.items.length, gap = n > 7 ? 29 : n > 6 ? 32 : 36; drawItems(m, 340, 196, n > 7 ? 13 : 15, gap); // the title menu floats over the attract run, no card behind it
-      text(ctx, 'GITHUB GAME OFF 2026', 742, 440, 8, '#5a66b0', { align: 'center', glow: false });
+      drawJamRibbon(t);
       text(ctx, lastDev === 'pad' ? padNames()[0] + ' = OK     ' + padNames()[1] + ' = BACK' : lastDev === 'touch' ? 'TAP TO CHOOSE' : 'ENTER = OK     ESC = BACK', 480, 500, 8, '#8d9be0', { align: 'center', glow: false });
       text(ctx, COPY, 480, 520, 7, '#5a66b0', { align: 'center', glow: false }); return; }
     ctx.fillStyle = m.kind === 'end' ? 'rgba(2,1,10,.6)' : 'rgba(2,1,10,.74)'; ctx.fillRect(0, 0, W, H);

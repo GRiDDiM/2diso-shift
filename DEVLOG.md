@@ -474,6 +474,10 @@ The cutscenes now tell a story, five lines each, and it carries through to the e
 - **Jupiter to Planet X.** RIVET-9 pulls coordinates out of the Eye's last look. Planet X is not a planet. It is a dream that something far past Pluto is having, and the only hope is to break the dream so the dreamer stays asleep.
 - The ending's last line now points back at the dreamer. Each line also stays on screen longer, so the whole thing can be read and heard.
 
+### 48. A jam banner on the title screen (r56)
+
+- The Game Off note on the title screen is now a neon pennant hanging in the top right corner: GITHUB GAME OFF 2026, THEME: SHIFT and a DEVLOG button. It sways, glints and glows brighter when you point at it. Click or tap it, or press the drone button, to read the devlog. The DEVLOG item has left the title menu.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
