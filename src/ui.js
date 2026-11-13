@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r57';
+const VER = 'r58';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -64,19 +64,19 @@ export function mountShift(root, host = {}) {
   const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
   const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: coarse ? 'low' : 'high', shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true, assist: false, ghost: true, crt: false, skin: 0, autobomb: false }, LS.get('opt', {})); const saveOpt = () => LS.set('opt', opt);
   // ship skins: looks only. Each is earned with an achievement, or owned through the host site's store when it sells them
-  const SKIN = [['PILOT'], ['FIRE MAGE', 'mars', 'DEFEAT THE COLOSSUS', 'shift-fire-mage'], ['DARK LORD', 'x', 'DEFEAT THE SHIFTER', 'shift-dark-lord'], ['PIXIE', 'jupiter', 'DEFEAT THE EYE', 'shift-pixie']];
+  const SKIN = [['PILOT'], ['FIRE MAGE', 'sun', 'BEAT SOLAR FLARE ON THE SUN', 'shift-fire-mage', 'THE WARP STAGE HIDDEN ON MARS'], ['DARK LORD', 'pluto', 'BEAT FROST WARDEN ON PLUTO', 'shift-dark-lord', 'THE WARP STAGE HIDDEN ON PLANET X'], ['PIXIE', 'belt', 'BEAT THE MOTHER ROCK', 'shift-pixie', 'THE WARP STAGE HIDDEN ON JUPITER']]; // each skin drops from the miniboss of a warp stage
   let owned = LS.get('owned', []), forSale = [], prices = { 'shift-fire-mage': 500, 'shift-pixie': 650, 'shift-dark-lord': 800 }, skinView = opt.skin | 0; if (host.skins) Promise.resolve().then(() => host.skins()).then(r => { if (r && Array.isArray(r.owned)) { owned = r.owned; LS.set('owned', owned); } if (r && Array.isArray(r.forSale)) forSale = r.forSale; if (r && r.prices) Object.assign(prices, r.prices); }).catch(() => { });
-  const skinOk = i => !i || BUGTEST && opt.skinTest || !!SKIN[i] && (!!LS.get('ach', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinReal = i => !i || !!SKIN[i] && (!!LS.get('ach', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinNow = () => skinOk(opt.skin | 0) ? opt.skin | 0 : 0;
+  const skinOk = i => !i || BUGTEST && opt.skinTest || !!SKIN[i] && (!!LS.get('skinsWon', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinReal = i => !i || !!SKIN[i] && (!!LS.get('skinsWon', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinNow = () => skinOk(opt.skin | 0) ? opt.skin | 0 : 0;
   const audio = createAudio(opt);
   let q = 0, slow = 0, ema = 16; // q: automatic quality step-down when frames run long (0 full, 1 no outer halo + lower res, 2 no glow)
   let destroyed = false, raf = 0, last = performance.now(), acc = 0, scale = 1, res = 1, rotOk = false;
   let bug = false, bugHits = 0; let scene = 'intro', sceneT = 0, g = null, attract = null, assisted = false, testRun = false, submitted = false, focusPaused = false, lastDev = coarse ? 'touch' : 'kb', titleT = 0, endInfo = null, levelId = 'earth', returnTo = null, warpT = 0, coop = false, daily = null, rec = null, ghost = null, fxC = null, crtPat = null; const mouse = { x: 0, y: 0, t: -1e9, down: false };
   const menus = []; let hits = []; const toasts = []; let rush = null, introWait = 0, story = null, hiShown = false, loopN = 0, endCarry = null, cred = null, achGot = LS.get('ach', {});
   // achievements: kept on this device. Idle mode never unlocks them.
-  function award(id) { if (bug) return; if (opt.idle || achGot[id]) return; achGot = LS.get('ach', {}); if (achGot[id]) return; achGot[id] = 1; LS.set('ach', achGot); const d = ACH.find(a => a[0] === id); if (!d) return; toast('ACHIEVEMENT', d[1]); audio.sfx('ring'); const s = SKIN.find(q => q[1] === id); if (s) toast('SKIN UNLOCKED', s[0] + ' - PICK IT IN OPTIONS'); }
+  function award(id) { if (bug) return; if (opt.idle || achGot[id]) return; achGot = LS.get('ach', {}); if (achGot[id]) return; achGot[id] = 1; LS.set('ach', achGot); const d = ACH.find(a => a[0] === id); if (!d) return; toast('ACHIEVEMENT', d[1]); audio.sfx('ring'); }
   function achTick() { if (bug) return; const p = g.players[0], s = g.stats; if (s.shifts) award('shift'); if (s.perfect) award('perfect'); if (s.order) award('order'); if (g.bestChain >= 50) award('chain50'); if (g.bestChain >= 100) award('chain100'); if (g.flags.warp) award('warp'); if (p.god > 0) award('god'); if (p.up[0] >= 6) award('drones'); if ([1, 2, 3, 4, 5].every(k => p.up[k] >= 3)) award('arsenal'); if (g.score >= 250000) award('score1'); if (g.score >= 1000000) award('score2'); }
   function achEnd(cleared, m) { const L = LEVELS[levelId]; if (opt.idle) return; const kills = LS.get('kills', 0) + g.stats.kills; LS.set('kills', kills); if (kills >= 1000) award('kills'); if (Object.keys(LS.get('warps', {})).length >= 4) award('warp4'); if (!cleared) return;
-    if (L.isArena) { award('arena'); const a = LS.get('arenas', {}); a[L.of] = 1; LS.set('arenas', a); if (Object.keys(a).length >= 4) award('arena4'); return; } if (L.isBonus) { award('bonus'); const bd = LS.get('bonusDone', {}); bd[levelId] = 1; LS.set('bonusDone', bd); return; }
+    if (L.isArena) { award('arena'); const a = LS.get('arenas', {}); a[L.of] = 1; LS.set('arenas', a); if (Object.keys(a).length >= 4) award('arena4'); return; } if (L.isBonus) { award('bonus'); const bd = LS.get('bonusDone', {}); bd[levelId] = 1; LS.set('bonusDone', bd); const sk = SKIN.find(q => q[1] === levelId), won = LS.get('skinsWon', {}); if (sk && !bug && !opt.idle && !won[levelId]) { won[levelId] = 1; LS.set('skinsWon', won); toast('SKIN DROPPED', sk[0] + ' - PICK IT IN OPTIONS'); audio.sfx('ring'); audio.say('new skin. ' + sk[0].toLowerCase(), true); } return; }
     award(levelId); if (g.stats.hits === 0) award('untouched'); if (g.stats.deaths === 0) award('nodeath'); if (m >> 6 & 1) award('fast'); if (m >> 5 & 1) award('perfect3'); if (bits(m) >= 5) award('ranks'); if (bits(m) >= 7) award('sss'); if (coop) award('coop'); }
   const toast = (a, b) => { toasts.push({ a, b: b || '', t: 0 }); if (toasts.length > 3) toasts.shift(); };
 
@@ -135,6 +135,8 @@ export function mountShift(root, host = {}) {
   const scrollMenu = (title, lines) => push({ title, kind: 'scroll', lines, off: 0, items: [{ label: 'BACK', act: popMenu }] });
   // options are split into tabs: L / R (or left / right on the tab row) flips between them
   function optionsMenu() { skinView = skinNow(); const tabs = [
+      { name: 'SHIP', items: [
+        { label: () => 'SHIP SKIN  ' + SKIN[skinView][0] + (skinOk(skinView) ? '' : '  (LOCKED)'), adj: d => { skinView = (skinView + (d < 0 ? SKIN.length - 1 : 1)) % SKIN.length; audio.sfx('blip'); if (skinOk(skinView)) { opt.skin = skinView; saveOpt(); } else toast('LOCKED', SKIN[skinView][2] + (forSale.includes(SKIN[skinView][3]) ? ' OR BUY IT IN THE SPARKZ STORE' : '')); } }] },
       { name: 'SOUND', items: [
         { label: () => 'MUSIC  ' + Math.round(opt.music * 10), adj: d => { opt.music = Math.max(0, Math.min(1, opt.music + d * 0.1)); audio.vol(); saveOpt(); } },
         { label: () => 'SOUND  ' + Math.round(opt.sfx * 10), adj: d => { opt.sfx = Math.max(0, Math.min(1, opt.sfx + d * 0.1)); audio.vol(); saveOpt(); audio.sfx('blip'); } },
@@ -151,8 +153,6 @@ export function mountShift(root, host = {}) {
         { label: () => 'IDLE MODE  ' + onoff(opt.idle), adj: () => setIdle(!opt.idle) },
         { label: () => 'RIVET-9 ASSIST  ' + onoff(opt.assist), adj: () => setAssist(!opt.assist) },
         { label: () => 'BEST RUN GHOST  ' + onoff(opt.ghost), adj: () => { opt.ghost = !opt.ghost; saveOpt(); if (!opt.ghost) ghost = null; } }] },
-      { name: 'SHIP', items: [
-        { label: () => 'SHIP SKIN  ' + SKIN[skinView][0] + (skinOk(skinView) ? '' : '  (LOCKED)'), adj: d => { skinView = (skinView + (d < 0 ? SKIN.length - 1 : 1)) % SKIN.length; audio.sfx('blip'); if (skinOk(skinView)) { opt.skin = skinView; saveOpt(); } else toast('LOCKED', SKIN[skinView][2] + (forSale.includes(SKIN[skinView][3]) ? ' OR BUY IT IN THE SPARKZ STORE' : '')); } }] },
       { name: 'MORE', items: [
         { label: 'CONTROLS', act: () => push({ title: 'CONTROLS', kind: 'controls', items: [{ label: 'BACK', act: popMenu }] }) },
         { label: 'CREDITS', act: () => scrollMenu('CREDITS', CREDITS) }] }];
@@ -467,8 +467,8 @@ export function mountShift(root, host = {}) {
     SKIN.forEach((_, k) => { ctx.fillStyle = k === i ? '#ffe14a' : skinOk(k) ? '#2ee6ff' : '#30345a'; ctx.beginPath(); ctx.arc(480 + (k - (SKIN.length - 1) / 2) * 14, y + 12, k === i ? 4 : 3, 0, 6.3); ctx.fill(); }); // which of the skins you are looking at
     if (!ok) { const lx = 480, ly = y + 62; ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(lx, ly - 10, 9, Math.PI, 0); ctx.stroke(); rr(lx - 14, ly - 10, 28, 22, 4); ctx.fillStyle = '#ff4d6d'; ctx.fill(); ctx.fillStyle = '#1a0610'; ctx.beginPath(); ctx.arc(lx, ly, 3.5, 0, 6.3); ctx.fill(); } // a padlock over a dim ship
     text(ctx, S[0], 480, y + 102, 12, ok ? '#ffffff' : '#7d8bd6', { align: 'center', bold: true, glow: ok });
-    const how = !S[1] ? 'THE STANDARD SHIP' : ok ? (on ? 'EQUIPPED' : 'UNLOCKED') : 'LOCKED - ' + S[2], buy = !ok && S[1] ? (price ? 'OR ' + price + ' SPARKZ IN THE STORE' : 'OR BUY IT WITH SPARKZ') : '';
-    text(ctx, on && ok ? 'EQUIPPED' : how, 480, y + 120, 7, on && ok ? '#3dffb0' : ok ? '#2ee6ff' : '#ff4d6d', { align: 'center', bold: true, glow: false }); if (buy) text(ctx, buy, 480, y + 134, 6.5, '#ffe14a', { align: 'center', bold: true, glow: false }); }
+    const how = !S[1] ? 'THE STANDARD SHIP' : ok ? (on ? 'EQUIPPED' : 'UNLOCKED') : 'LOCKED - ' + S[2], where = !ok && S[4] ? S[4] : '', buy = !ok && S[1] ? (price ? 'OR ' + price + ' SPARKZ IN THE STORE' : 'OR BUY IT WITH SPARKZ') : '';
+    text(ctx, on && ok ? 'EQUIPPED' : how, 480, y + 120, 7, on && ok ? '#3dffb0' : ok ? '#2ee6ff' : '#ff4d6d', { align: 'center', bold: true, glow: false }); if (where) text(ctx, where, 480, y + 131, 6, '#9fb0ff', { align: 'center', bold: true, glow: false }); if (buy) text(ctx, buy, 480, y + (where ? 142 : 134), 6.5, '#ffe14a', { align: 'center', bold: true, glow: false }); }
   function drawTabs(m, y) { const n = m.tabs.length, tw = 70, x0 = 480 - n * tw / 2, on = m.i === 0; // the tab strip: the open tab lit, the row itself glowing when it is the one you are on
     m.tabs.forEach((q, k) => { const x = x0 + k * tw, cur = k === m.tab; rr(x + 3, y - 4, tw - 6, 20, 10); ctx.fillStyle = cur ? (on ? '#ffe14a' : 'rgba(255,225,74,.25)') : 'rgba(9,6,22,.8)'; ctx.fill(); ctx.strokeStyle = cur ? '#ffe14a' : '#2ee6ff'; ctx.globalAlpha = cur ? 1 : 0.6; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = 1;
       text(ctx, q.name, x + tw / 2, y + 2, 8, cur ? (on ? '#17101b' : '#ffe14a') : '#8d9be0', { align: 'center', bold: true, glow: false }); hits.push({ x, y: y - 4, w: tw, h: 20, fn: () => { m.i = 0; setTab(m, k); audio.sfx('move'); } }); }); }

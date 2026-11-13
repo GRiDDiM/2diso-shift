@@ -482,6 +482,12 @@ The cutscenes now tell a story, five lines each, and it carries through to the e
 
 - The SHIP tab in Options now shows the skin you are looking at as a turning model, with dots for all four skins. A skin you have not earned is a dim silhouette with a padlock, plus what unlocks it: beat the boss, or the Sparkz price from the store (FIRE MAGE: THE COLOSSUS or 500, PIXIE: THE EYE or 650, DARK LORD: THE SHIFTER or 800).
 
+### 50. Skins drop from the warp stages (r58)
+
+- **A reason to find the warps.** Skins no longer come from the main bosses. Each one drops from the miniboss of a hidden warp stage: FIRE MAGE from SOLAR FLARE on the Sun (warp on Mars), PIXIE from THE MOTHER ROCK in the Asteroid Belt (warp on Jupiter), DARK LORD from FROST WARDEN on Pluto (warp on Planet X). You can still buy them with Sparkz.
+- **The music slider works.** Each sound bus used to go into one shared compressor that evened the volume back out, so turning the music down barely changed anything. Music and sound effects now each have their own compressor, the sliders come after it, and a limiter at the very end only catches peaks.
+- **SHIP is the first options tab.**
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

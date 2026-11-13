@@ -1,15 +1,17 @@
 // 2DISO SHIFT — all sound is synthesised with Web Audio. No audio files.
 export function createAudio(opt) {
-  let ac = null, master, sfxG, musG, noiseBuf, timer = 0, step = 0, nextT = 0, mode = null, last = {};
+  let ac = null, master, sfxG, musG, sfxV, musV, noiseBuf, timer = 0, step = 0, nextT = 0, mode = null, last = {};
   function init() {
     if (ac) return true; const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
     try { ac = new AC(); } catch { return false; }
-    master = ac.createDynamicsCompressor(); master.connect(ac.destination);
-    sfxG = ac.createGain(); musG = ac.createGain(); sfxG.connect(master); musG.connect(master); vol();
+    // each bus is squeezed by its own compressor first and only then turned up or down, so the volume sliders are not flattened back out by the compressor
+    const lim = ac.createDynamicsCompressor(); lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.1; lim.connect(ac.destination); // a brick-wall limiter on the very end only catches peaks
+    const bus = (pre) => { const g = ac.createGain(), c = ac.createDynamicsCompressor(), v = ac.createGain(); g.gain.value = pre; g.connect(c); c.connect(v); v.connect(lim); return [g, v]; };
+    [sfxG, sfxV] = bus(0.4); [musG, musV] = bus(0.42); master = sfxG; vol();
     noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.6, ac.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     return true;
   }
-  function vol() { if (!ac) return; sfxG.gain.value = opt.mute ? 0 : opt.sfx * 0.5; musG.gain.value = opt.mute ? 0 : opt.music * 0.6; }
+  function vol() { if (!ac) return; const t = ac.currentTime; sfxV.gain.setTargetAtTime(opt.mute ? 0 : opt.sfx * 1.1, t, 0.02); musV.gain.setTargetAtTime(opt.mute ? 0 : opt.music * 1.2, t, 0.02); }
   function tone(type, f0, f1, dur, v, t = ac.currentTime, out = sfxG) { const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur); o.connect(g); g.connect(out); o.start(t); o.stop(t + dur + 0.02); }
   function noise(dur, v, f0, f1, t = ac.currentTime, out = sfxG, q = 1) { const s = ac.createBufferSource(), fl = ac.createBiquadFilter(), g = ac.createGain(); s.buffer = noiseBuf; fl.type = 'bandpass'; fl.Q.value = q; fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur); s.connect(fl); fl.connect(g); g.connect(out); s.start(t); s.stop(t + dur + 0.02); }
   const SFX = {
