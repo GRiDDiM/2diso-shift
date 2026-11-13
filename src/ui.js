@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r64';
+const VER = 'r65';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -63,13 +63,15 @@ export function mountShift(root, host = {}) {
 <div class="ds-rotate" hidden><div>TURN YOUR SCREEN SIDEWAYS</div><button type="button">PLAY ANYWAY</button></div></section>`;
   const shell = root.querySelector('.ds-shell'), stage = root.querySelector('.ds-stage'), canvas = root.querySelector('canvas'), ctx = canvas.getContext('2d'), touchEl = root.querySelector('.ds-touch'), stickEl = root.querySelector('.ds-stick'), nubEl = root.querySelector('.ds-nub'), rotEl = root.querySelector('.ds-rotate');
   const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
-  const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: coarse ? 'low' : 'high', shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true, assist: false, ghost: true, crt: false, skin: 0, autobomb: false }, LS.get('opt', {})); const saveOpt = () => LS.set('opt', opt);
+  const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: 'high', gfx: null, dyn: true, shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true, assist: false, ghost: true, crt: false, skin: 0, autobomb: false }, LS.get('opt', {})); if (!opt.gfx) opt.gfx = opt.glow === 'low' || coarse ? 'normal' : 'high'; /* graphics: high / normal / low, plus dynamic framerate that steps down on its own when frames run long */ const saveOpt = () => LS.set('opt', opt);
   // ship skins: looks only. Each is earned with an achievement, or owned through the host site's store when it sells them
   const SKIN = [['PILOT'], ['FIRE MAGE', 'sun', 'BEAT SOLAR FLARE ON THE SUN', 'shift-fire-mage', 'THE WARP STAGE HIDDEN ON MARS'], ['DARK LORD', 'pluto', 'BEAT FROST WARDEN ON PLUTO', 'shift-dark-lord', 'THE WARP STAGE HIDDEN ON PLANET X'], ['PIXIE', 'belt', 'BEAT THE MOTHER ROCK', 'shift-pixie', 'THE WARP STAGE HIDDEN ON JUPITER']]; // each skin drops from the miniboss of a warp stage
   let owned = LS.get('owned', []), forSale = [], prices = { 'shift-fire-mage': 500, 'shift-pixie': 650, 'shift-dark-lord': 800 }, skinView = opt.skin | 0; if (host.skins) Promise.resolve().then(() => host.skins()).then(r => { if (r && Array.isArray(r.owned)) { owned = r.owned; LS.set('owned', owned); } if (r && Array.isArray(r.forSale)) forSale = r.forSale; if (r && r.prices) Object.assign(prices, r.prices); }).catch(() => { });
   const skinOk = i => !i || BUGTEST && opt.skinTest || !!SKIN[i] && (!!LS.get('skinsWon', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinReal = i => !i || !!SKIN[i] && (!!LS.get('skinsWon', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinNow = () => skinOk(opt.skin | 0) ? opt.skin | 0 : 0;
   const audio = createAudio(opt);
-  let q = 0, slow = 0, ema = 16; // q: automatic quality step-down when frames run long (0 full, 1 no outer halo + lower res, 2 no glow)
+  let q = 0, slow = 0, ema = 16, upWait = 600, sinceUp = 1e9; // q: how many steps dynamic framerate has dropped below the chosen graphics setting
+  // quality tiers: 0 full glow at full resolution, 1 one soft halo at 3/4 resolution, 2 no glow at lower resolution, 3 no glow, half resolution, no far scenery
+  const GBASE = { high: 0, normal: 1, low: 3 }, TNAME = ['HIGH', 'NORMAL', 'REDUCED', 'LOW', 'MINIMUM'], tier = () => Math.min(4, (GBASE[opt.gfx] ?? 0) + (opt.dyn ? q : 0)); // 4 is an emergency step only dynamic framerate reaches: lower resolution still and no solid shading
   let destroyed = false, raf = 0, last = performance.now(), acc = 0, scale = 1, res = 1, rotOk = false;
   let bug = false, bugHits = 0; let scene = 'intro', sceneT = 0, g = null, attract = null, assisted = false, testRun = false, submitted = false, focusPaused = false, lastDev = coarse ? 'touch' : 'kb', titleT = 0, endInfo = null, levelId = 'earth', returnTo = null, warpT = 0, coop = false, daily = null, rec = null, ghost = null, fxC = null, crtPat = null; const mouse = { x: 0, y: 0, t: -1e9, down: false };
   const menus = []; let hits = []; const toasts = []; let rush = null, introWait = 0, story = null, hiShown = false, loopN = 0, endCarry = null, cred = null, achGot = LS.get('ach', {});
@@ -83,7 +85,7 @@ export function mountShift(root, host = {}) {
 
   // ---------- layout ----------
   function fit() { const r = shell.getBoundingClientRect(); if (!r.width || !r.height) return; scale = Math.min(r.width / W, r.height / H); stage.style.transform = `translate(${(r.width - W * scale) / 2}px,${(r.height - H * scale) / 2}px) scale(${scale})`;
-    const want = Math.min(opt.glow === 'low' ? 1.25 : [2, 1.5, 1.25][q], Math.max(1, scale * (window.devicePixelRatio || 1))); if (Math.abs(want - res) > 0.05 || canvas.width !== Math.round(W * want)) { res = want; canvas.width = Math.round(W * res); canvas.height = Math.round(H * res); }
+    const want = Math.min([2, 1.5, 1.25, 1, 0.75][tier()], Math.max(tier() > 3 ? 0.75 : 1, scale * (window.devicePixelRatio || 1))); if (Math.abs(want - res) > 0.05 || canvas.width !== Math.round(W * want)) { res = want; canvas.width = Math.round(W * res); canvas.height = Math.round(H * res); }
     rotEl.hidden = !(lastDev === 'touch' && r.height > r.width * 1.1 && !rotOk); }
   rotEl.querySelector('button').onclick = () => { rotOk = true; fit(); };
   const ro = new ResizeObserver(fit); ro.observe(shell); addEventListener('resize', fit);
@@ -143,7 +145,8 @@ export function mountShift(root, host = {}) {
         { label: () => 'SOUND  ' + Math.round(opt.sfx * 10), adj: d => { opt.sfx = Math.max(0, Math.min(1, opt.sfx + d * 0.1)); audio.vol(); saveOpt(); audio.sfx('blip'); } },
         { label: () => 'ANNOUNCER  ' + onoff(opt.voice), adj: () => { opt.voice = !opt.voice; saveOpt(); if (opt.voice) audio.say('announcer on', true); else audio.hush(); } }] },
       { name: 'VIDEO', items: [
-        { label: () => 'GLOW  ' + opt.glow.toUpperCase(), adj: () => { opt.glow = opt.glow === 'high' ? 'low' : 'high'; saveOpt(); fit(); } },
+        { label: () => 'GRAPHICS  ' + opt.gfx.toUpperCase(), adj: d => { const o = ['low', 'normal', 'high'], k = o.indexOf(opt.gfx); opt.gfx = o[(k + (d || 1) + 3) % 3]; q = 0; slow = 0; saveOpt(); fit(); } },
+        { label: () => 'DYNAMIC FRAMERATE  ' + onoff(opt.dyn) + (opt.dyn && q ? '  (NOW ' + TNAME[tier()] + ')' : ''), adj: () => { opt.dyn = !opt.dyn; q = 0; slow = 0; saveOpt(); fit(); } },
         { label: () => 'SOLID OBSTACLES  ' + onoff(opt.fill), adj: () => { opt.fill = !opt.fill; saveOpt(); } },
         { label: () => 'SCREEN SHAKE  ' + onoff(opt.shake), adj: () => { opt.shake = !opt.shake; saveOpt(); } },
         { label: () => 'CRT FILTER  ' + onoff(opt.crt), adj: () => { opt.crt = !opt.crt; saveOpt(); } }] },
@@ -524,7 +527,7 @@ export function mountShift(root, host = {}) {
   }
   function render() {
     ctx.setTransform(res, 0, 0, res, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-    const ro2 = { glow: opt.glow === 'high' && scene !== 'title' /* the attract run behind the title is dimmed anyway: no glow passes for it */, shake: opt.shake, fill: opt.fill, ghost: null, q, skin: scene === 'title' && menus.length ? skinView : skinNow() }; /* on the title screen the options menu previews a skin, locked or not */ if (ghost && g && scene === 'play' && ghost.g.players[0].dead <= 0) { const q = ghost.g.players[0]; ro2.ghost = { x: q.x, y: q.y, z: q.z + ghost.g.camZ - g.camZ }; }
+    const ro2 = { glow: tier() < 2, shake: opt.shake, fill: opt.fill && tier() < 4, ghost: null, q: tier(), skin: scene === 'title' && menus.length ? skinView : skinNow() }; /* on the title screen the options menu previews a skin, locked or not */ if (ghost && g && scene === 'play' && ghost.g.players[0].dead <= 0) { const q = ghost.g.players[0]; ro2.ghost = { x: q.x, y: q.y, z: q.z + ghost.g.camZ - g.camZ }; }
     if (scene === 'intro') drawIntro();
     else if (scene === 'story') drawStory();
     else if (scene === 'credits') drawCredits();
@@ -543,12 +546,16 @@ export function mountShift(root, host = {}) {
     const showTouch = lastDev === 'touch' && scene === 'play' && !menus.length; if (touchEl.hidden === showTouch) { touchEl.hidden = !showTouch; if (!showTouch) { tb.clear(); stick = null; nubEl.hidden = true; } }
   }
   // colour split: the frame is drawn again in red and cyan, pulled apart sideways (on shifts and perfect shifts)
-  function chroma(k, a) { if (opt.glow !== 'high' || k < 0.5) return; if (!fxC) fxC = document.createElement('canvas'); if (fxC.width !== canvas.width || fxC.height !== canvas.height) { fxC.width = canvas.width; fxC.height = canvas.height; } const f = fxC.getContext('2d');
+  function chroma(k, a) { if (tier() > 0 || k < 0.5) return; if (!fxC) fxC = document.createElement('canvas'); if (fxC.width !== canvas.width || fxC.height !== canvas.height) { fxC.width = canvas.width; fxC.height = canvas.height; } const f = fxC.getContext('2d');
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); for (const [col, dx] of [['#ff0030', -k], ['#00e0ff', k]]) { f.globalCompositeOperation = 'copy'; f.drawImage(canvas, 0, 0); f.globalCompositeOperation = 'multiply'; f.fillStyle = col; f.fillRect(0, 0, fxC.width, fxC.height); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.drawImage(fxC, dx * res, 0); } ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
   function frame(now) {
     if (destroyed) return; raf = requestAnimationFrame(frame);
     let dt = (now - last) / 1000; last = now; if (dt > 0.25) dt = 0.25; if (focusPaused) return;
-    if (scene === 'play' && !menus.length) { ema += (dt * 1000 - ema) * 0.05; if (ema > 21 && q < 2) { if (++slow > 60) { q++; slow = 0; ema = 16; fit(); } } else if (ema < 17.5 && q > 0) { if (--slow < -900) { q--; slow = 0; fit(); } } else if (slow > 0) slow--; else if (slow < 0 && ema >= 17.5) slow = 0; } /* drop quality fast when frames run long, earn it back after 15 smooth seconds */ acc += dt; let n = 0;
+    if (scene === 'play' && !menus.length && opt.dyn) { ema += (Math.min(100, dt * 1000) - ema) * 0.05; sinceUp++; const qmax = 4 - (GBASE[opt.gfx] ?? 0);
+      if (ema > 20.5 && q < qmax) { if (++slow > (ema > 28 ? 20 : 45)) { q++; slow = 0; ema = 16; if (sinceUp < 600) upWait = Math.min(7200, upWait * 2); /* it could not hold the better setting: wait longer before trying again */ fit(); } }
+      else if (ema < 17.3 && q > 0) { if (--slow < -upWait) { q--; slow = 0; sinceUp = 0; fit(); } }
+      else if (slow > 0) slow--; else if (slow < 0 && ema >= 17.3) slow = 0; } // dynamic framerate: drop a step within a second when frames run long (faster if it is bad), climb back one step after ten smooth seconds
+    acc += dt; let n = 0;
     while (acc >= 1 / 60 && n < 5) { acc -= 1 / 60; n++; const i = readInput(); update(i); if (tap && scene !== 'intro' && scene !== 'story' && !menus.length) tap = null; } if (n === 5) acc = 0;
     render();
   }
@@ -566,5 +573,5 @@ export function mountShift(root, host = {}) {
     getState: () => ({ scene, state: g?.state || scene, score: g?.score || 0, lives: g ? Math.max(0, g.players[0].lives) : 0, view: g ? VIEWS[g.view] : '-', chain: g?.chain || 0, best: LS.get('best', 0), level: LEVELS[levelId].name, bonus: !!LEVELS[levelId].isBonus, speed: g ? GEARS[g.gear] : '-', boss: g?.boss ? g.boss.name : '', warp: !!g?.flags.warp, paused: menus.length > 0 && scene === 'play', idle: !!opt.idle, assist: !!opt.assist, coop, daily: daily ? daily.label : '', muted: !!opt.mute, menu: scene !== 'play' }),
     control(a) { if (a === 'sound') { opt.mute = !opt.mute; saveOpt(); audio.vol(); if (opt.mute) audio.hush(); } else if (a === 'exit') host.onExit?.(); else if (a === 'pause') { if (menus.length && top().pause) resume(); else pauseMenu(); } else if (a === 'idle') setIdle(!opt.idle); else if (a === 'assist') setAssist(!opt.assist); else if (a === 'menu') showTitle(); else if (a === 'start' || a === 'restart') { testRun = false; returnTo = null; coop = false; daily = null; loopN = 0; assisted = !!opt.idle || !!opt.assist; startLevel('earth', null); } },
     getResult: () => ({ score: g?.score || 0, state: g?.state || scene, assisted }),
-    _debug: { bugMenu: () => bugMenu(), devlogMenu: () => devlogMenu(), cutScene: (from, to) => { startStory(CUT[to].map(q => q[1]), () => showTitle()); story.cut = { from, to, faces: CUT[to].map(q => q[0]) }; story.per = 210; }, optionsMenu: () => optionsMenu(), ghost: () => ghost, rec: () => rec, setCoop: v => { coop = v; }, setAssist, game: () => g, scene: () => scene, menus, opt, startLevel: (id, s, test = true) => { testRun = test; returnTo = null; startLevel(id, s); }, showTitle, setIdle, startStory, beginEnding, startCredits, award, bugMenu, bugStart, skipIntro: () => { showTitle(); titleT = 99; } } };
+    _debug: { gfx: () => ({ tier: tier(), q, ema: Math.round(ema * 10) / 10, res, upWait }), bugMenu: () => bugMenu(), devlogMenu: () => devlogMenu(), cutScene: (from, to) => { startStory(CUT[to].map(q => q[1]), () => showTitle()); story.cut = { from, to, faces: CUT[to].map(q => q[0]) }; story.per = 210; }, optionsMenu: () => optionsMenu(), ghost: () => ghost, rec: () => rec, setCoop: v => { coop = v; }, setAssist, game: () => g, scene: () => scene, menus, opt, startLevel: (id, s, test = true) => { testRun = test; returnTo = null; startLevel(id, s); }, showTitle, setIdle, startStory, beginEnding, startCredits, award, bugMenu, bugStart, skipIntro: () => { showTitle(); titleT = 99; } } };
 }

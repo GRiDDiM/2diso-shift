@@ -14,6 +14,7 @@ for (const k in G) P[k] = G[k].split(' ').map(s => { const a = []; for (let i = 
 export const ADV = 5.6 / 6;
 export function textWidth(str, size, bold) { return str.length * size * ADV * (bold ? 1.1 : 1) - size * 1.6 / 6; }
 // draws str with cap height `size` px; (x,y) is the top-left (or top-center / top-right with align)
+let TG = 2; export const setTextGlow = n => { TG = n; }; // 2: full neon text, 1: one halo, 0: plain strokes (the cheapest)
 export function text(ctx, str, x, y, size, col, o = {}) {
   str = o.raw ? String(str) : String(str).toUpperCase();
   const B = !!o.bold, u = size / 6, sk = o.italic ? 0.3 : B ? 0.16 : 0.09, w = textWidth(str, size, B), adv = size * ADV * (B ? 1.1 : 1);
@@ -31,7 +32,7 @@ export function text(ctx, str, x, y, size, col, o = {}) {
   }
   ctx.lineJoin = B ? 'miter' : 'round'; ctx.lineCap = B ? 'square' : 'round'; ctx.miterLimit = 3;
   const a = o.alpha == null ? 1 : o.alpha, lw = o.weight || (B ? Math.max(2, size / 4.6) : Math.max(1.2, size / 9));
-  if (o.glow !== false) { ctx.strokeStyle = col; if (o.tube) { ctx.globalAlpha = a * 0.1; ctx.lineWidth = lw * (B ? 3.6 : 7); ctx.stroke(); } ctx.globalAlpha = a * (B ? 0.22 : 0.28); ctx.lineWidth = lw * (B ? 2 : 3.4); ctx.stroke(); }
+  if (o.glow !== false && TG) { ctx.strokeStyle = col; if (o.tube && TG > 1) { ctx.globalAlpha = a * 0.1; ctx.lineWidth = lw * (B ? 3.6 : 7); ctx.stroke(); } ctx.globalAlpha = a * (B ? 0.22 : 0.28); ctx.lineWidth = lw * (B ? 2 : 3.4); ctx.stroke(); }
   ctx.globalAlpha = a; ctx.strokeStyle = o.core || col; ctx.lineWidth = lw; ctx.stroke();
   ctx.globalAlpha = 1;
   return w;

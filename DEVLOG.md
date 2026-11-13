@@ -562,6 +562,17 @@ The cutscenes now tell a story, five lines each, and it carries through to the e
 - The pop-up cards in the corner grow to fit their text. A long one, like the tick for the MOTHER ROCK test, used to spill out of its card.
 - On the Sun the heat meter drops below a boss or miniboss health bar instead of sitting on top of it.
 
+### 57. Smooth first: graphics settings and dynamic framerate (r65)
+
+A proper look at where the time goes. The answer was clear: the game logic costs almost nothing (about a quarter of a millisecond a frame). Nearly all of a frame is spent painting glowing lines, and the cost grows with how many pixels there are and how many times each line is painted.
+
+- **GRAPHICS: HIGH / NORMAL / LOW** in Options, VIDEO tab. HIGH is the full look. NORMAL keeps the glow but softer, at three quarters of the resolution. LOW has no glow, half the resolution and no far skyline; it is plain but sharp and readable.
+- **DYNAMIC FRAMERATE** (on by default). It watches the frame time while you play. If frames run long it drops a step within a second, faster if things are really bad, and climbs back after ten smooth seconds. If it climbs and has to drop again straight away, it waits twice as long before the next try, so it does not bounce. There is one emergency step below LOW that only this can reach. The option shows the step it is on.
+- **Cheaper glow at every setting.** The halo round each line used to be painted twice at full size. Now the glow is painted once into a small off-screen buffer and laid over the picture, and the wide outer halo is that same buffer shrunk and stretched. It looks the same and takes one pass fewer per colour.
+- **Cheaper text** on the lower settings: the neon halo on HUD text goes first.
+
+On a test machine with no graphics card at 1080p, the same Mars stretch went from 29 frames a second on HIGH to 44 to 48 with dynamic framerate on.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

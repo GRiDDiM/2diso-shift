@@ -1,6 +1,6 @@
 // 2DISO SHIFT — neon vector renderer. Everything is glowing lines; four projections of the same 3D world.
 import { VIEWS, BAR, BARMAX, DRONE_MODES, GEARS, MASK, U, solid, WAVECOL, waveAt, groundAt, SK, hyperOk } from './game.js';
-import { text, textWidth } from './font.js';
+import { text, textWidth, setTextGlow } from './font.js';
 export const W = 960, H = 540;
 const TAU = Math.PI * 2;
 const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -45,12 +45,23 @@ const rotCache = new Map();
 function hueRot(hex, deg) { const k = hex + deg; let r = rotCache.get(k); if (r) return r;
   let c = hex.slice(1); if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2]; const R = parseInt(c.slice(0, 2), 16) / 255, G = parseInt(c.slice(2, 4), 16) / 255, Bl = parseInt(c.slice(4, 6), 16) / 255, mx = Math.max(R, G, Bl), mn = Math.min(R, G, Bl), l = (mx + mn) / 2, d = mx - mn;
   let h = 0, s = 0; if (d) { s = d / (1 - Math.abs(2 * l - 1)); h = mx === R ? ((G - Bl) / d) % 6 : mx === G ? (Bl - R) / d + 2 : (R - G) / d + 4; h *= 60; } r = `hsl(${(h + deg + 360) % 360 | 0},${s * 100 | 0}%,${l * 100 | 0}%)`; rotCache.set(k, r); return r; }
+// The glow is the expensive part: wide soft strokes over millions of pixels. So the halos are drawn into a small off-screen buffer (a quarter of the pixels
+// or fewer) and laid over the picture once at the end; scaling it up only makes the glow softer. The sharp cores are still drawn at full resolution.
+let GC = null, GX = null, GON = false; const GS = 0.5;
+function glowBegin(on) { GON = !!on && typeof document !== 'undefined'; if (!GON) return; if (!GC) { GC = document.createElement('canvas'); GC.width = W * GS; GC.height = H * GS; GX = GC.getContext('2d'); }
+  GX.setTransform(1, 0, 0, 1, 0, 0); GX.globalCompositeOperation = 'source-over'; GX.globalAlpha = 1; GX.clearRect(0, 0, GC.width, GC.height); GX.setTransform(GS, 0, 0, GS, 0, 0); GX.globalCompositeOperation = 'lighter'; GX.lineCap = 'butt'; }
+let G2 = null, G2X = null;
+function glowEnd(ctx) { if (!GON) return; GON = false; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = true; ctx.drawImage(GC, 0, 0, W, H);
+  if (HQ) { if (!G2) { G2 = document.createElement('canvas'); G2.width = GC.width / 4; G2.height = GC.height / 4; G2X = G2.getContext('2d'); } G2X.clearRect(0, 0, G2.width, G2.height); G2X.drawImage(GC, 0, 0, G2.width, G2.height); ctx.globalAlpha = 0.85; ctx.drawImage(G2, 0, 0, W, H); ctx.globalAlpha = 1; } } // the wide outer halo is the same buffer shrunk again and stretched back: a blur for the price of two small copies
 function flush(ctx, glow, trip, L = 0) {
   ctx.lineCap = 'round';
   for (const b of layers[L].values()) {
-    const d = b.d; if (!d.length) continue; ctx.beginPath(); for (let i = 0; i < d.length; i += 4) { ctx.moveTo(d[i], d[i + 1]); ctx.lineTo(d[i + 2], d[i + 3]); }
-    ctx.strokeStyle = trip && !b.nt ? hueRot(b.col, trip) : b.col; const w = b.w || 1; if (glow && !b.ng && b.a >= 0.25) { if (HQ && b.a >= 0.5) { ctx.globalAlpha = 0.07 * b.a; ctx.lineWidth = 13 * Math.min(w, 2.2); ctx.stroke(); } ctx.globalAlpha = 0.2 * b.a; ctx.lineWidth = 6 * w; ctx.stroke(); } // faint lines and sparks skip the glow passes: they cost the most and show the least
-    ctx.globalAlpha = b.a; ctx.lineWidth = 1.6 * w; ctx.stroke(); d.length = 0;
+    const d = b.d; if (!d.length) continue; const w = b.w || 1, col = trip && !b.nt ? hueRot(b.col, trip) : b.col, gl = glow && GON && !b.ng && b.a >= 0.25; // faint lines and sparks skip the glow: it costs the most and shows the least
+    if (gl) { const p = new Path2D(); for (let i = 0; i < d.length; i += 4) { p.moveTo(d[i], d[i + 1]); p.lineTo(d[i + 2], d[i + 3]); }
+      GX.strokeStyle = col; GX.globalAlpha = 0.26 * b.a; GX.lineWidth = 6 * w; GX.stroke(p); // one soft stroke per colour; the buffer's blur does the rest
+      ctx.strokeStyle = col; ctx.globalAlpha = b.a; ctx.lineWidth = 1.6 * w; ctx.stroke(p); }
+    else { ctx.beginPath(); for (let i = 0; i < d.length; i += 4) { ctx.moveTo(d[i], d[i + 1]); ctx.lineTo(d[i + 2], d[i + 3]); } ctx.strokeStyle = col; ctx.globalAlpha = b.a; ctx.lineWidth = 1.6 * w; ctx.stroke(); }
+    d.length = 0;
   }
   ctx.globalAlpha = 1;
 }
@@ -62,6 +73,7 @@ function drawQuads(ctx, L) { const quads = qlay[L]; if (!quads.length) return; q
   for (const f of quads) { const q = f.q; ctx.beginPath(); ctx.moveTo(q[0], q[1]); for (let i = 2; i < q.length; i += 2) ctx.lineTo(q[i], q[i + 1]); ctx.closePath();
     if (f.h) { const h = f.h; ctx.moveTo(h[0], h[1]); for (let i = 2; i < h.length; i += 2) ctx.lineTo(h[i], h[i + 1]); ctx.closePath(); } /* a wall with a hole cut through it */
     const fr = f.h ? 'evenodd' : 'nonzero'; if (f.dark) { ctx.fillStyle = '#02010a'; ctx.globalAlpha = f.dark; ctx.fill(fr); ctx.globalAlpha = 1; }
+    if (GON && f.dark && !f.h) { GX.globalCompositeOperation = 'destination-out'; GX.globalAlpha = f.dark; GX.beginPath(); GX.moveTo(q[0], q[1]); for (let i = 2; i < q.length; i += 2) GX.lineTo(q[i], q[i + 1]); GX.closePath(); GX.fill(); GX.globalCompositeOperation = 'lighter'; } /* a solid face hides the glow of what is behind it */
     if (f.col) { const gr = f.h ? ctx.createRadialGradient(f.c[0], f.c[1], 4, f.c[0], f.c[1], f.r) : ctx.createLinearGradient((q[0] + q[2]) / 2, (q[1] + q[3]) / 2, (q[4] + q[6]) / 2, (q[5] + q[7]) / 2); gr.addColorStop(0, rgba(f.col, f.a0)); gr.addColorStop(1, rgba(f.col, f.a1)); ctx.fillStyle = gr; ctx.fill(fr); } }
   quads.length = 0; ctx.globalCompositeOperation = 'lighter'; }
 function holePoly(outer, hole, cx, cy, cz, col, a0, a1, key, dark = 0.9) { const q = [], h = []; for (const p of outer) { P(p[0], p[1], p[2]); if (!OK) return; q.push(X, Y); } for (const p of hole) { P(p[0], p[1], p[2]); if (!OK) return; h.push(X, Y); } P(cx, cy, cz); qlay[LAY].push({ q, h, c: [X, Y], col, a0, a1, key, dark, r: Math.max(60, S * 9) }); } // the hole's centre lights the face from the opening outwards
@@ -183,12 +195,12 @@ function drawShip(g, p, t) {
 }
 
 // ---------- backdrop per planet ----------
-let RCTX = null; let GHg = null; const GH = z => GHg ? groundAt(GHg, z) : 0; // ground height under a point, when the level has hills
+let RCTX = null, LITE = false, LITE2 = false; let GHg = null; const GH = z => GHg ? groundAt(GHg, z) : 0; // ground height under a point, when the level has hills
 function backdrop(g, th, t) { GHg = g.level.hills && g.level.hills.length && !th.arena ? g : null;
   const gc = th.grid || '#2443c8', off = g.camZ % 3, base = Math.floor(g.camZ / 4), sky = th.sky, dim = vB === 0 ? 0.2 : 0.5;
   const gx = th.arena ? 13.5 : 9, gz1 = th.arena ? 36 : 30 / ZS;
   if (!th.nofloor && sky === 'city' && !th.arena) cityGround(g, gx, gz1, t);
-  if (sky === 'ice' && !th.arena) { NG = true; for (let i = 0; i < 46; i++) { const sp = 0.5 + hash(i * 1.7) * 0.8, y = 10 - ((t * 0.02 * sp + hash(i * 3.1) * 10) % 10), z = ((hash(i * 5.3) * 34 - (g.camZ * 0.6) % 34) + 34) % 34, x = (hash(i * 7.9) - 0.5) * 20 + Math.sin(t * 0.03 + i) * 0.6; diamondAt(x, y, z, 0.07 + hash(i) * 0.06, '#e8faff', 0.35 + hash(i * 2) * 0.4); } NG = false; } // snow drifting down on Pluto // Earth stands on land: asphalt, kerbs, lane lines, crossings and street lamps
+  if (sky === 'ice' && !th.arena && !LITE) { NG = true; for (let i = 0; i < 46; i++) { const sp = 0.5 + hash(i * 1.7) * 0.8, y = 10 - ((t * 0.02 * sp + hash(i * 3.1) * 10) % 10), z = ((hash(i * 5.3) * 34 - (g.camZ * 0.6) % 34) + 34) % 34, x = (hash(i * 7.9) - 0.5) * 20 + Math.sin(t * 0.03 + i) * 0.6; diamondAt(x, y, z, 0.07 + hash(i) * 0.06, '#e8faff', 0.35 + hash(i * 2) * 0.4); } NG = false; } // snow drifting down on Pluto // Earth stands on land: asphalt, kerbs, lane lines, crossings and street lamps
   if (!th.nofloor && sky === 'volcano') terrainFloor(g, gc, gx, gz1, th);
   else if (!th.nofloor) { for (let k = 0; k < (th.arena ? 14 : 16); k++) { const z = -3 - off + k * 3; if (z > gz1 + 3) break; if (sky === 'sun' || th.trippy) { let lx = -9, ly = Math.sin(z * 0.5 + t * 0.05 - 9 * 0.6) * 0.3; for (let x = -6; x <= 9; x += 3) { const y = Math.sin(z * 0.5 + t * 0.05 + x * 0.6) * 0.3; seg(lx, ly + 0.3 + GH(z), z, x, y + 0.3 + GH(z), z, gc, 0.6); lx = x; ly = y; } } else seg(-gx, GH(z), z, gx, GH(z), z, gc, 0.55); } for (let x = -gx; x <= gx; x += th.arena ? 4.5 : 3) { if (!GHg) seg(x, 0, -3, x, 0, gz1, gc, 0.55); else for (let k = 0; k < 11; k++) { const z = -3 - off + k * 3; seg(x, GH(z), z, x, GH(z + 3), z + 3, gc, 0.55); } } }
   if (GHg && vB === 0) { NG = true; for (let z = -3; z < 37 / ZS; z += 0.75) { const a = GH(z), b2 = GH(z + 0.75); if (a > 0.02 || b2 > 0.02) { LW = 2.2; seg(0, a, z, 0, b2, z + 0.75, '#ffffff', 0.75); LW = 1; seg(0, 0, z, 0, a, z, gc, 0.5); } } NG = false; } // side on, a hill is a bright ridge line with hatching under it
@@ -221,7 +233,7 @@ function cityGround(g, gx, gz1, t) { const ctx = RCTX, v = mix < 0.5 ? vA : vB, 
   for (const x of [-6.5, 6.5]) seg(x, 0.02, -3, x, 0.02, gz1, '#3a4cb8', 0.8); for (const x of [-8.6, 8.6]) seg(x, 0.02, -3, x, 0.02, gz1, '#2443c8', 0.5); // kerbs and the edge of the pavement
   for (let k = 0; k < 12; k++) { const z = -3 - off + k * 3; if (z > gz1) break; for (const x of [-2.15, 2.15]) seg(x, 0.02, z, x, 0.02, z + 1.4, '#ffe14a', 0.55); seg(0, 0.02, z, 0, 0.02, z + 3, '#ffe14a', 0.25); } // lane dashes and the centre line
   for (let k = 0; k < 2; k++) { const id = Math.floor(cz / 46) + k, z = id * 46 - cz + 20; if (z < -3 || z > gz1) continue; for (let x = -6; x <= 6; x += 0.9) seg(x, 0.02, z, x, 0.02, z + 2.2, '#c7cdf0', 0.35); seg(-8.6, 0.02, z - 0.6, 8.6, 0.02, z - 0.6, '#ffffff', 0.35); } // zebra crossings
-  for (let k = 0; k < 4; k++) { const id = Math.floor(cz / 12) + k, z = id * 12 - cz + 6; if (z < -2 || z > gz1) continue; for (const sd of [-1, 1]) { const x = sd * 7.6, on = hash(id * 3.1 + sd) > 0.15; seg(x, 0, z, x, 3.2, z, '#3a4cb8', 0.7); seg(x, 3.2, z, x - sd * 0.8, 3.4, z, '#3a4cb8', 0.7); if (on) { circle(x - sd * 0.8, 3.3, z, 0.18, '#ffe14a', 0.9, 6, 0); circle(x - sd * 0.8, 0.03, z, 0.9, '#ffe14a', 0.18, 10, 1); } } } // street lamps along both pavements
+  if (!LITE) for (let k = 0; k < 4; k++) { const id = Math.floor(cz / 12) + k, z = id * 12 - cz + 6; if (z < -2 || z > gz1) continue; for (const sd of [-1, 1]) { const x = sd * 7.6, on = hash(id * 3.1 + sd) > 0.15; seg(x, 0, z, x, 3.2, z, '#3a4cb8', 0.7); seg(x, 3.2, z, x - sd * 0.8, 3.4, z, '#3a4cb8', 0.7); if (on) { circle(x - sd * 0.8, 3.3, z, 0.18, '#ffe14a', 0.9, 6, 0); circle(x - sd * 0.8, 0.03, z, 0.9, '#ffe14a', 0.18, 10, 1); } } } // street lamps along both pavements
   NG = false; }
 function terrainFloor(g, gc, gx, gz1, th) { const step = 2.2, first = Math.floor((g.camZ - 3) / step), n = Math.ceil((gz1 + 3) / step) + 1; let prev = null;
   for (let k = 0; k < n; k++) { const id = first + k, z = id * step - g.camZ, row = []; for (let i = 0, x = -gx; x <= gx + 0.01; x += 1.5, i++) row.push([x + (hash(id * 5.3 + i) - 0.5) * 0.9, z + (hash(id * 13.1 + i * 7.7) - 0.5) * 1.7]);
@@ -429,13 +441,13 @@ export function drawWorld(ctx, g, o = {}) { RCTX = ctx;
   const t = g.tick, p0 = g.players[0], th = g.level.theme || {}; SKI = o.skin | 0; SKN = SKINS[SKI] || SKINS[0];
   vA = g.viewFrom; vB = g.view; mix = g.shiftT > 0 ? ease(1 - g.shiftT) : 1; rollA = g.shiftT > 0 ? g.shiftDir * mix * TAU : 0; wob = th.trippy ? Math.sin(t * 0.013) * 0.05 : 0;
   { const al = g.players.filter(q => q.dead <= 0), n = al.length || 1, cx = al.length ? al.reduce((a, q) => a + q.x, 0) / n : p0.x, cy = al.length ? al.reduce((a, q) => a + q.y, 0) / n : p0.y, cz = al.length ? Math.min(...al.map(q => q.z)) : p0.z; cam.x = cx * 0.55; cam.y = cy * 0.55 + 1.9; cam.z = cz - 7.5; } const tags = [];
-  HQ = !(o.q >= 1); { const bz = g.level.rules?.arena ? 0.52 : g.boss && !g.boss.dying && g.boss.z < 30 ? 0.52 : 0.68; { const zt = g.level.rules?.arena || g.boss || g.mini ? 1 : 1 / 1.3; ZS += (zt - ZS) * 0.04; if (Math.abs(ZS - zt) < 0.002) ZS = zt; } ZK += (bz - ZK) * 0.04; if (Math.abs(ZK - bz) < 0.002) ZK = bz; } // the camera pulls back for a boss so there is room to move
+  HQ = !(o.q >= 1); setTextGlow(o.q >= 2 ? 0 : o.q >= 1 ? 1 : 2); { const bz = g.level.rules?.arena ? 0.52 : g.boss && !g.boss.dying && g.boss.z < 30 ? 0.52 : 0.68; { const zt = g.level.rules?.arena || g.boss || g.mini ? 1 : 1 / 1.3; ZS += (zt - ZS) * 0.04; if (Math.abs(ZS - zt) < 0.002) ZS = zt; } ZK += (bz - ZK) * 0.04; if (Math.abs(ZK - bz) < 0.002) ZK = bz; } // the camera pulls back for a boss so there is room to move
   ctx.save();
   if (g.shake > 0.5 && o.shake !== false) ctx.translate((Math.random() - 0.5) * g.shake, (Math.random() - 0.5) * g.shake);
   ctx.globalCompositeOperation = 'lighter';
   const warp = Math.max(0, g.speedMul - 1.75) * 30; ctx.strokeStyle = '#8fa8ff'; ctx.fillStyle = '#8fa8ff'; ctx.lineWidth = 1;
   for (let i = 0; i < 70; i++) { const sp = 0.3 + hash(i) * 1.5, x = ((hash(i + 50) * W - g.camZ * sp * (vB === 0 ? 6 : 2)) % W + W) % W, y = ((hash(i + 99) * H + (vB === 3 ? g.camZ * sp * 6 : 0)) % H + H) % H; ctx.globalAlpha = 0.25 + hash(i + 7) * 0.5; if (warp > 1) { const dx = x - 480, dy = y - 270, d = Math.hypot(dx, dy) || 1; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx / d * warp * sp, y + dy / d * warp * sp); ctx.stroke(); } else ctx.fillRect(x, y, sp > 1.2 ? 2 : 1, sp > 1.2 ? 2 : 1); } ctx.globalAlpha = 1;
-  sky2d(ctx, g, th, t); ctx.globalCompositeOperation = 'lighter';
+  LITE = o.q >= 3; LITE2 = o.q >= 2; if (!LITE) sky2d(ctx, g, th, t); ctx.globalCompositeOperation = 'lighter'; // the lowest setting drops the far skyline and the decorative extras
   STYLE = { volcano: 'rock', cloud: 'cloud', bio: 'flesh', moon: 'rock', sun: 'rock' }[th.sky] || null; FILL = !!o.fill; vOcc = mix < 0.5 ? vA : vB; OCC = FILL && (vOcc === 1 || vOcc === 2); depth0(); backdrop(g, th, t); LAY = 2; buckets = layers[2]; // layer 0 = floor and skyline, 1 = ground shadows, 2+ = everything else, far to near
   for (const b of g.obs) drawObs(g, b, t);
   if (FILL) for (const e of g.enemies) if (e.type === 'boss' && e.z < 30) { const hs = e.look === 'colossus' ? 3.3 : 0; if (hs) { const ck = vB === 2 ? mix : vA === 2 ? 1 - mix : 0; BSK = 1 + 0.65 * ck; BX = e.x; BY = e.y; BZ = e.z; fillBox({ x: e.x, y: Math.max(hs, e.y - 0.2), z: e.z, hx: hs * 0.52, hy: hs, hz: hs * 0.45 }, e.col, 0.9); BSK = 1; } }
@@ -513,7 +525,7 @@ export function drawWorld(ctx, g, o = {}) { RCTX = ctx;
     else if (b.kind === 'dia') { const a = Math.min(1, (1 - f) * 1.8), r = b.r || 0.3; LW = 2.4; mesh(OCT, b.x, b.y, b.z, r * 1.3, 0, 0, 0, sk(b.col), a); LW = 1.2; mesh(OCT, b.x, b.y, b.z, r * 0.8, 0, 0, 0, '#ffffff', a * 0.8); mesh(OCT, b.x, b.y, b.z, r * 0.4, 0, 0, 0, sk(b.col), a); LW = 1; }
     else if (b.kind === 'mega' && b.t < 36) { const c = b.t / 36; for (let k = 0; k < 5; k++) { const r = ((1 - c) * 16 + k * 3.2 - (b.t * 0.35) % 3.2); if (r > 0.3) circle(b.x, b.y, b.z, r, k % 2 ? sk('#ff3df0') : sk('#ffffff'), Math.min(1, c * 1.5 + 0.2), 22, pl, b.t * 0.05); } LW = 2.5; circle(b.x, b.y, b.z, 0.9 + c * 0.8 + Math.sin(b.t) * 0.15, '#ffffff', 1, 14, pl); LW = 1; } }
   for (const s of g.shocks) { depth(s.x, s.z); circle(s.x, s.y, s.z, s.r, s.col, s.life / s.max, 16, vB === 3 ? 1 : vB === 0 ? 2 : 0); }
-  { const trip = th.trippy ? ((t * 0.8) % 360 / 30 | 0) * 30 : 0; for (let L = 0; L < NL; L++) { if (FILL) drawQuads(ctx, L); flush(ctx, o.glow !== false && !(o.q >= 2), trip, L); } depth0(); }
+  { const trip = th.trippy ? ((t * 0.8) % 360 / 30 | 0) * 30 : 0; const gl = o.glow !== false && !(o.q >= 2); glowBegin(gl); for (let L = 0; L < NL; L++) { if (FILL) drawQuads(ctx, L); flush(ctx, gl, trip, L); } glowEnd(ctx); depth0(); }
   for (const q of g.pops) { P(q.x, q.y, q.z); if (!OK) continue; text(ctx, q.txt, X, Y, q.big ? 15 : q.sm ? 6.5 : 9, q.col, { bold: true, align: 'center', alpha: Math.min(1, q.life / 20) * (q.sm ? 0.85 : 1), glow: q.big }); }
   for (const e of g.enemies) { if (!(e.hbT > 0) || e.hp <= 0 || e.type === 'boss' || e.mini || e.max < 2) continue; P(e.x, e.y + (e.hy ?? e.r) + 0.45, e.z); if (!OK) continue; const w = 26, f = Math.max(0, e.hp / e.max), a = Math.min(1, e.hbT / 20); ctx.globalAlpha = a; ctx.fillStyle = '#0a0c24'; ctx.fillRect(X - w / 2 - 1, Y - 2, w + 2, 5); ctx.fillStyle = f > 0.5 ? '#3dffb0' : f > 0.25 ? '#ffe14a' : '#ff4d6d'; ctx.fillRect(X - w / 2, Y - 1, w * f, 3); ctx.globalAlpha = 1; } // health bars on whatever is being hit
   for (const q of tags) text(ctx, q[2], q[0], q[1], 7, q[3], { align: 'center', glow: false });
@@ -645,7 +657,7 @@ const mood = m => { for (const [re, pre, f] of MOODS) if (re.test(m)) return { p
 let RQ = [], RLAST = null, RLT = 0, RG = null;
 function wrapText(str, max) { const out = []; let ln = ''; for (const w of str.split(/\s+/)) { if ((ln + ' ' + w).trim().length > max && ln) { out.push(ln); ln = w; } else ln = (ln + ' ' + w).trim(); } if (ln) out.push(ln); return out; }
 export function rivetFace(ctx, cx, cy, s, ex, talk, t, k) { // s = half size of the head. Drawn in screen space with plain canvas strokes
-  const u = s / 10, cyan = '#2ee6ff', ink = (c, w = 1.6) => { ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = w * u * 0.55; ctx.shadowColor = c; ctx.shadowBlur = 6; };
+  const u = s / 10, cyan = '#2ee6ff', ink = (c, w = 1.6) => { ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = w * u * 0.55; ctx.shadowColor = c; ctx.shadowBlur = LITE2 ? 0 : 6; };
   const shake = ex === 'scared' ? Math.sin(t * 1.9) * 0.8 : ex === 'angry' ? Math.sin(t * 1.3) * 0.5 : 0, pop = ex === 'shock' && k < 14 ? 1 + (14 - k) / 30 : 1, bob = Math.sin(t * 0.12) * 0.8;
   ctx.save(); ctx.translate(cx + shake * u, cy + bob); ctx.scale(pop, pop); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   // the head: a rounded orange shell with ear bolts and an antenna whose bulb flashes as he talks
