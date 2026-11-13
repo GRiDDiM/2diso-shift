@@ -675,6 +675,11 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - The title line is now just a female "2diso", then a male "SHIFT!" echoing away. The stutter is gone: the browser voice kept spelling it out letter by letter.
 - The game's own sound now waits about a second after launch before starting, so the ArcadeGridz app's coin-drop sound isn't cut off.
 
+### 71. The title ship flickers (r77)
+
+- Every few seconds, the turning ship on the title screen briefly glitches: torn lines, a red and blue split and a little static.
+- The jam ribbon is a little longer, so SHIFT sits clear of its bottom edge.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

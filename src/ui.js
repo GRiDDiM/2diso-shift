@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r76';
+const VER = 'r77';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -439,7 +439,7 @@ export function mountShift(root, host = {}) {
     hits.push({ x: 50, y: 86, w: 860, h: 170, fn: () => { m.off = Math.max(0, m.off - 120); } }, { x: 50, y: 256, w: 860, h: 170, fn: () => { m.off += 120; } });
     ctx.restore(); m.off = Math.min(m.off, Math.max(0, total - 300)); const f = total > 320 ? m.off / (total - 300) : 0; if (total > 320) { ctx.fillStyle = '#26306e'; ctx.fillRect(896, 90, 4, 330); ctx.fillStyle = '#2ee6ff'; ctx.fillRect(896, 90 + f * 280, 4, 50); text(ctx, lastDev === 'touch' ? 'DRAG THE STICK AREA UP / DOWN' : 'UP / DOWN TO SCROLL', 480, 432, 7, '#5a66b0', { align: 'center', glow: false }); } }
   // the jam banner: a neon pennant hanging in the top right corner of the title screen
-  function drawJamRibbon(t) { const pulse = 0.5 + 0.5 * Math.sin(t * 3), x = 852, w = 92, h = 118, tail = 18, cx = x + w / 2, sw = Math.sin(t * 1.4) * 0.012; ctx.save(); ctx.translate(cx, 0); ctx.rotate(sw); ctx.translate(-cx, 0); // it sways a little on its hook
+  function drawJamRibbon(t) { const pulse = 0.5 + 0.5 * Math.sin(t * 3), x = 852, w = 92, h = 132, tail = 18, cx = x + w / 2, sw = Math.sin(t * 1.4) * 0.012; ctx.save(); ctx.translate(cx, 0); ctx.rotate(sw); ctx.translate(-cx, 0); // it sways a little on its hook
     const path = () => { ctx.beginPath(); ctx.moveTo(x, -4); ctx.lineTo(x + w, -4); ctx.lineTo(x + w, h); ctx.lineTo(cx, h - tail); ctx.lineTo(x, h); ctx.closePath(); };
     const gr = ctx.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#2a0b45'); gr.addColorStop(1, '#7a1f9e'); path(); ctx.fillStyle = gr; ctx.shadowColor = '#ff3df0'; ctx.shadowBlur = 10 + pulse * 8; ctx.fill(); ctx.shadowBlur = 0;
     ctx.strokeStyle = '#ff3df0'; ctx.lineWidth = 2; ctx.stroke(); ctx.strokeStyle = '#ffe14a'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.lineDashOffset = -t * 10; ctx.beginPath(); ctx.moveTo(x + 5, 0); ctx.lineTo(x + 5, h - 6); ctx.moveTo(x + w - 5, 0); ctx.lineTo(x + w - 5, h - 6); ctx.stroke(); ctx.setLineDash([]);
@@ -451,7 +451,7 @@ export function mountShift(root, host = {}) {
       const k = Math.min(1, titleT / 18), sc = 1 + (1 - k) * (1 - k) * 2.2; if (titleT < 26) ctx.translate((Math.random() - 0.5) * (26 - titleT) * 0.5, (Math.random() - 0.5) * (26 - titleT) * 0.5);
       drawLogo(ctx, 480, 34 - (sc - 1) * 30, sc, t); ctx.setTransform(res, 0, 0, res, 0, 0);
       drawTagline(ctx, 480, 146, 10, t);
-      ctx.globalCompositeOperation = 'lighter'; skinPreview(ctx, skinNow(), 480, 272 + Math.sin(t * 1.3) * 6, 96, t, false); ctx.globalCompositeOperation = 'source-over'; // your ship, in your skin, turning in the middle
+      ctx.globalCompositeOperation = 'lighter'; skinPreview(ctx, skinNow(), 480, 272 + Math.sin(t * 1.3) * 6, 96, t, false); ctx.globalCompositeOperation = 'source-over'; shipGlitch(t); // your ship, in your skin, turning in the middle
       drawGrid(m, 392); // the menu: two centred rows of pills along the bottom
       drawJamRibbon(t);
       text(ctx, lastDev === 'pad' ? padNames()[0] + ' = OK     ' + padNames()[1] + ' = BACK' : lastDev === 'touch' ? 'TAP TO CHOOSE' : 'ENTER = OK     ESC = BACK', 480, 500, 8, '#8d9be0', { align: 'center', glow: false });
@@ -565,6 +565,16 @@ export function mountShift(root, host = {}) {
     if (g.view !== 1 && g.tick % 6 === 0 && wrB <= 0 && g.enemies.some(e => e.shape === 'wraith' && e.hp > 0 && e.z > 0 && e.z < 15) && Math.random() < 0.18) wrB = 3 + Math.random() * 5 | 0;
     if (wrB > 0) { wrB--; k = Math.max(k, 0.18); }
     return opt.shake ? k : k * 0.4; } /* SCREEN SHAKE off tones it right down */
+  // the title ship glitches now and then: a short burst of torn lines and colour split over just the ship
+  let sgNext = 2.5, sgEnd = 0;
+  function shipGlitch(t) { if (t > sgNext) { sgEnd = t + 0.12 + Math.random() * 0.3; sgNext = t + 2.5 + Math.random() * 4; } if (t > sgEnd) return;
+    if (!fxC) fxC = document.createElement('canvas'); if (fxC.width !== canvas.width || fxC.height !== canvas.height) { fxC.width = canvas.width; fxC.height = canvas.height; }
+    const f = fxC.getContext('2d'), r = Math.random, X0 = 345 * res | 0, Y0 = 182 * res | 0, RW = 270 * res | 0, RH = 162 * res | 0, k = 0.6 + r() * 0.4;
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); f.globalCompositeOperation = 'copy'; f.drawImage(canvas, 0, 0);
+    for (let i = 0, n = 3 + r() * 6 | 0; i < n; i++) { const h = Math.max(2, (3 + r() * 26) * res) | 0, y = Y0 + r() * RH | 0, dx = ((r() - 0.5) * 2 * k * 34 * res) | 0; ctx.drawImage(fxC, X0, y, RW, h, X0 + dx, y, RW, h); } // torn lines through the ship
+    if (tier() < 3) { const d = (k * 6 * res) | 0; for (const [col, dx] of [['#ff0030', -d], ['#00e0ff', d]]) { f.globalCompositeOperation = 'copy'; f.drawImage(canvas, 0, 0); f.globalCompositeOperation = 'multiply'; f.fillStyle = col; f.fillRect(X0, Y0, RW, RH); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 * k; ctx.drawImage(fxC, X0, Y0, RW, RH, X0 + dx, Y0, RW, RH); } }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; for (let i = 0; i < 14; i++) { const v = 150 + r() * 105 | 0; ctx.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',' + (0.2 + r() * 0.4).toFixed(2) + ')'; ctx.fillRect(X0 + r() * RW, Y0 + r() * RH, (4 + r() * 40) * res, res); } // a little static
+    ctx.restore(); }
   function glitchFx(k) { if (!fxC) fxC = document.createElement('canvas'); if (fxC.width !== canvas.width || fxC.height !== canvas.height) { fxC.width = canvas.width; fxC.height = canvas.height; }
     const f = fxC.getContext('2d'), cw = canvas.width, ch = canvas.height, r = Math.random; glF++;
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; f.globalCompositeOperation = 'copy'; f.drawImage(canvas, 0, 0);
