@@ -3,7 +3,7 @@
 // (C) 2026 GRiDDiM / ArcadeGridz / BDC
 import { createGame, step, autopilot, snapshot, makeWing, VIEWS, BAR, GEARS, INTRO } from './game.js';
 import { LEVELS, ORDER, buildLevel } from './levels.js';
-import { W, H, drawWorld, drawHUD, drawLogo, drawTagline, drawSplash, meshScreen, text, textWidth, SHIP_HULL, SHIP_WING, SHIP_FIN, RAINBOW, VCOL, PIV, logosReady, rivetLine, rivetFace } from './render.js';
+import { W, H, drawWorld, drawHUD, drawLogo, drawTagline, drawSplash, meshScreen, text, textWidth, SHIP_HULL, SHIP_WING, SHIP_FIN, RAINBOW, VCOL, PIV, logosReady, rivetLine, rivetFace, skinPreview } from './render.js';
 import { createAudio } from './audio.js';
 import { DEVLOG, CREDITS } from './devlog.js';
 
@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r56';
+const VER = 'r57';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -65,7 +65,7 @@ export function mountShift(root, host = {}) {
   const opt = Object.assign({ music: 0.7, sfx: 0.8, glow: coarse ? 'low' : 'high', shake: true, idle: false, autofire: coarse, gear: 0, voice: true, fill: true, assist: false, ghost: true, crt: false, skin: 0, autobomb: false }, LS.get('opt', {})); const saveOpt = () => LS.set('opt', opt);
   // ship skins: looks only. Each is earned with an achievement, or owned through the host site's store when it sells them
   const SKIN = [['PILOT'], ['FIRE MAGE', 'mars', 'DEFEAT THE COLOSSUS', 'shift-fire-mage'], ['DARK LORD', 'x', 'DEFEAT THE SHIFTER', 'shift-dark-lord'], ['PIXIE', 'jupiter', 'DEFEAT THE EYE', 'shift-pixie']];
-  let owned = LS.get('owned', []), forSale = [], skinView = opt.skin | 0; if (host.skins) Promise.resolve().then(() => host.skins()).then(r => { if (r && Array.isArray(r.owned)) { owned = r.owned; LS.set('owned', owned); } if (r && Array.isArray(r.forSale)) forSale = r.forSale; }).catch(() => { });
+  let owned = LS.get('owned', []), forSale = [], prices = { 'shift-fire-mage': 500, 'shift-pixie': 650, 'shift-dark-lord': 800 }, skinView = opt.skin | 0; if (host.skins) Promise.resolve().then(() => host.skins()).then(r => { if (r && Array.isArray(r.owned)) { owned = r.owned; LS.set('owned', owned); } if (r && Array.isArray(r.forSale)) forSale = r.forSale; if (r && r.prices) Object.assign(prices, r.prices); }).catch(() => { });
   const skinOk = i => !i || BUGTEST && opt.skinTest || !!SKIN[i] && (!!LS.get('ach', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinReal = i => !i || !!SKIN[i] && (!!LS.get('ach', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinNow = () => skinOk(opt.skin | 0) ? opt.skin | 0 : 0;
   const audio = createAudio(opt);
   let q = 0, slow = 0, ema = 16; // q: automatic quality step-down when frames run long (0 full, 1 no outer halo + lower res, 2 no glow)
@@ -458,9 +458,17 @@ export function mountShift(root, host = {}) {
     else if (m.kind === 'scores') { const rows = m.rows; if (!rows) text(ctx, 'LOADING...', 480, 240, 12, '#9fb0ff', { align: 'center' }); else if (!rows.length) text(ctx, 'NO SCORES YET', 480, 240, 12, '#9fb0ff', { align: 'center' });
       else rows.slice(0, 10).forEach((r, k) => { const y = 124 + k * 30; text(ctx, String(k + 1), 250, y, 13, '#ffe14a', { align: 'right' }); text(ctx, String(r.name || '???').slice(0, 14), 280, y, 13, '#ffffff'); text(ctx, String(r.score), 700, y, 13, '#3dffb0', { align: 'right' }); const tag = r.cheater ? 'CHEATER' : r.assisted ? 'ASSISTED' : r.verified === false ? 'UNVERIFIED' : ''; if (tag) text(ctx, tag, 716, y + 3, 7, '#ff8a2b', { glow: false }); });
       drawItems(m, 480, 450, 14, 30); }
-    else if (m.tabs) { drawTabs(m, y0 + 56); const sub = { ...m, items: m.items.slice(1), i: m.i - 1 }; const h0 = hits.length; drawItems(sub, 480, y0 + 62 + gap, 14, gap); for (let k = h0; k < hits.length; k++) if (hits[k].i != null) hits[k].i += 1; }
+    else if (m.tabs) { drawTabs(m, y0 + 56); if (m.tabs[m.tab].name === 'SHIP') drawSkinCard(y0 + 62 + gap * 3); const sub = { ...m, items: m.items.slice(1), i: m.i - 1 }; const h0 = hits.length; drawItems(sub, 480, y0 + 62 + gap, 14, gap); for (let k = h0; k < hits.length; k++) if (hits[k].i != null) hits[k].i += 1; }
     else drawItems(m, 480, y0 + 62 + nn, 14, gap);
   }
+  function drawSkinCard(y) { const t = performance.now() / 1000, i = skinView, S = SKIN[i], ok = skinOk(i), on = (opt.skin | 0) === i, slug = S[3], price = slug && prices[slug];
+    rr(330, y, 300, 150, 12); ctx.fillStyle = 'rgba(4,6,20,.85)'; ctx.fill(); ctx.strokeStyle = ok ? '#2ee6ff' : '#3a4380'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; skinPreview(ctx, i, 480, y + 62, 66, t, !ok); ctx.restore();
+    SKIN.forEach((_, k) => { ctx.fillStyle = k === i ? '#ffe14a' : skinOk(k) ? '#2ee6ff' : '#30345a'; ctx.beginPath(); ctx.arc(480 + (k - (SKIN.length - 1) / 2) * 14, y + 12, k === i ? 4 : 3, 0, 6.3); ctx.fill(); }); // which of the skins you are looking at
+    if (!ok) { const lx = 480, ly = y + 62; ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(lx, ly - 10, 9, Math.PI, 0); ctx.stroke(); rr(lx - 14, ly - 10, 28, 22, 4); ctx.fillStyle = '#ff4d6d'; ctx.fill(); ctx.fillStyle = '#1a0610'; ctx.beginPath(); ctx.arc(lx, ly, 3.5, 0, 6.3); ctx.fill(); } // a padlock over a dim ship
+    text(ctx, S[0], 480, y + 102, 12, ok ? '#ffffff' : '#7d8bd6', { align: 'center', bold: true, glow: ok });
+    const how = !S[1] ? 'THE STANDARD SHIP' : ok ? (on ? 'EQUIPPED' : 'UNLOCKED') : 'LOCKED - ' + S[2], buy = !ok && S[1] ? (price ? 'OR ' + price + ' SPARKZ IN THE STORE' : 'OR BUY IT WITH SPARKZ') : '';
+    text(ctx, on && ok ? 'EQUIPPED' : how, 480, y + 120, 7, on && ok ? '#3dffb0' : ok ? '#2ee6ff' : '#ff4d6d', { align: 'center', bold: true, glow: false }); if (buy) text(ctx, buy, 480, y + 134, 6.5, '#ffe14a', { align: 'center', bold: true, glow: false }); }
   function drawTabs(m, y) { const n = m.tabs.length, tw = 70, x0 = 480 - n * tw / 2, on = m.i === 0; // the tab strip: the open tab lit, the row itself glowing when it is the one you are on
     m.tabs.forEach((q, k) => { const x = x0 + k * tw, cur = k === m.tab; rr(x + 3, y - 4, tw - 6, 20, 10); ctx.fillStyle = cur ? (on ? '#ffe14a' : 'rgba(255,225,74,.25)') : 'rgba(9,6,22,.8)'; ctx.fill(); ctx.strokeStyle = cur ? '#ffe14a' : '#2ee6ff'; ctx.globalAlpha = cur ? 1 : 0.6; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = 1;
       text(ctx, q.name, x + tw / 2, y + 2, 8, cur ? (on ? '#17101b' : '#ffe14a') : '#8d9be0', { align: 'center', bold: true, glow: false }); hits.push({ x, y: y - 4, w: tw, h: 20, fn: () => { m.i = 0; setTab(m, k); audio.sfx('move'); } }); }); }

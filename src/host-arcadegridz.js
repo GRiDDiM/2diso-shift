@@ -9,8 +9,8 @@ export function mountTwoDisoShift(root, { onExit } = {}) {
   let gone = false, timer = 0;
   const inst = mountShift(root, { hosted: true, onExit: () => onExit?.(),
     leaderboard: () => window.ArcadeGridzBridge?.leaderboard ? window.ArcadeGridzBridge.leaderboard(ID) : fetch('/api/leaderboards', { cache: 'no-store' }).then(r => r.json()).then(d => d?.games?.[ID] || []),
-    skins: async () => { const out = { owned: [], forSale: [] }, t = token(), mine = s => typeof s === 'string' && s.startsWith('shift-'); // skins bought in the Network store: which are on sale, and which this account owns
-      try { const c = await fetch('https://griddim.com/api/sparkz/catalogue', { cache: 'no-store' }).then(r => r.json()); out.forSale = (c.items || c.catalogue || []).map(i => i.slug).filter(mine); } catch { }
+    skins: async () => { const out = { owned: [], forSale: [], prices: {} }, t = token(), mine = s => typeof s === 'string' && s.startsWith('shift-'); // skins bought in the Network store: which are on sale, and which this account owns
+      try { const c = await fetch('https://griddim.com/api/sparkz/catalogue', { cache: 'no-store' }).then(r => r.json()); const it = (c.items || c.catalogue || []).filter(i => mine(i.slug)); out.forSale = it.map(i => i.slug); out.prices = Object.fromEntries(it.map(i => [i.slug, i.price])); } catch { }
       if (t) try { const d = await fetch('https://griddim.com/account/sparkz/inventory', { cache: 'no-store', headers: { Authorization: 'Bearer ' + t } }).then(r => r.json()); out.owned = (d.items || []).map(i => i.slug).filter(mine); } catch { }
       return out; },
     submitScore(r) { const t = token(); if (!t || !(r.score > 0)) return; fetch(`/api/catalog/${ID}/score`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + t }, body: JSON.stringify({ score: r.score, tags: r.assisted ? ['assisted'] : [] }) }).catch(() => { }); } });

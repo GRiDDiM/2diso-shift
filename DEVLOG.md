@@ -478,6 +478,10 @@ The cutscenes now tell a story, five lines each, and it carries through to the e
 
 - The Game Off note on the title screen is now a neon pennant hanging in the top right corner: GITHUB GAME OFF 2026, THEME: SHIFT and a DEVLOG button. It sways, glints and glows brighter when you point at it. Click or tap it, or press the drone button, to read the devlog. The DEVLOG item has left the title menu.
 
+### 49. Skin previews (r57)
+
+- The SHIP tab in Options now shows the skin you are looking at as a turning model, with dots for all four skins. A skin you have not earned is a dim silhouette with a padlock, plus what unlocks it: beat the boss, or the Sparkz price from the store (FIRE MAGE: THE COLOSSUS or 500, PIXIE: THE EYE or 650, DARK LORD: THE SHIFTER or 800).
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

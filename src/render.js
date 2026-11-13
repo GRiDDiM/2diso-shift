@@ -693,6 +693,9 @@ export function drawHUD(ctx, g, o = {}) {
 }
 
 // ---------- screen-space pieces for the splash screens, title and menus ----------
+// a turning model of one ship skin for the skin picker; locked skins are a dim silhouette
+export function skinPreview(ctx, i, x, y, s, t, locked) { const K = SKINS[i] || SKINS[0], a = t * 0.8, pi = -0.3 + Math.sin(t * 0.9) * 0.12, rl = Math.sin(t * 0.7) * 0.25;
+  K.m.forEach((M, k) => meshScreen(ctx, M, x, y, s, a, pi, rl, locked ? '#3a4380' : K.c[k], !locked)); }
 export function meshScreen(ctx, M, cx, cy, s, yaw, pitch, roll, col, glow = true) {
   const cyw = Math.cos(yaw), syw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll), sr = Math.sin(roll);
   ctx.beginPath();
