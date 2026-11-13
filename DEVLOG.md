@@ -657,6 +657,13 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - The ship swooping in at the end of the intro has a sound now: air building to a roar as it comes at you, then a falling doppler as it peels away.
 - Fixed the old drawn GRiDDiM splash flashing up for a moment before the real logo: the intro now shows nothing until the logo image has loaded, and it waits by the clock instead of counting frames, which ran out early on fast monitors.
 
+### 68. Splash sounds and two voices (r74)
+
+- The GRiDDiM splash hums and crackles like a neon sign powering up.
+- The ArcadeGridz splash plays a couple of bars of chiptune, finishing on a bright chord.
+- The ship's swoop sound starts a little earlier.
+- The title line is now two voices: a female voice says "2diso", then a male voice stutters "shif, shif, SHIFT!" and echoes away. The voices are picked once the browser has its full voice list, so the first line no longer falls back to the default voice.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
