@@ -395,7 +395,7 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 ### 36. A new voice (r43)
 
 - **The announcer is a woman now.** A calm, close, unhurried voice, picked from the best female voice the browser offers, a little lower and slower than normal speech.
-- **Title voiceover.** The title screen says the name: "two D, iso ... shift".
+- **Title voiceover.** The title screen says the name: "two-diso ... shift".
 - **ISO is a word.** The announcer used to spell out I-S-O; it now says "eye-so", like the rest of us.
 
 ## Still to do

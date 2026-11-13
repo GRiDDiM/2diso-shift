@@ -67,8 +67,8 @@ export function createAudio(opt) {
   }
   // ---- announcer ----
   let lastSay = 0, vox = null;
-  // say words the way the game means them: ISO is a word (eye-so), not three letters; 2DISO is 'two D, iso'
-  const speakable = t => String(t).toLowerCase().replace(/\b2d ?iso\b/g, 'two dee, eye-so').replace(/\biso\b/g, 'eye-so');
+  // say words the way the game means them: ISO is a word (eye-so), not three letters; 2DISO is 'two diso'
+  const speakable = t => String(t).toLowerCase().replace(/\b2d ?iso\b/g, 'two diso').replace(/\biso\b/g, 'eye-so');
   function say(txt, force) { const sy = window.speechSynthesis; if (!sy || !opt.voice || opt.mute || opt.sfx <= 0) return; const now = performance.now(); if (!force && (sy.speaking || now - lastSay < 900)) return; lastSay = now;
     try { if (force) sy.cancel(); sfx('vox'); const u = new SpeechSynthesisUtterance(speakable(txt)); if (!vox) { const vs = sy.getVoices(); vox = vs.find(v => /Microsoft (Aria|Jenny|Sonia|Libby|Emma|Ava|Michelle|Natasha) Online/i.test(v.name)) || vs.find(v => /Google UK English Female|Samantha|Serena|Moira|Karen|Tessa|Ava|Allison|Susan|Hazel|Zira/i.test(v.name)) || vs.find(v => /^en/i.test(v.lang) && /female|woman/i.test(v.name)) || vs.find(v => /Google US English/i.test(v.name)) || vs.find(v => /^en/i.test(v.lang)) || null; } if (vox) u.voice = vox; u.pitch = 0.92; u.rate = /!$/.test(txt) ? 0.98 : 0.86; /* a calm, close, low female voice: unhurried, never shouted */ u.volume = Math.min(1, opt.sfx * 1.1); sy.speak(u); } catch { } }
   return { unlock() { if (init() && ac.state === 'suspended') ac.resume().catch(() => { }); }, sfx, vol, say, hush() { try { window.speechSynthesis?.cancel(); } catch { } },
