@@ -68,6 +68,7 @@ function fireRing(g, b, col, n = 16, sp = 2.6, hole = 4) { const gap = g.rand() 
 const fan = (g, b, n, sp = 8, col) => { for (let i = 0; i < n; i++) aimed(g, b, sp, (i - (n - 1) / 2) * 0.17, col); g.fx.push('eshot'); };
 function boss(spec) {
   const update = (g, b, dt) => {
+    { const k = bossScale(g); if (b.k && Math.abs(k - b.k) > 1e-3 && !b.dying) { b.hp *= k / b.k; b.max = Math.round(b.max * k / b.k); } b.k = k; } // your firepower changed (an upgrade, or losing guns to a death): health and its cap scale together, so the boss keeps the same share it had
     const S = spec.stages[b.stage], p = g.players[0];
     if (b.dying) { b.dying++; g.lockShift = true; if (spec.glitchy && (b.dying === 2 || b.dying % 36 === 2)) glitch(g, b.dying === 2 ? 50 : 22, b.dying === 2 ? 1 : 0.8); for (const q of g.players) q.inv = Math.max(q.inv, 40); // the finisher: the fold rolls through all four views while it comes apart
       if (b.dying % 36 === 2 && b.dying < 146) { g.viewFrom = g.view; g.view = (g.view + 1) % 4; g.shiftT = 1; g.shiftDir = 1; g.fx.push('shift', 'boom2'); g.flash = 8; for (let i = 0; i < 3; i++) g.shocks.push({ x: b.x, y: b.y, z: b.z, r: 0.5, vr: 14 + i * 10, life: 30, max: 30, col: ['#ffffff', '#ff3df0', '#2ee6ff'][i] }); }
@@ -495,7 +496,7 @@ function pluto() { // the cold edge: shatter the shelf, dodge the snowflake come
 // ---------- minibosses: one closes every bonus arena and every warp stage ----------
 // a miniboss is an ordinary enemy carrying its own little brain (e.ai), run once a tick by the level
 const power = g => 0.5 + 0.25 * g.players[0].up.slice(1, 6).reduce((a, b) => a + b, 0); // minibosses are as tough as your guns are strong
-const runMini = g => { const e = g.mini; if (!e) return; if (e.hp > 0) { e.mt = (e.mt || 0) + 1; e.ai(g, e, e.mt); } else if (!e.fin) { e.fin = true; g.score += 5000; g.shake = 14; g.flash = 12; g.fx.push('boom2', 'say:miniboss destroyed', 'toast:' + e.name + ' DESTROYED|+5000'); for (let i = 0; i < 3; i++) addPod(g, e.x + (i - 1) * 2, e.y, e.z + (i - 1)); for (let i = 0; i < 4; i++) explode(g, e.x + (g.rand() - 0.5) * 3, e.y + (g.rand() - 0.5) * 2, e.z, i % 2 ? '#ffffff' : e.col, 30, 13); g.ebul.length = 0; } };
+const runMini = g => { const e = g.mini; if (!e) return; { const k = power(g); if (e.pk && Math.abs(k - e.pk) > 1e-3 && e.hp > 0) { e.hp *= k / e.pk; e.hpMax = Math.round(e.hpMax * k / e.pk); e.max = e.hpMax; } e.pk = k; } if (e.hp > 0) { e.mt = (e.mt || 0) + 1; e.ai(g, e, e.mt); } else if (!e.fin) { e.fin = true; g.score += 5000; g.shake = 14; g.flash = 12; g.fx.push('boom2', 'say:miniboss destroyed', 'toast:' + e.name + ' DESTROYED|+5000'); for (let i = 0; i < 3; i++) addPod(g, e.x + (i - 1) * 2, e.y, e.z + (i - 1)); for (let i = 0; i < 4; i++) explode(g, e.x + (g.rand() - 0.5) * 3, e.y + (g.rand() - 0.5) * 2, e.z, i % 2 ? '#ffffff' : e.col, 30, 13); g.ebul.length = 0; } };
 const ring2 = (g, e, n, sp, col, off = 0) => { for (let i = 0; i < n; i++) { const a = i / n * 6.283 + off; bullet(g, e.x, e.y, e.z, Math.cos(a) * sp, 0, Math.sin(a) * sp, col); } g.fx.push('eshot'); }; // a flat ring, for the arenas
 const ARENA_MINI = {
   // GRID WARDEN: patrols a square circuit, sweeping four rotating streams, and launches chasers

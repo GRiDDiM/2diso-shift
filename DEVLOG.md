@@ -706,6 +706,11 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 
 - In a boss or miniboss fight in ISO view, left and right now move you toward or away from the boss instead of across the lane, so you can back off or close in to get out of the way. Up and down still change height. Everywhere else ISO works as before.
 
+### 77. Fair fights, kept guns (r83)
+
+- Boss and miniboss health now follows your firepower during the fight, not just when it starts. Lose your guns to a death and the boss's health and its cap shrink together, so it keeps the same share it had. Upgrade mid-fight and it toughens up the same way. It never just refills or empties.
+- New rule: take a weapon all the way to max rank and it's yours for good. You keep it even when you lose a ship. RIVET-9 tells you when it happens. Spend wisely and your loadout builds up over a run.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
