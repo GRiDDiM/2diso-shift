@@ -3,7 +3,7 @@
 // (C) 2026 GRiDDiM / ArcadeGridz / BDC
 import { createGame, step, autopilot, snapshot, makeWing, VIEWS, BAR, GEARS, INTRO } from './game.js';
 import { LEVELS, ORDER, buildLevel } from './levels.js';
-import { W, H, drawWorld, drawHUD, drawLogo, drawTagline, drawSplash, meshScreen, text, textWidth, SHIP_HULL, SHIP_WING, SHIP_FIN, RAINBOW, VCOL, PIV, logosReady, rivetLine } from './render.js';
+import { W, H, drawWorld, drawHUD, drawLogo, drawTagline, drawSplash, meshScreen, text, textWidth, SHIP_HULL, SHIP_WING, SHIP_FIN, RAINBOW, VCOL, PIV, logosReady, rivetLine, rivetFace } from './render.js';
 import { createAudio } from './audio.js';
 import { DEVLOG, CREDITS } from './devlog.js';
 
@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r53';
+const VER = 'r54';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -198,6 +198,11 @@ export function mountShift(root, host = {}) {
 
   // ---------- story ----------
   const STORY = ['THE COSMIC SHIFT HAS BEGUN.', 'A RIFT FROM PLANET X IS FOLDING REALITY,', 'ONE WORLD AT A TIME.', "EARTH'S OWN DEFENCE GRID HAS TURNED ON ITS CITIES.", 'ONE SHIP CAN SEE ALL FOUR FACES OF THE FOLD.', 'YOURS.', 'SHIFT WITH IT. OR BE FLATTENED.'];
+  // between planets: a short flight with RIVET-9 on comms, his face doing the acting
+  const CUT = { mars: [['happy', 'EARTH HOLDS. NICE FLYING, PILOT!'], ['scared', 'BUT THE SHIFT ROLLS ON. MARS IS FOLDING.'], ['shock', 'ITS FORGES ARE AWAKE...'], ['angry', 'AND THE STONE HEADS HAVE OPENED THEIR EYES. LET\'S GO!']],
+    jupiter: [['starry', 'MARS IS COOLING. WE DID THAT!'], ['shock', 'THE RIFT HAS REACHED JUPITER!'], ['scared', 'THE STORM HAS AN EYE NOW...'], ['scared', 'AND IT IS LOOKING AT YOU. ONLY YOU. NOT ME. PROBABLY.']],
+    x: [['smug', 'THE STORM IS QUIET. TOLD YOU WE HAD THIS.'], ['shock', 'ONE WORLD LEFT. THE ONE THAT STARTED IT.'], ['scared', 'PLANET X IS NOT A PLACE. IT IS ALIVE. EWW.'], ['angry', 'END THE SHIFT, PILOT!']] };
+  const PCOL = { earth: '#2ee6ff', mars: '#ff8a2b', jupiter: '#9d5bff', x: '#3dffb0' };
   const BRIEF = { mars: ['EARTH HOLDS.', 'BUT THE SHIFT ROLLS ON.', 'MARS IS FOLDING. ITS FORGES ARE AWAKE,', 'AND THE STONE HEADS HAVE OPENED THEIR EYES.'], jupiter: ['MARS IS COOLING.', 'THE RIFT HAS REACHED JUPITER.', 'THE STORM HAS AN EYE NOW.', 'AND IT IS LOOKING AT YOU.'], x: ['THE STORM IS QUIET.', 'ONE WORLD LEFT. THE ONE THAT STARTED IT.', 'PLANET X IS NOT A PLACE. IT IS ALIVE.', 'END THE SHIFT.'] };
   const ENDING = ['THE SHIFTER FOLDS IN ON ITSELF.', 'FOUR FACES. THEN TWO. THEN ONE. THEN NOTHING.', 'THE RIFT CLOSES BEHIND YOU LIKE A WOUND.', "JUPITER'S STORM GOES BACK TO BEING ONLY A STORM.", 'THE FORGES OF MARS GO DARK. THE STONE HEADS CLOSE THEIR EYES.', 'ON EARTH, THE GRID WAKES AND REMEMBERS WHOSE SIDE IT IS ON.', 'NOBODY DOWN THERE WILL KNOW HOW CLOSE THE WORLD CAME TO BEING FLAT.', 'YOU DO. YOU SAW EVERY SIDE OF IT.', 'BUT FAR PAST PLUTO, SOMETHING ROLLS OVER IN ITS SLEEP...'];
   // the ending, then the credit roll, then the choice to loop
@@ -235,7 +240,27 @@ export function mountShift(root, host = {}) {
     ctx.globalCompositeOperation = 'source-over'; for (let j = Math.max(0, k - 1); j <= k; j++) { const ln = st.lines[j], age = st.t - j * per, cur = j === k, sz = ln.length > 50 ? 9 : 11; text(ctx, cur ? ln.slice(0, Math.max(0, age * 0.9 | 0)) : ln, 480 - (cur ? textWidth(ln, sz) / 2 : 0), cur ? 440 : 410, cur ? sz : sz - 2, cur ? '#ffffff' : '#5a66b0', { align: cur ? 'left' : 'center', glow: cur }); }
     if (st.t > 90) text(ctx, lastDev === 'touch' ? 'TAP TO SKIP' : lastDev === 'pad' ? padNames()[0] + ' TO SKIP' : 'ENTER TO SKIP', 480, 512, 7, '#3a4380', { align: 'center', glow: false }); }
   function startStory(lines, after, end) { menus.length = 0; story = { lines, after, t: 0, said: -1, end }; scene = 'story'; sceneT = 0; prevM = { ok: true, pause: true, back: true }; audio.music('title'); }
-  function drawStory() { const st = story, t = performance.now() / 1000; if (st.end) return drawEnding(st); ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'lighter';
+  function drawCut(st) { const t = st.t / 60, c = st.cut, per = 150, n = st.lines.length, k = Math.min(n - 1, st.t / per | 0), dur = n * per + 120, f = Math.min(1, st.t / dur), TAU2 = Math.PI * 2;
+    ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'lighter';
+    for (let q = 0; q < 110; q++) { const sp = 2 + q % 4 * 2.5, x = W - ((q * 197 + st.t * sp) % (W + 80)), y = (q * 71 + q * q * 3) % 380; ctx.strokeStyle = '#8fa8ff'; ctx.globalAlpha = 0.15 + (q % 5) * 0.1; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + sp * 4, y); ctx.stroke(); } ctx.globalAlpha = 1; // stars streaking past
+    const e = f * f * (3 - 2 * f); orb(220 - e * 360, 200, 70 - e * 30, PCOL[c.from] || '#2ee6ff', 0.9 * (1 - e * 0.6), t, c.from === 'mars'); // the world you saved slides away behind
+    const tx = 860 - e * 120, tr = 26 + e * 96; orb(tx, 190, tr, PCOL[c.to] || '#ff3df0', 0.95, t, c.to === 'jupiter'); // the next one looms
+    ctx.strokeStyle = '#ff3df0'; ctx.lineWidth = 2; for (let j = 0; j < 2; j++) { ctx.globalAlpha = (0.5 + 0.4 * Math.sin(t * 6 + j)) * Math.min(1, e * 2); ctx.beginPath(); for (let q = 0; q <= 8; q++) { const yy = 190 - tr + q * tr / 4, xx = tx - tr * 0.2 + j * 10 + Math.sin(q * 1.9 + t * 3 + j) * tr * 0.12 + (q % 2 ? 6 : -6); q ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.stroke(); } ctx.globalAlpha = 1; // the rift cracked across it
+    const bob = Math.sin(t * 2.2) * 6, sx = 380 + Math.sin(t * 0.7) * 30, sy = 250 + bob; // the ship, with RIVET-9 tucked in behind
+    for (const [x, y, s2, cols] of [[sx - 110, sy + 44 + Math.sin(t * 2.2 + 1) * 5, 30, ['#ffb070', '#ffe14a', '#ffb070']], [sx, sy, 46, ['#ffffff', '#2ee6ff', '#ff3df0']]]) { ctx.strokeStyle = cols[1]; ctx.lineWidth = 2; ctx.globalAlpha = 0.55; ctx.beginPath(); ctx.moveTo(x - s2 * 0.8, y); ctx.lineTo(x - s2 * 0.8 - 60 - 20 * Math.sin(t * 30 + x), y); ctx.stroke(); ctx.globalAlpha = 1;
+      const rl = Math.sin(t * 1.3 + x) * 0.25; meshScreen(ctx, SHIP_HULL, x, y, s2, Math.PI / 2, 0.25, rl, cols[0]); meshScreen(ctx, SHIP_WING, x, y, s2, Math.PI / 2, 0.25, rl, cols[1]); meshScreen(ctx, SHIP_FIN, x, y, s2, Math.PI / 2, 0.25, rl, cols[2]); }
+    ctx.globalCompositeOperation = 'source-over';
+    text(ctx, 'NEXT  //  ' + LEVELS[c.to].name, 860 - e * 120, 190 + tr + 18, 11, PCOL[c.to] || '#ffffff', { align: 'center', bold: true, alpha: Math.min(1, e * 3) });
+    // RIVET-9 on comms along the bottom
+    const bx = 120, by = 392, bw = 720, bh = 104, age = st.t - k * per, ln = st.lines[k], shown = Math.max(0, age * 1.1 | 0), talking = shown < ln.length, ex = c.faces[k] || 'happy';
+    ctx.fillStyle = 'rgba(6,4,22,0.9)'; rr(bx, by, bw, bh, 12); ctx.fill(); ctx.strokeStyle = '#ffb070'; ctx.lineWidth = 2; ctx.shadowColor = '#ffb070'; ctx.shadowBlur = 12; ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,176,112,0.16)'; rr(bx, by, bw, 18, [12, 12, 0, 0]); ctx.fill(); ctx.fillStyle = '#3dff6a'; ctx.beginPath(); ctx.arc(bx + 110, by + 9, 3, 0, TAU2); ctx.fill(); text(ctx, 'RIVET-9', bx + 118, by + 5, 8, '#ffb070', { bold: true, glow: false }); text(ctx, 'COMMS OPEN', bx + bw - 14, by + 5, 7, '#7d8bd6', { align: 'right', glow: false });
+    ctx.fillStyle = '#04081a'; rr(bx + 10, by + 10, 86, 86, 8); ctx.fill(); ctx.strokeStyle = '#3a4cb8'; ctx.lineWidth = 1; ctx.stroke(); rivetFace(ctx, bx + 53, by + 56, 34, ex, talking && (st.t >> 2) % 2 === 0, st.t, age);
+    const words = ln.split(' '), lines = []; let cur = ''; for (const w of words) { if ((cur + ' ' + w).trim().length > 44 && cur) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); } lines.push(cur);
+    let left = shown; lines.forEach((l2, j) => { if (left <= 0) return; text(ctx, l2.slice(0, left), bx + 112, by + 32 + j * 22, 13, '#ffffff', { bold: true, glow: j === 0 }); left -= l2.length + 1; });
+    for (let j = 0; j < n; j++) { ctx.fillStyle = j <= k ? '#ffb070' : '#30345a'; ctx.fillRect(bx + bw - 16 - (n - j) * 12, by + bh - 12, 8, 4); }
+    text(ctx, lastDev === 'touch' ? 'TAP TO SKIP' : lastDev === 'pad' ? padNames()[0] + ' TO SKIP' : 'ENTER TO SKIP', 480, 522, 7, '#5a66b0', { align: 'center', glow: false }); }
+  function drawStory() { const st = story, t = performance.now() / 1000; if (st.end) return drawEnding(st); if (st.cut) return drawCut(st); ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = '#8fa8ff'; for (let k = 0; k < 80; k++) { ctx.globalAlpha = 0.2 + (k % 5) * 0.12; ctx.fillRect((k * 131 + st.t * (0.2 + k % 3 * 0.15)) % W, (k * 71) % H, 1.5, 1.5); } ctx.globalAlpha = 1;
     const ex = 760, ey = 300, er = 92; ctx.strokeStyle = '#2ee6ff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(ex, ey, er, 0, TAU); ctx.stroke(); ctx.globalAlpha = 0.5; for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.ellipse(ex, ey, er, er * k / 4, 0, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.ellipse(ex, ey, er * Math.abs(Math.cos(t * 0.3 + k * 0.8)), er, 0, 0, TAU); ctx.stroke(); } ctx.globalAlpha = 1;
     ctx.strokeStyle = '#ff3df0'; ctx.lineWidth = 2; for (let j = 0; j < 3; j++) { ctx.beginPath(); for (let k = 0; k <= 14; k++) { const yy = 60 + k * 30, xx = 600 + j * 14 + Math.sin(k * 1.7 + t * 2 + j) * (10 + k * 1.5) + (k % 2 ? 9 : -9); k ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.globalAlpha = 0.9 - j * 0.3; ctx.stroke(); } ctx.globalAlpha = 1;
@@ -290,7 +315,7 @@ export function mountShift(root, host = {}) {
       if (!opt.idle && !bug) { const all = LS.get('medals', {}); if (bits(m) > bits(all[levelId] || 0)) { all[levelId] = m; LS.set('medals', all); endInfo.newRank = true; }
         if (rec && rec.runs.length < 40000) { const gain = g.score - (rec.start.score || 0), old = LS.get('ghost.' + levelId, null); if (!old || old.v !== VER || gain > old.gain) { LS.set('ghost.' + levelId, { ...rec, gain }); endInfo.newGhost = true; } } } }
     if (!bug) achEnd(cleared, endInfo.medals || 0); rec = null; ghost = null;
-    const goNext = (from, c) => { const nx = LEVELS[from].next; startStory(BRIEF[nx] || [], () => { scene = 'play'; travel(from, nx, () => startLevel(nx, c)); }); };
+    const goNext = (from, c) => { const nx = LEVELS[from].next, cl = CUT[nx]; startStory(cl ? cl.map(q => q[1]) : BRIEF[nx] || [], () => { scene = 'play'; travel(from, nx, () => startLevel(nx, c)); }); if (cl) story.cut = { from, to: nx, faces: cl.map(q => q[0]) }; };
     if (bug) { if (cleared) bugTick(levelId); endInfo.bugHits = g.stats.bugHits || 0;
       items = [{ label: 'BACK TO BUG TEST', act: () => { showTitle(); bugMenu(); } }, ...(cleared ? [] : [{ label: 'RETRY', act: () => bugStart(levelId) }]), ...(cleared && levelId === 'x' ? [{ label: 'PLAY THE ENDING', act: beginEnding }] : [])];
       push({ kind: 'end', root: true, cleared, items }); return; }
@@ -475,5 +500,5 @@ export function mountShift(root, host = {}) {
     getState: () => ({ scene, state: g?.state || scene, score: g?.score || 0, lives: g ? Math.max(0, g.players[0].lives) : 0, view: g ? VIEWS[g.view] : '-', chain: g?.chain || 0, best: LS.get('best', 0), level: LEVELS[levelId].name, bonus: !!LEVELS[levelId].isBonus, speed: g ? GEARS[g.gear] : '-', boss: g?.boss ? g.boss.name : '', warp: !!g?.flags.warp, paused: menus.length > 0 && scene === 'play', idle: !!opt.idle, assist: !!opt.assist, coop, daily: daily ? daily.label : '', muted: !!opt.mute, menu: scene !== 'play' }),
     control(a) { if (a === 'sound') { opt.mute = !opt.mute; saveOpt(); audio.vol(); if (opt.mute) audio.hush(); } else if (a === 'exit') host.onExit?.(); else if (a === 'pause') { if (menus.length && top().pause) resume(); else pauseMenu(); } else if (a === 'idle') setIdle(!opt.idle); else if (a === 'assist') setAssist(!opt.assist); else if (a === 'menu') showTitle(); else if (a === 'start' || a === 'restart') { testRun = false; returnTo = null; coop = false; daily = null; loopN = 0; assisted = !!opt.idle || !!opt.assist; startLevel('earth', null); } },
     getResult: () => ({ score: g?.score || 0, state: g?.state || scene, assisted }),
-    _debug: { optionsMenu: () => optionsMenu(), ghost: () => ghost, rec: () => rec, setCoop: v => { coop = v; }, setAssist, game: () => g, scene: () => scene, menus, opt, startLevel: (id, s, test = true) => { testRun = test; returnTo = null; startLevel(id, s); }, showTitle, setIdle, startStory, beginEnding, startCredits, award, bugMenu, bugStart, skipIntro: () => { showTitle(); titleT = 99; } } };
+    _debug: { cutScene: (from, to) => { startStory(CUT[to].map(q => q[1]), () => showTitle()); story.cut = { from, to, faces: CUT[to].map(q => q[0]) }; }, optionsMenu: () => optionsMenu(), ghost: () => ghost, rec: () => rec, setCoop: v => { coop = v; }, setAssist, game: () => g, scene: () => scene, menus, opt, startLevel: (id, s, test = true) => { testRun = test; returnTo = null; startLevel(id, s); }, showTitle, setIdle, startStory, beginEnding, startCredits, award, bugMenu, bugStart, skipIntro: () => { showTitle(); titleT = 99; } } };
 }

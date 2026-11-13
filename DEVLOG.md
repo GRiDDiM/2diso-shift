@@ -461,6 +461,11 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **Reality shifts in the levels.** The fold now flips your view for you once or twice on every planet, not only in the last boss fight. Where it happens is random each run, but always somewhere in the middle half of the level and never right on a change of view. Roll back yourself.
 - **The last boss's blob walls hold.** They have more than ten times the health and scale with your guns, so it now takes a few seconds of focused fire to burst one before it reaches you.
 
+### 46. Cutscenes between planets (r54)
+
+- **A short flight between planets.** After each boss, before the map and hyperspace, there is a short scene. The world you saved slides away behind you, the next one looms up with the rift cracked across it, and you fly with RIVET-9 tucked in behind. He talks you through it on comms, with his face doing the acting: proud, then panicking, then fired up.
+- **RIVET-9 calls the reality shifts** in the levels and in the last boss fight, with a WHOA WHOA WHOA! and a shocked face.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

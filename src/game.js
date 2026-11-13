@@ -272,7 +272,7 @@ export function step(g, inputs) {
   const dz = rules.arena ? 0 : playing ? SCROLL * g.speedMul * dt : SCROLL * 0.4 * dt;
   if (playing) {
     g.camZ += dz;
-    if (g.rs?.length && !g.boss && g.intro <= 0 && g.camZ >= g.rs[0]) { g.rs.shift(); g.rsT = 55; hint(g, 'REALITY SHIFT!', 70); g.fx.push('charge', 'say:reality shift'); }
+    if (g.rs?.length && !g.boss && g.intro <= 0 && g.camZ >= g.rs[0]) { g.rs.shift(); g.rsT = 55; hint(g, 'REALITY SHIFT!', 70); g.fx.push('charge'); }
     if (g.rsT > 0 && --g.rsT === 0) { doShift(g, (g.view + 1 + (g.rsR() * 3 | 0)) % 4, 1, null); g.flash = 6; g.shake = Math.max(g.shake, 6); } // the fold rolls you into some other view: roll back yourself
     if (!g.boss) while (g.evi < lvd.events.length && lvd.events[g.evi].z <= g.camZ) { const e = lvd.events[g.evi++]; if ((e.lim ?? e.z) >= g.z0 - 0.01) e.fn(g); }
     const zn = lvd.zones.find(z => g.camZ + 32 >= z.z0 && g.camZ + 32 < z.z1);

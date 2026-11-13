@@ -589,9 +589,10 @@ function drawBoss2(g, b, t) {
 // ---------- HUD ----------
 
 // ---------- RIVET-9 on comms: tips, view calls and anomaly alerts pop up top left like an instant message, with his face pulling expressions as he talks ----------
-const BANNER = /^(WAVE |FINAL WAVE|GET READY|REALITY SHIFT|LAVA RISING|ASH FALLING)|\/\//; // the big centre-screen calls stay as banners
+const BANNER = /^(WAVE |FINAL WAVE|GET READY|LAVA RISING|ASH FALLING)|\/\//; // the big centre-screen calls stay as banners
 export const isBanner = s => BANNER.test(s);
 const MOODS = [ // what he says first, and which two faces he flips between while he says it
+  [/REALITY SHIFT/, 'WHOA WHOA WHOA!', ['shock', 'scared']],
   [/ANOMALY|WARP/, 'WHOA!!', ['shock', 'starry']],
   [/LAVA|ROCK|FALL|SHARK|JELLY|STING|TORNADO|LIGHTNING|OVERHEAT|FLASH|HYPER|BLOB|CYCLONE|STORM|EYE|ACID|SPORE/, 'YIKES!', ['scared', 'shock']],
   [/SHELL|CORE|BOSS|LOCKS/, 'GET HIM!', ['angry', 'grin']],
@@ -600,7 +601,7 @@ export const rivetLine = h => isBanner(h) ? h : mood(h).pre + ' ' + h; // what R
 const mood = m => { for (const [re, pre, f] of MOODS) if (re.test(m)) return { pre, f }; return { pre: 'HEY!', f: ['happy', 'grin'] }; };
 let RQ = [], RLAST = null, RLT = 0, RG = null;
 function wrapText(str, max) { const out = []; let ln = ''; for (const w of str.split(/\s+/)) { if ((ln + ' ' + w).trim().length > max && ln) { out.push(ln); ln = w; } else ln = (ln + ' ' + w).trim(); } if (ln) out.push(ln); return out; }
-function rivetFace(ctx, cx, cy, s, ex, talk, t, k) { // s = half size of the head. Drawn in screen space with plain canvas strokes
+export function rivetFace(ctx, cx, cy, s, ex, talk, t, k) { // s = half size of the head. Drawn in screen space with plain canvas strokes
   const u = s / 10, cyan = '#2ee6ff', ink = (c, w = 1.6) => { ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = w * u * 0.55; ctx.shadowColor = c; ctx.shadowBlur = 6; };
   const shake = ex === 'scared' ? Math.sin(t * 1.9) * 0.8 : ex === 'angry' ? Math.sin(t * 1.3) * 0.5 : 0, pop = ex === 'shock' && k < 14 ? 1 + (14 - k) / 30 : 1, bob = Math.sin(t * 0.12) * 0.8;
   ctx.save(); ctx.translate(cx + shake * u, cy + bob); ctx.scale(pop, pop); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
