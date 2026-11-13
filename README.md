@@ -5,7 +5,9 @@ A shoot-'em-up where **you** shift reality: barrel-roll between four views of th
 Made for **GitHub Game Off 2026** (theme: **SHIFT**).
 
 ## Status
-Playable start to finish: four planets, four bosses, a themed wave arena after each boss and four hidden bonus stages. Also: Perfect Shifts, medals and ranks, a Daily Run, best-run ghosts, two-player co-op and an AI wingman (RIVET-9). Built during November 2026 for the jam. See `DEVLOG.md` for how it was made.
+Playable start to finish: four planets, four bosses with minibosses, an ending with scrolling credits, then loop mode (keep your upgrades, loops get much harder). Each planet hides two warps: a bonus stage and a themed wave arena that drops you back at the next checkpoint.
+
+Also in the game: Boss Rush (every boss and miniboss back to back, timed), 30 achievements, Perfect Shifts, medals and ranks, wave-order targeting bonuses, 1UP drops, hills and slopes, two-player co-op and an AI wingman (RIVET-9). Built during November 2026 for the jam. See `DEVLOG.md` for how it was made.
 
 ## The four views
 | View | What it is | What it flattens |
@@ -18,7 +20,7 @@ Playable start to finish: four planets, four bosses, a themed wave arena after e
 What a view flattens does not exist for collisions, so a wall in one view is open sky in another.
 
 ## Levels
-| # | Planet | Hazards | Boss | Hidden warp |
+| # | Planet | Hazards | Boss | Hidden bonus stage |
 |---|---|---|---|---|
 | 1 | Earth, Neo Terra | skyscrapers, skyways, firewall gates | OVERSEER | The Moon |
 | 2 | Mars, The Forge | lava geysers, fire arcs, alien stone heads | THE COLOSSUS | The Sun |
