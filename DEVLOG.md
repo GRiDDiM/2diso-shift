@@ -466,6 +466,14 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 - **A short flight between planets.** After each boss, before the map and hyperspace, there is a short scene. The world you saved slides away behind you, the next one looms up with the rift cracked across it, and you fly with RIVET-9 tucked in behind. He talks you through it on comms, with his face doing the acting: proud, then panicking, then fired up.
 - **RIVET-9 calls the reality shifts** in the levels and in the last boss fight, with a WHOA WHOA WHOA! and a shocked face.
 
+### 47. A story between the planets (r55)
+
+The cutscenes now tell a story, five lines each, and it carries through to the ending:
+- **Earth to Mars.** RIVET-9 used to work for OVERSEER (he was its spellchecker). Before it crashed it sent one word to Mars: WAKE. The stone heads there are not statues. They are antennas the Fold listens through.
+- **Mars to Jupiter.** THE COLOSSUS talked on the way down: the Fold cannot see depth and only ever sees one side at a time. That is why it hates a pilot who sees all four. So it grew an eye inside Jupiter.
+- **Jupiter to Planet X.** RIVET-9 pulls coordinates out of the Eye's last look. Planet X is not a planet. It is a dream that something far past Pluto is having, and the only hope is to break the dream so the dreamer stays asleep.
+- The ending's last line now points back at the dreamer. Each line also stays on screen longer, so the whole thing can be read and heard.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
