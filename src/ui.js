@@ -3,7 +3,7 @@
 // (C) 2026 GRiDDiM / ArcadeGridz / BDC
 import { createGame, step, autopilot, snapshot, makeWing, VIEWS, BAR, GEARS, INTRO } from './game.js';
 import { LEVELS, ORDER, buildLevel, ARENAS_ON, shelved } from './levels.js';
-import { W, H, drawWorld, drawHUD, drawLogo, drawTagline, drawSplash, meshScreen, text, textWidth, SHIP_HULL, SHIP_WING, SHIP_FIN, RAINBOW, VCOL, PIV, logosReady, rivetLine, rivetFace, skinPreview } from './render.js';
+import { W, H, drawWorld, drawHUD, drawLogo, drawTagline, drawSplash, meshScreen, text, textWidth, SHIP_HULL, SHIP_WING, SHIP_FIN, RAINBOW, VCOL, PIV, logosReady, rivetLine, rivetFace, skinPreview, snapCam } from './render.js';
 import { createAudio } from './audio.js';
 import { DEVLOG_TABS, CREDITS } from './devlog.js';
 
@@ -23,7 +23,7 @@ const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); r
 // settings and anything bought on the host site are kept
 try { if (!LS.get('fresh1', false)) { for (const k of Object.keys(localStorage)) if (k.startsWith('2dshift.') && !['2dshift.opt', '2dshift.owned', '2dshift.bugkit'].includes(k)) localStorage.removeItem(k); LS.set('fresh1', true); } } catch (e) { }
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r116';
+const VER = 'r117';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 // THE DIFFICULTY LADDER: EASY, NORMAL, HARD, then LOOP 1, LOOP 2 and on. Looping the game steps one rung up (NORMAL loops into HARD)
@@ -181,6 +181,7 @@ export function mountShift(root, host = {}) {
         { label: 'CONTROLS', act: () => push({ title: 'CONTROLS', kind: 'controls', items: [{ label: 'BACK', act: popMenu }] }) },
         { label: 'ABOUT', act: () => scrollMenu('ABOUT', ABOUT()) },
         { label: 'CREDITS', act: () => scrollMenu('CREDITS', CREDITS) },
+        { label: 'PLAY TRAILER', act: () => trailer() },
         { label: 'VIDEO TEST', act: videoTest },
         { label: () => resetArm ? 'PRESS AGAIN TO RESET' : resetMsg > 0 ? 'RESET DONE' : 'RESET TO DEFAULTS', act: resetOpts }] }]; resetArm = false; resetMsg = 0;
     const m = push({ title: 'OPTIONS', gap: 28, tabs, tab: 0, items: [] }); setTab(m, 0); }
@@ -241,7 +242,7 @@ export function mountShift(root, host = {}) {
   function travel(from, to, after) { menus.length = 0; const m = mapMenu(after, to); m.locked = true; m.travel = { from, to, t0: performance.now() }; audio.sfx('whoosh'); return m; }
   function titleMenu() { menus.length = 0;
     const play = () => { const items = [], sv = LS.get('save', null);
-      if (sv && LEVELS[sv.level]) items.push({ label: 'CONTINUE  ' + LEVELS[sv.level].name + '  ' + TN((sv.diff ?? 1) + (sv.loop || 0)), act: () => { testRun = false; returnTo = null; coop = false; daily = null; assisted = true; loopN = sv.loop || 0; diffN = sv.diff ?? 1; startLevel(sv.level, sv); } });
+      if (sv && LEVELS[sv.level]) items.push({ split: true, label: 'CONTINUE  ' + LEVELS[sv.level].name + ' / ' + TN((sv.diff ?? 1) + (sv.loop || 0)), act: () => { testRun = false; returnTo = null; coop = false; daily = null; assisted = true; loopN = sv.loop || 0; diffN = sv.diff ?? 1; startLevel(sv.level, sv); } });
       items.push({ label: 'NEW GAME', act: () => pickDiff(() => { testRun = false; returnTo = null; coop = false; daily = null; assisted = !!opt.idle || !!opt.assist; loopN = 0; LS.set('runMap', {}); startStory(STORY, () => startLevel('earth', null)); }) },
         { label: 'CO-OP', act: () => pickDiff(() => { testRun = false; returnTo = null; coop = true; daily = null; assisted = true; loopN = 0; LS.set('runMap', {}); startStory(STORY, () => { startLevel('earth', null); toast('CO-OP', 'P1 KEYBOARD   P2 CONTROLLER'); }); }) },
         { label: 'STAGE SELECT', act: () => stageSelect() },
@@ -278,10 +279,10 @@ export function mountShift(root, host = {}) {
   // between planets: a short flight with RIVET-9 on comms, his face doing the acting
   // between planets: a short flight with RIVET-9 on comms, his face doing the acting. The story runs through all three, and ties into the ending
   const CUT = { /* shelved: the Moon's scene, kept for when it comes back */ moon: [['happy', "OVERSEER IS DOWN. EARTH'S GRID IS OURS AGAIN!"], ['smug', 'FUN FACT: I USED TO WORK FOR THAT THING. I WAS ITS SPELLCHECKER.'], ['shock', 'BEFORE IT CRASHED, IT SENT ONE WORD UP TO THE MOON... WAKE.'], ['scared', 'THERE IS AN OLD DEFENCE BASE UP THERE. NOBODY HAS BEEN HOME IN YEARS.'], ['angry', 'SOMEBODY IS HOME NOW. LET US GO KNOCK!']],
-    sun: [['happy', "OVERSEER IS DOWN. EARTH'S GRID IS OURS AGAIN!"], ['smug', 'FUN FACT: I USED TO WORK FOR THAT THING. I WAS ITS SPELLCHECKER.'], ['shock', 'BEFORE IT CRASHED, IT SENT ONE WORD OUT TO MARS AND FARTHER... WAKE.'], ['smug', 'WE ARE TOO SLOW TO CATCH IT. UNLESS WE CHEAT.'], ['starry', 'A SLINGSHOT! ROUND THE SUN AND OUT THE OTHER SIDE AT TEN TIMES THE SPEED!'], ['scared', 'IT IS A BIT WARM IN THERE. STAY WHERE IT IS CLEAR.']],
-    mars: [['happy', 'WE ARE OUT! AND FAST! DID YOU SEE THAT THING IN THE FIRE? I DID NOT LIKE IT.'], ['shock', 'THE SIGNAL GOT TO MARS BEFORE US. ONE WORD AGAIN... WAKE.'], ['scared', 'THE STONE HEADS ON MARS ARE NOT STATUES. THEY ARE ANTENNAS.'], ['angry', "THE FOLD IS LISTENING THROUGH THEM. LET'S GO BREAK ITS EARS!"]],
+    mars: [['happy', "OVERSEER IS DOWN. EARTH'S GRID IS OURS AGAIN!"], ['smug', 'FUN FACT: I USED TO WORK FOR THAT THING. I WAS ITS SPELLCHECKER.'], ['shock', 'BEFORE IT CRASHED, IT SENT ONE WORD OUT TO MARS AND FARTHER... WAKE.'], ['scared', 'THE STONE HEADS ON MARS ARE NOT STATUES. THEY ARE ANTENNAS.'], ['angry', "THE FOLD IS LISTENING THROUGH THEM. LET'S GO BREAK ITS EARS!"]],
+    sun: [['starry', 'THE COLOSSUS FELL! AND IT TALKED ON THE WAY DOWN!'], ['shock', 'THE FOLD CANNOT SEE DEPTH. IT ONLY EVER SEES ONE SIDE AT A TIME.'], ['grin', 'THAT IS WHY IT HATES YOU. YOU SEE ALL FOUR.'], ['scared', 'THE SIGNAL IS ALREADY AT JUPITER. THE BELT IS IN THE WAY AND WE ARE TOO SLOW.'], ['starry', 'SO WE CHEAT. A SLINGSHOT! ROUND THE SUN AND CLEAN OVER THE BELT AT TEN TIMES THE SPEED!'], ['scared', 'IT IS A BIT WARM IN THERE. STAY WHERE IT IS CLEAR.']],
     /* shelved: the Belt's scene */ belt: [['starry', 'THE COLOSSUS FELL! AND IT TALKED ON THE WAY DOWN!'], ['shock', 'THE FOLD CANNOT SEE DEPTH. IT ONLY EVER SEES ONE SIDE AT A TIME.'], ['grin', 'THAT IS WHY IT HATES YOU. YOU SEE ALL FOUR.'], ['scared', 'NEXT STOP, THE BELT. THE MINING COLONY OUT THERE STOPPED ANSWERING LAST WEEK.'], ['shock', 'THE LAST THING THEY SENT WAS... THE ROCK IS MOVING.']],
-    jupiter: [['starry', 'THE COLOSSUS FELL! AND IT TALKED ON THE WAY DOWN!'], ['shock', 'THE FOLD CANNOT SEE DEPTH. IT ONLY EVER SEES ONE SIDE AT A TIME.'], ['grin', 'THAT IS WHY IT HATES YOU. YOU SEE ALL FOUR.'], ['scared', 'NOW IT HAS GROWN ITSELF AN EYE. A BIG ONE. INSIDE JUPITER.'], ['scared', 'IT IS LOOKING AT YOU. ONLY YOU. NOT ME. PROBABLY.']],
+    jupiter: [['happy', 'WE ARE OUT! AND FAST! DID YOU SEE THAT THING IN THE FIRE? I DID NOT LIKE IT.'], ['starry', 'THE WHOLE BELT JUST WENT BY UNDERNEATH US. BYE, ROCKS!'], ['scared', 'THE FOLD HAS GROWN ITSELF AN EYE. A BIG ONE. INSIDE JUPITER.'], ['scared', 'IT IS LOOKING AT YOU. ONLY YOU. NOT ME. PROBABLY.']],
     saturn: [['smug', 'THE EYE IS SHUT. TOLD YOU WE HAD THIS.'], ['shock', 'WAIT. IT WAS NOT LOOKING AT US THE WHOLE TIME. IT WAS LOOKING AT SATURN.'], ['scared', 'SOMETHING IN THE RINGS IS BENDING ITS LIGHT. FOCUSING IT. LIKE A LENS.'], ['starry', 'ALSO THERE ARE STORIES ABOUT A WHALE OUT THERE. A WHALE! IN SPACE!'], ['grin', 'I HOPE THE WHALE IS REAL. I HOPE THE LENS IS NOT.']],
     pluto: [['happy', 'THE PRISM IS DARK! AND THE WHALE WAS REAL! BEST DAY!'], ['shock', 'I PULLED SOMETHING OUT OF ITS LAST FLASH. COORDINATES.'], ['scared', 'PLANET X IS NOT OUT HERE AT ALL. THE ONLY WAY TO IT IS A DOOR.'], ['shock', 'AND THE DOOR IS PAST PLUTO. WITH A WARDEN STANDING IN FRONT OF IT.'], ['angry', 'PACK SOMETHING WARM, PILOT.']],
     worm: [['grin', 'THE WARDEN HAS THAWED. THE DOOR IS OPEN.'], ['scared', 'IT IS A WORMHOLE. THE FOLD DUG IT TO REACH US. WE ARE GOING UP IT THE WRONG WAY.'], ['shock', 'EVERYTHING IT EVER TOUCHED IS SMEARED ALONG THE WALLS. EARTH. MARS. ALL OF IT.'], ['scared', 'UP AND DOWN DO NOT HOLD. TIME DOES NOT HOLD. I AM NOT SURE I HOLD.'], ['angry', 'WHATEVER IT SHOWS YOU, KEEP SHIFTING!']],
@@ -440,12 +441,83 @@ export function mountShift(root, host = {}) {
     else { finish(false); items = daily ? [{ label: 'QUIT TO TITLE', act: showTitle }] : [{ label: 'RETRY FROM CHECKPOINT', act: () => { assisted = true; startLevel(levelId, { ...g.cpSnap, lives: 3 }); } }, { label: 'REPLAY STAGE', act: replayStage }, { label: 'QUIT TO TITLE', act: showTitle }]; }
     push({ kind: 'end', root: true, cleared, items }); }
 
+  // ---------- TRAILER ----------
+  // A cut-together trailer that runs on the game itself: every picture is the real engine flying a real stretch of a real stage (autopilot,
+  // nothing can hurt the ship, nothing is scored). Cards tell the story between the shots. Any button skips it.
+  // A shot: { d: length in ticks, id + z: stage and where to start, v: hold this view, vs: [[tick, view]...] shifts on cue, pre: ticks flown before the cut,
+  // rate: sim speed (0.5 = slow motion), cap / sub: caption, big: a word slammed across the middle, lines: card text, mus: music from here, say: narrator }
+  const tP = (d, id, z, o) => ({ d, id, z, ...o }), tC = (d, lines, o) => ({ d, lines, ...o });
+  const TRAILER = [
+    tC(170, [['ONE WORD WENT OUT ACROSS THE SOLAR SYSTEM.', 17, '#8d9be0']], { mus: '', say: 'one word went out, across the solar system.', drone: 1 }),
+    tC(80, [['WAKE.', 64, '#ff3df0', 1]], { slam: 1, say: 'wake.' }),
+    tP(210, 'earth', 55, { v: 0, cap: 'SOMETHING IS FOLDING THE WORLDS FLAT.', mus: 'title', fade: 1 }),
+    tC(120, [['IT ONLY EVER SEES ONE SIDE.', 18, '#8d9be0']], { say: 'it only ever sees one side.' }),
+    tC(80, [['YOU SEE ALL FOUR.', 40, '#ffe14a', 1]], { slam: 1, say: 'you see all four.' }),
+    tP(330, 'earth', 150, { v: 0, vs: [[80, 1], [160, 2], [240, 3]], names: 1, gl: 1 }),
+    tC(60, [['SHIFT THE VIEW.', 34, '#2ee6ff', 1]], { slam: 1, say: 'shift the view.' }), tC(60, [['SHIFT THE RULES.', 34, '#ff3df0', 1]], { slam: 1, say: 'shift the rules.' }),
+    tP(95, 'earth', 525, { stage: 1, mus: 'boss', gl: 1 }), tP(95, 'mars', 665, { stage: 1 }), tP(95, 'sun', 845, { stage: 1 }), tP(95, 'jupiter', 690, { stage: 1 }),
+    tP(95, 'saturn', 1040, { stage: 1 }), tP(95, 'pluto', 250, { stage: 1 }), tP(95, 'worm', 560, { stage: 1 }), tP(95, 'x', 150, { stage: 1 }),
+    tC(55, [['EIGHT WORLDS.', 44, '#ffe14a', 1]], { slam: 1 }),
+    tP(170, 'saturn', 565, { big: 'SKY WHALES', rate: 0.6, gl: 1 }), tP(150, 'jupiter', 1165, { big: 'GIANT SQUID' }), tP(150, 'pluto', 899, { big: 'STAMPEDES' }),
+    tP(160, 'x', 625, { big: 'A DRAGON' }), tP(170, 'worm', 1007, { big: 'SOMETHING IS WATCHING', rate: 0.7 }),
+    tC(55, [['PREDATORS.', 44, '#ff8a2b', 1]], { slam: 1 }),
+    tP(130, 'earth', 735, { pred: 1, gl: 1 }), tP(115, 'mars', 855, { pred: 1 }), tP(115, 'saturn', 752, { pred: 1, pre: 460 }),
+    tC(55, [['EIGHT BOSSES.', 44, '#ff4d6d', 1]], { slam: 1 }),
+    tP(75, 'earth', -1, { boss: 1, pre: 380, gl: 1 }), tP(75, 'mars', -1, { boss: 1, pre: 380 }), tP(75, 'sun', -1, { boss: 1, pre: 380 }), tP(75, 'jupiter', -1, { boss: 1, pre: 380 }),
+    tP(75, 'saturn', -1, { boss: 1, pre: 380 }), tP(75, 'pluto', -1, { boss: 1, pre: 380 }), tP(75, 'worm', -1, { boss: 1, pre: 380 }),
+    tP(150, 'worm', 747, { big: 'BULLET HELL', pre: 420 }),
+    tC(125, [['PLANET X IS NOT A PLANET.', 18, '#8d9be0']], { mus: '', say: 'planet x is not a planet.', drone: 1 }),
+    tC(125, [['IT IS A DREAM SOMETHING IS HAVING.', 18, '#3dffb0']], { say: 'it is a dream, something is having.' }),
+    tP(170, 'x', -1, { pre: 420, rate: 0.5, fade: 1, cap: 'AND THE DREAMER IS STILL ASLEEP.' }),
+    tC(70, [['END THE SHIFT.', 40, '#ffffff', 1]], { slam: 1, say: 'end the shift, pilot.' }),
+    { d: 420, logo: 1, mus: 'title', slam: 1 }];
+  let tr = null;
+  function trailer(shots) { menus.length = 0; story = null; toasts.length = 0; audio.hush(); audio.unlock(); tr = { shots: shots || TRAILER, i: -1, t: 0, T: 0, acc: 0, s: null, gm: {} }; scene = 'trailer'; sceneT = 0; g = null; testRun = true; prevM = { ok: true, pause: true, back: true }; tap = null; trNext(); host.onState?.({ scene }); }
+  function trEnd() { tr = null; g = null; testRun = false; audio.hush(); showTitle(); titleT = 0; audio.sfx('slam'); }
+  function trView(gg, v, anim) { if (anim) { if (gg.view === v) return; gg.viewFrom = gg.view; gg.view = v; gg.shiftT = 1; gg.shiftDir = 1; gg.glT = 10; gg.glK = 0.5; audio.sfx('shift'); } else { gg.view = v; gg.viewFrom = v; gg.shiftT = 0; } gg.recView = v; gg.lockShift = true; }
+  // every shot's game is built and flown up to its cut ahead of time, a few milliseconds a frame, so a cut never hitches
+  function trMake(s, k) { const L = buildLevel(s.id), z = s.z < 0 ? L.checkpoints[L.checkpoints.length + s.z] : s.z;
+    const gg = createGame({ seed: s.seed || 20261114 + k * 7919, level: L, start: { r6: 1, z, up: s.up || [...(LEVELS[s.id].kit || [1, 1, 0, 0, 0, 0, 0, 0]), 0], shield: 0, bombs: 3, lives: 9, gear: 2 }, players: 1, wing: false, mut: { loop: 0, easy: false, bug: true } }); gg.intro = 0;
+    if (s.v != null) trView(gg, s.v); return { g: gg, left: s.pre ?? 300 }; }
+  function trPrep(ms) { const t0 = performance.now(); for (let j = tr.i + 1; j < tr.shots.length; j++) { const s = tr.shots[j]; if (!s.id) continue; const q = tr.gm[j] || (tr.gm[j] = trMake(s, j)); while (q.left > 0) { trStep(q.g, s, true); q.left--; if (performance.now() - t0 > ms) return; } } }
+  function trNext() { if (++tr.i >= tr.shots.length) return trEnd(); const s = tr.s = tr.shots[tr.i]; tr.t = 0; tr.acc = 0;
+    if (s.mus != null) audio.music(s.mus || null); if (s.say) audio.sayM(s.say, true); if (s.slam) audio.sfx('slam'); else if (s.id) audio.sfx('whoosh'); if (s.drone) audio.sfx('bossin');
+    if (s.id) { levelId = s.id; const q = tr.gm[tr.i] || trMake(s, tr.i); delete tr.gm[tr.i]; while (q.left-- > 0) trStep(q.g, s, true); g = q.g; snapCam(); } else g = null; }
+  function trStep(gg, s, quiet) { if (gg.state !== 'play') return; for (const p of gg.players) p.lives = 9; if (s.v != null && !s.vs) { gg.recView = s.v; gg.lockShift = true; } step(gg, [autopilot(gg, 0)]); gg.pops.length = 0;
+    if (!quiet) for (const f of gg.fx) { if (f.includes(':') || f === 'hint' || f === 'bossin' || f === 'go' || f === 'shift' || f === 'shield' || f === 'gear') continue; audio.sfx(f); } }
+  function trTick(i) { const s = tr.s; if ((i.ok && !prevM.ok) || (i.pause && !prevM.pause) || (i.back && !prevM.back) || tap) { tap = null; prevM = i; return trEnd(); } prevM = i; tr.t++; tr.T++;
+    if (g) { if (s.vs) for (const [at, v] of s.vs) if (tr.t === at) trView(g, v, true); tr.acc += s.rate || 1; while (tr.acc >= 1) { tr.acc--; trStep(g, s, false); } }
+    if (tr.t >= s.d) trNext(); }
+  function trSlam(str, y, size, col, t) { const k = Math.min(1, t / 9), sc = 1 + (1 - k) * (1 - k) * 2.4; ctx.save(); ctx.translate(480, y + size / 2); ctx.scale(sc, sc); if (t < 14) ctx.translate((Math.random() - 0.5) * (14 - t) * 0.6, (Math.random() - 0.5) * (14 - t) * 0.6); text(ctx, str, 0, -size / 2, size, col, { align: 'center', bold: true, weight: size > 24 ? size / 7 : undefined, tube: true, alpha: k }); ctx.restore(); }
+  function drawTrailer() { trPrep(5); const s = tr.s, t = tr.t, left = s.d - t, now = performance.now() / 1000, LB = 50; ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H);
+    if (s.id && g) { drawWorld(ctx, g, { glow: tier() < 2, clarity: false, shake: opt.shake, fill: opt.fill && tier() < 4, ghost: null, q: tier(), skin: 0 }); ctx.setTransform(res, 0, 0, res, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+      if (g.shiftT > 0) chroma(9 * Math.sin(Math.PI * g.shiftT), 0.4); const gk = g.glT > 0 ? (g.glK || 0) * Math.min(1, g.glT / 8) : 0; if (gk > 0.04) glitchFx(gk); }
+    else if (s.logo) { titleBack(); ctx.setTransform(res, 0, 0, res, 0, 0); ctx.globalCompositeOperation = 'source-over'; }
+    else { ctx.globalCompositeOperation = 'lighter'; for (let k = 0; k < 70; k++) { const z = ((k * 0.137 + now * 0.05) % 1), x = 480 + ((k * 197) % 960 - 480) / (z * 3 + 0.4), y = 270 + ((k * 71) % 540 - 270) / (z * 3 + 0.4); if (x < 0 || x > W || y < 0 || y > H) continue; ctx.fillStyle = k % 7 ? '#5a6fd0' : '#ff9ef2'; ctx.globalAlpha = Math.min(1, (1 - z) * 0.55); ctx.fillRect(x, y, 1.6, 1.6); } ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+    if (s.fade) { const a = Math.max(1 - t / 40, 1 - left / 40); if (a > 0) { ctx.fillStyle = '#02010a'; ctx.globalAlpha = Math.min(1, a); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; } }
+    ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, LB); ctx.fillRect(0, H - LB, W, LB); // letterbox
+    if (s.lines) { const n = s.lines.length, tot = s.lines.reduce((a, q) => a + q[1] * 2.1, 0); let y = 270 - tot / 2; s.lines.forEach(([str, size, col, slam], k) => { const tt = t - k * 26; if (tt > 0) { if (slam) trSlam(str, y, size, col, tt); else { const shown = Math.min(str.length, Math.floor(tt / 1.6)); text(ctx, str.slice(0, shown), 480 - textWidth(str, size, true) / 2, y, size, col, { bold: true, alpha: Math.min(1, left / 14) }); } } y += size * 2.1; }); }
+    if (s.logo) { const k = Math.min(1, t / 18), sc = 1 + (1 - k) * (1 - k) * 2.2; ctx.save(); if (t < 26) ctx.translate((Math.random() - 0.5) * (26 - t) * 0.5, (Math.random() - 0.5) * (26 - t) * 0.5); drawLogo(ctx, 480, 120 - (sc - 1) * 30, sc, now); ctx.restore(); ctx.setTransform(res, 0, 0, res, 0, 0);
+      if (t > 40) drawTagline(ctx, 480, 236, 11, now); if (t > 90) text(ctx, 'EIGHT WORLDS.  EIGHT BOSSES.  FOUR WAYS TO SEE THE FIGHT.', 480, 300, 10, '#ffffff', { align: 'center', bold: true, alpha: Math.min(1, (t - 90) / 20) });
+      if (t > 140) { const a = Math.min(1, (t - 140) / 20); text(ctx, 'PLAY IT FREE NOW', 480, 352, 20, '#ffe14a', { align: 'center', bold: true, alpha: a, tube: true }); text(ctx, 'ARCADEGRIDZ.COM', 480, 392, 12, '#2ee6ff', { align: 'center', bold: true, alpha: a }); text(ctx, 'A GRIDDIM GAME  //  MADE FOR GAME OFF 2026', 480, 430, 8, '#8d9be0', { align: 'center', alpha: a, glow: false }); } }
+    if (s.stage) { const L = LEVELS[s.id], a = Math.min(1, t / 6, left / 6), dx = (1 - Math.min(1, t / 8)) * -60; text(ctx, '0' + L.n, 44 + dx, H - LB - 74, 12, '#ffffff', { bold: true, alpha: a }); text(ctx, L.name, 44 + dx, H - LB - 54, 34, PCOL[s.id], { bold: true, alpha: a, weight: 5, tube: true }); text(ctx, L.sub, 46 + dx, H - LB - 8, 9, '#ffffff', { bold: true, alpha: a, glow: false }); }
+    if (s.boss) { const L = LEVELS[s.id], a = Math.min(1, t / 5, left / 5); text(ctx, L.boss, W - 44, H - LB - 44, 26, '#ff4d6d', { bold: true, align: 'right', alpha: a, weight: 4, tube: true }); text(ctx, L.name, W - 44, H - LB - 62, 9, '#ffffff', { bold: true, align: 'right', alpha: a, glow: false }); }
+    if (s.pred && g) { const a = Math.min(1, t / 5, left / 5); text(ctx, 'PREDATOR', W - 44, H - LB - 62, 9, '#ffffff', { bold: true, align: 'right', alpha: a, glow: false }); text(ctx, (g.pred?.name || tr.pn || ''), W - 44, H - LB - 44, 26, '#ff8a2b', { bold: true, align: 'right', alpha: a, weight: 4, tube: true }); if (g.pred) tr.pn = g.pred.name; }
+    if (s.big && t > 8) trSlam(s.big, H - LB - 64, 30, '#ffe14a', t - 8);
+    if (s.names && g) { const v = g.view, since = s.vs.reduce((a, [at]) => t >= at ? t - at : a, t); trSlam(VIEWS[v], 70, 36, VCOL[v], since); text(ctx, (v + 1) + ' / 4', 480, 122, 9, '#ffffff', { align: 'center', bold: true, glow: false }); }
+    if (s.cap) { const shown = Math.min(s.cap.length, Math.floor((t - 20) / 1.5)); if (shown > 0) text(ctx, s.cap.slice(0, shown), 480 - textWidth(s.cap, 12, true) / 2, H - LB - 34, 12, '#ffffff', { bold: true, alpha: Math.min(1, left / 20) }); }
+    if (tr.T < 200 || s.logo) { } if (tr.i > 1 && g) text(ctx, 'LIVE GAMEPLAY', W - 20, H - LB + 20, 6, '#3a4380', { align: 'right', glow: false });
+    text(ctx, lastDev === 'touch' ? 'TAP TO SKIP' : 'ANY BUTTON SKIPS', 20, H - LB + 20, 6, '#3a4380', { glow: false });
+    if (s.slam && t < 8) { ctx.fillStyle = '#fff'; ctx.globalAlpha = (1 - t / 8) * 0.7; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; } else if (s.id && !s.fade && t < 5) { ctx.fillStyle = '#fff'; ctx.globalAlpha = (1 - t / 5) * 0.5; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+    if ((s.gl || s.slam) && t < 12) glitchFx(0.9 * (1 - t / 12)); }
+
   // ---------- frame ----------
   let prevIn = {};
   function update(i) {
     sceneT++; if (scene === 'intro' && sceneT < 3 && !logosReady() && performance.now() - (introWait || (introWait = performance.now())) < 5000) sceneT = 0; /* the intro waits (up to 5 s, by the clock, not by frames) for the logo images */
     if (scene === 'intro') { if ((i.ok && !prevM.ok) || (i.pause && !prevM.pause) || tap || sceneT > 600) { tap = null; showTitle(); titleT = 0; audio.sfx('slam'); } if (sceneT === 54) { audio.unlock(); audio.sfx('buzz'); } /* the game's sound starts a beat after launch, so the app's own coin-drop sound gets to finish first */ if (sceneT === 170) audio.sfx('jingle'); if (sceneT === 296) { audio.unlock(); audio.sfx('swoop'); } prevM = i; return; }
     if (scene === 'story') { const st = story, per = st.per || 150; st.at = (st.at || 0) + 1; /* the animation clock never stops */ if ((st.t + 1) % per === 0 && audio.speaking() && (st.hold = (st.hold || 0) + 1) < 360) { } else { st.hold = 0; st.t++; } /* a line waits for the voice to finish before the next one starts */ const k = st.t / per | 0; if (k < st.lines.length && k !== st.said) { st.said = k; audio.say(st.lines[k].replace('(C)', 'copyright'), true); } if (st.end && st.t < 90) tap = null; if (tap || (st.t >= (st.end ? 90 : 0) && ((i.ok && !prevM.ok) || (i.pause && !prevM.pause))) || st.t > st.lines.length * per + 120) { tap = null; audio.hush(); const f = st.after; story = null; f(); } prevM = i; return; }
+    if (scene === 'trailer') { trTick(i); return; }
     if (scene === 'title') { titleT++; menuInput(i); return; } // no game runs behind the title any more: it is a still, cheap backdrop
     if (scene === 'credits') { if (menus.length) { menuInput(i); return; } cred.y = Math.min(cred.max, cred.y + (i.ok || i.down ? 3 : 0.5)); if (tap) { tap = null; cred.y = Math.min(cred.max, cred.y + 160); }
       if ((cred.y >= cred.max && ++cred.hold > 100) || (sceneT > 40 && ((i.pause && !prevM.pause) || (i.back && !prevM.back)))) creditsMenu(); prevM = i; return; }
@@ -494,7 +566,7 @@ export function mountShift(root, host = {}) {
     if (!pill) { labs.forEach((lab, k) => { const on = k === m.i, w = textWidth(lab, size, true), yy = y + k * gap; text(ctx, lab, cx, yy, size, on ? '#ffe14a' : '#8d9be0', { align: 'center', glow: on, bold: true }); if (on) text(ctx, '>', cx - w / 2 - size * 1.4, yy, size, '#ffe14a', { bold: true }); hits.push({ x: cx - w / 2 - 40, y: yy - 6, w: w + 80, h: size + 12, i: k }); }); return; }
     const sz = Math.min(size, gap * 0.42), ph = Math.min(gap - 6, sz * 2.3);
     // settings ('NAME  VALUE' on an adjustable item) are split capsules: the name on the left, the value on the right, a slanted cut between them
-    const split = labs.map((l, k) => { const it = m.items[k]; if (!it.adj || it.tabRow || typeof l !== 'string') return null; const j = l.indexOf('  '); return j > 0 ? [l.slice(0, j), l.slice(j).trim().replace(/\s{2,}/g, ' ')] : null; });
+    const split = labs.map((l, k) => { const it = m.items[k]; if ((!it.adj && !it.split) || it.tabRow || typeof l !== 'string') return null; const j = l.indexOf('  '); return j > 0 ? [l.slice(0, j), l.slice(j).trim().replace(/\s{2,}/g, ' ')] : null; });
     const nW = Math.max(0, ...split.map(q => q ? textWidth(q[0], sz, true) : 0)), vW = Math.max(0, ...split.map(q => q ? textWidth(q[1], sz, true) : 0));
     const pw = Math.max(170, ...labs.map((l, k) => split[k] ? 0 : textWidth(l, sz, true) + sz * 4.4), split.some(Boolean) ? nW + vW + sz * 10 : 0), cut = split.some(Boolean) ? Math.max(pw * 0.42, nW + sz * 3) : 0;
     labs.forEach((lab, k) => { const it = m.items[k], on = k === m.i, lift = on ? 2 : 0, px = cx - pw / 2, py = y + k * gap - (ph - sz) / 2 - lift, r = ph / 2, sp = split[k];
@@ -506,7 +578,7 @@ export function mountShift(root, host = {}) {
         rr(px, py, pw, ph, r); ctx.strokeStyle = on ? '#ffe14a' : '#2ee6ff'; if (on) { ctx.globalAlpha = 0.25 + 0.08 * Math.sin(t * 5); ctx.lineWidth = 12; ctx.stroke(); ctx.globalAlpha = 1; } else { ctx.globalAlpha = 0.16; ctx.lineWidth = 9; ctx.stroke(); ctx.globalAlpha = 1; } ctx.lineWidth = 2; ctx.globalAlpha = on ? 1 : 0.85; ctx.stroke(); ctx.globalAlpha = 1;
         text(ctx, sp[0], px + r + sz * 0.4, ty, sz, on ? '#ffe14a' : '#2ee6ff', { glow: on, bold: true });
         const vx = (sx + px + pw - r * 0.4) / 2; text(ctx, v, vx, ty, sz, isOff ? '#9aa0d0' : '#0a0818', { align: 'center', glow: false, bold: true });
-        if (on) { text(ctx, '<', sx + d + sz * 0.5, ty, sz, isOff ? '#ffe14a' : '#0a0818', { bold: true, glow: false }); text(ctx, '>', px + pw - r * 0.8 - sz * 0.5, ty, sz, isOff ? '#ffe14a' : '#0a0818', { bold: true, glow: false }); }
+        if (on && it.adj) { text(ctx, '<', sx + d + sz * 0.5, ty, sz, isOff ? '#ffe14a' : '#0a0818', { bold: true, glow: false }); text(ctx, '>', px + pw - r * 0.8 - sz * 0.5, ty, sz, isOff ? '#ffe14a' : '#0a0818', { bold: true, glow: false }); }
         hits.push({ x: px, y: py, w: pw, h: ph, i: k }); return; }
       const MK = ['#2ee6ff', '#ff3df0', '#3dffb0', '#ffe14a', '#b06bff'][k % 5]; rr(px, py, pw, ph, r);
       if (on) { const gr = ctx.createLinearGradient(px, 0, px + pw, 0); gr.addColorStop(0, '#ffe14a'); gr.addColorStop(1, '#ff9a3d'); ctx.globalAlpha = 0.22 + 0.06 * Math.sin(t * 5); ctx.lineWidth = 12; ctx.strokeStyle = '#ffb03d'; ctx.stroke(); ctx.globalAlpha = 1; ctx.fillStyle = gr; ctx.fill(); ctx.strokeStyle = '#fff2a8'; ctx.lineWidth = 2; ctx.stroke(); }
@@ -519,7 +591,7 @@ export function mountShift(root, host = {}) {
     const t = performance.now() / 1000, sy = 250, RR = RUN(), warp = RR.w, af = RR.af, ar = RR.ar, bd = RR.bd, md = Object.fromEntries(Object.entries(RR.md).map(([k, v]) => [k, v.m])), mdl = Object.fromEntries(Object.entries(RR.md).map(([k, v]) => [k, v.loop])), found = L => L.isArena ? af[L.of] || ar[L.of] : warp[L.of], done = (L, id) => L.isArena ? ar[L.of] : L.isBonus ? bd[id] : md[id]; ctx.globalCompositeOperation = 'lighter';
     ctx.lineWidth = 1; for (const x of [215, 325, 495, 605, 705, 872]) { ctx.strokeStyle = '#26348c'; ctx.beginPath(); ctx.ellipse(90, sy, x - 90, (x - 90) * 0.42, 0, -0.9, 0.9); ctx.stroke(); }
     ctx.fillStyle = '#8d9be0'; for (let k = 0; k < 40; k++) { const a = -0.8 + k / 40 * 1.6 + Math.sin(k * 9) * 0.02, r = 315 + Math.sin(k * 7) * 10; ctx.fillRect(90 + Math.cos(a) * r, sy + Math.sin(a) * r * 0.42, 2, 2); }
-    ctx.strokeStyle = '#ff3df0'; ctx.setLineDash([6, 6]); ctx.beginPath(); ORDER.forEach((id, k) => { const n = NODES.find(q => q.id === id); k ? ctx.lineTo(n.x, NY(n)) : ctx.moveTo(n.x, NY(n)); }); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = '#ff3df0'; ctx.setLineDash([6, 6]); ctx.beginPath(); { const rn = ORDER.map(id => NODES.find(q => q.id === id)); rn.forEach((n, k) => { if (!k) return ctx.moveTo(n.x, NY(n)); const a = rn[k - 1], over = rn.some(q => q !== a && q !== n && (q.x - a.x) * (q.x - n.x) < 0); /* a leg that doubles back, or jumps over other stops, swings wide: the slingshot round the Sun */ if (n.x < a.x) ctx.quadraticCurveTo((a.x + n.x) / 2, NY(a) - 110, n.x, NY(n)); else if (over) ctx.quadraticCurveTo((a.x + n.x) / 2, NY(a) + 120, n.x, NY(n)); else ctx.lineTo(n.x, NY(n)); }); } ctx.stroke(); ctx.setLineDash([]);
     { const e = NODES.find(n => n.id === 'earth'), a = t * 0.5; if (e) { const mx = e.x + Math.cos(a) * 38, my = NY(e) + Math.sin(a) * 14; ctx.save(); ctx.globalAlpha = 0.45; ctx.strokeStyle = '#5a6480'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(e.x, NY(e), 38, 14, 0, 0, TAU); ctx.stroke(); ctx.globalAlpha = Math.sin(a) < 0 ? 0.55 : 0.9; ctx.strokeStyle = '#c8d0e0'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(mx, my, 4.5, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(mx - 1.5, my - 1, 1.2, 0, TAU); ctx.stroke(); ctx.restore(); } } // the Moon: shelved for now, it just goes round Earth
     { const bx = 405, by = 250 + Math.sin(t * 0.7) * 26; ctx.save(); ctx.globalAlpha = 0.5; ctx.strokeStyle = '#6a6a80'; ctx.lineWidth = 1.2; for (let q = 0; q < 5; q++) { const an = q * 1.26 + t * 0.3; ctx.strokeRect(bx + Math.cos(an) * 10 - 1.5, by + Math.sin(an) * 5 - 1.5, 3, 3); } ctx.restore(); } // the Belt: shelved, just scenery on the map
     if (!ARENAS_ON) { const sx = 480 + Math.sin(t * 0.13) * 330 + Math.sin(t * 0.31 + 1) * 70, sy = 300 + Math.sin(t * 0.21 + 2) * 30 + Math.cos(t * 0.17) * 18; // a lone arena station drifting about the map: something for later
@@ -681,6 +753,7 @@ export function mountShift(root, host = {}) {
     if (scene === 'intro') drawIntro();
     else if (scene === 'story') drawStory();
     else if (scene === 'credits') drawCredits();
+    else if (scene === 'trailer') drawTrailer();
     else { ctx.fillStyle = '#02010a'; ctx.fillRect(0, 0, W, H); const gg = g;
       if (scene === 'title') titleBack(); else drawWorld(ctx, gg, ro2); ctx.setTransform(res, 0, 0, res, 0, 0); ctx.globalCompositeOperation = 'source-over';
       if (scene === 'title') { if (titleT < 14) { ctx.fillStyle = '#fff'; ctx.globalAlpha = 1 - titleT / 14; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; } }
@@ -749,10 +822,10 @@ export function mountShift(root, host = {}) {
   canvas.addEventListener('pointerdown', () => wake());
   function destroy() { if (destroyed) return; destroyed = true; cancelAnimationFrame(raf); ro.disconnect(); removeEventListener('resize', fit); removeEventListener('keydown', onKey, true); removeEventListener('keyup', onKey, true); removeEventListener('blur', onBlur); removeEventListener('focus', onFocus); removeEventListener('pointerup', mUp); document.removeEventListener('visibilitychange', onVis); audio.close(); root.innerHTML = ''; }
 
-  fit(); prevM = { ok: true, pause: true }; raf = requestAnimationFrame(frame); try { canvas.focus({ preventScroll: true }); } catch { }
+  fit(); prevM = { ok: true, pause: true }; if (host.trailer) trailer(); /* launched straight into the trailer (the site's TRAILER button) */ raf = requestAnimationFrame(frame); try { canvas.focus({ preventScroll: true }); } catch { }
   return { ownsFocusPause: true, destroy, pauseForFocus, resumeFromFocus: wake,
     getState: () => ({ scene, state: g?.state || scene, score: g?.score || 0, lives: g ? Math.max(0, g.players[0].lives) : 0, view: g ? VIEWS[g.view] : '-', chain: g?.chain || 0, best: LS.get('best', 0), level: LEVELS[levelId].name, bonus: !!LEVELS[levelId].isBonus, speed: g ? GEARS[g.gear] : '-', boss: g?.boss ? g.boss.name : '', warp: !!g?.flags.warp, paused: menus.length > 0 && scene === 'play', idle: !!opt.idle, assist: !!opt.assist, coop, daily: daily ? daily.label : '', muted: !!opt.mute, menu: scene !== 'play' }),
     control(a) { if (a === 'sound') { opt.mute = !opt.mute; saveOpt(); audio.vol(); if (opt.mute) audio.hush(); } else if (a === 'exit') host.onExit?.(); else if (a === 'pause') { if (menus.length && top().pause) resume(); else pauseMenu(); } else if (a === 'idle') setIdle(!opt.idle); else if (a === 'assist') setAssist(!opt.assist); else if (a === 'menu') showTitle(); else if (a === 'start' || a === 'restart') { testRun = false; returnTo = null; coop = false; daily = null; loopN = 0; assisted = !!opt.idle || !!opt.assist; startLevel('earth', null); } },
     getResult: () => ({ score: g?.score || 0, state: g?.state || scene, assisted }),
-    _debug: { mapMenu: () => mapMenu(), about: () => scrollMenu('ABOUT', ABOUT()), stageSelect: () => stageSelect(), endNow: c => { g.stats.ticks = 7400; g.stats.pods = 27; g.bestChain = 14; endMenu(c); }, optReset: () => { optionsMenu(); resetArm = true; resetOpts(); }, gfx: () => ({ tier: tier(), q, ema: Math.round(ema * 10) / 10, res, upWait }), bugMenu: () => bugMenu(), devlogMenu: () => devlogMenu(), cutScene: (from, to) => { startStory(CUT[to].map(q => q[1]), () => showTitle()); story.cut = { from, to, faces: CUT[to].map(q => q[0]) }; story.per = 210; }, optionsMenu: () => optionsMenu(), ghost: () => ghost, rec: () => rec, setCoop: v => { coop = v; }, setAssist, game: () => g, scene: () => scene, menus, opt, startLevel: (id, s, test = true) => { testRun = test; returnTo = null; startLevel(id, s); }, showTitle, setIdle, startStory, beginEnding, startCredits, award, bugMenu, bugStart, skipIntro: () => { showTitle(); titleT = 99; } } };
+    _debug: { trailer: (k, shots) => { trailer(shots); if (k > 0) { tr.i = k - 1; trNext(); } }, trShot: () => tr.s, trInfo: () => tr && ({ i: tr.i, t: tr.t, T: tr.T, n: tr.shots.length, total: tr.shots.reduce((a, q) => a + q.d, 0) }), mapMenu: () => mapMenu(), about: () => scrollMenu('ABOUT', ABOUT()), stageSelect: () => stageSelect(), endNow: c => { g.stats.ticks = 7400; g.stats.pods = 27; g.bestChain = 14; endMenu(c); }, optReset: () => { optionsMenu(); resetArm = true; resetOpts(); }, gfx: () => ({ tier: tier(), q, ema: Math.round(ema * 10) / 10, res, upWait }), bugMenu: () => bugMenu(), devlogMenu: () => devlogMenu(), cutScene: (from, to) => { startStory(CUT[to].map(q => q[1]), () => showTitle()); story.cut = { from, to, faces: CUT[to].map(q => q[0]) }; story.per = 210; }, optionsMenu: () => optionsMenu(), ghost: () => ghost, rec: () => rec, setCoop: v => { coop = v; }, setAssist, game: () => g, scene: () => scene, menus, opt, startLevel: (id, s, test = true) => { testRun = test; returnTo = null; startLevel(id, s); }, showTitle, setIdle, startStory, beginEnding, startCredits, award, bugMenu, bugStart, skipIntro: () => { showTitle(); titleT = 99; } } };
 }

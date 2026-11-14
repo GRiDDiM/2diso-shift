@@ -3,11 +3,11 @@
 import { mountShift } from './ui.js';
 const ID = '2diso-shift';
 const CSS = `body.ds-playing .workspace{padding:0;overflow:hidden}.ds-shell.ds-fixed{position:fixed!important;inset:0;z-index:2147483000;width:auto!important;height:auto!important}body.ds-touch{overflow:hidden;overscroll-behavior:none}`;
-export function mountTwoDisoShift(root, { onExit } = {}) {
+export function mountTwoDisoShift(root, { onExit, trailer } = {}) {
   if (!document.getElementById('ds-host-css')) { const st = document.createElement('style'); st.id = 'ds-host-css'; st.textContent = CSS; document.head.appendChild(st); }
   const token = () => { try { return localStorage.getItem('griddim_network_token') || ''; } catch { return ''; } };
   let gone = false, timer = 0;
-  const inst = mountShift(root, { hosted: true, onExit: () => onExit?.(),
+  const inst = mountShift(root, { hosted: true, trailer: !!trailer, onExit: () => onExit?.(),
     leaderboard: () => window.ArcadeGridzBridge?.leaderboard ? window.ArcadeGridzBridge.leaderboard(ID) : fetch('/api/leaderboards', { cache: 'no-store' }).then(r => r.json()).then(d => d?.games?.[ID] || []),
     skins: async () => { const out = { owned: [], forSale: [], prices: {} }, t = token(), mine = s => typeof s === 'string' && s.startsWith('shift-'); // skins bought in the Network store: which are on sale, and which this account owns
       try { const c = await fetch('https://griddim.com/api/sparkz/catalogue', { cache: 'no-store' }).then(r => r.json()); const it = (c.items || c.catalogue || []).filter(i => mine(i.slug)); out.forSale = it.map(i => i.slug); out.prices = Object.fromEntries(it.map(i => [i.slug, i.price])); } catch { }

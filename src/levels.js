@@ -1066,10 +1066,10 @@ function arena(of) {
 }
 
 export const LEVELS = {
-  earth: { build: earth, n: 1, name: 'EARTH', sub: 'NEO TERRA', next: 'sun', boss: 'OVERSEER', info: 'CYBER CITY. SKYSCRAPERS, SKYWAYS, FIREWALL GATES.' },
+  earth: { build: earth, n: 1, name: 'EARTH', sub: 'NEO TERRA', next: 'mars', boss: 'OVERSEER', info: 'CYBER CITY. SKYSCRAPERS, SKYWAYS, FIREWALL GATES.' },
   moon: { build: moon, n: 0, shelved: true, name: 'THE MOON', sub: 'SEA OF QUIET', next: 'sun', boss: 'THE SENTINEL', info: 'LOW GRAVITY. A DEAD BASE, THE MASS DRIVER, METEORS.', kit: [1, 1, 0, 0, 0, 0, 0, 0] },
-  sun: { build: sun, n: 2, name: 'THE SUN', sub: 'CORONA', next: 'mars', boss: 'HELIOS', info: 'A SLINGSHOT ROUND THE SUN. STAY IN THE CLEAR CHANNEL.', kit: [1, 1, 1, 0, 0, 1, 0, 0] },
-  mars: { build: mars, n: 3, name: 'MARS', sub: 'THE FORGE', next: 'jupiter', boss: 'THE COLOSSUS', info: 'LAVA GEYSERS, FIRE ARCS, ALIEN STONE HEADS.', kit: [2, 1, 1, 1, 0, 1, 0, 0] },
+  sun: { build: sun, n: 3, name: 'THE SUN', sub: 'CORONA', next: 'jupiter', boss: 'HELIOS', info: 'A SLINGSHOT ROUND THE SUN, OVER THE BELT. STAY IN THE CLEAR CHANNEL.', kit: [2, 1, 1, 1, 0, 1, 0, 0] },
+  mars: { build: mars, n: 2, name: 'MARS', sub: 'THE FORGE', next: 'sun', boss: 'THE COLOSSUS', info: 'LAVA GEYSERS, FIRE ARCS, ALIEN STONE HEADS.', kit: [1, 1, 1, 0, 0, 1, 0, 0] },
   belt: { build: asteroids, n: 0, shelved: true, name: 'ASTEROID BELT', sub: 'THE RUBBLE', next: 'jupiter', boss: 'THE MOTHER ROCK', info: 'ROCK STORMS, A MINING COLONY, MAGNETIC LODESTONES.', kit: [2, 2, 1, 1, 0, 1, 0, 0] },
   jupiter: { build: jupiter, n: 4, name: 'JUPITER', sub: 'STORM DECK', next: 'saturn', boss: 'THE EYE', info: 'LIGHTNING CHAINS, STORM WALLS, HIDDEN WRAITHS.', kit: [2, 2, 1, 1, 1, 1, 0, 0] },
   saturn: { build: saturn, n: 5, name: 'SATURN', sub: 'THE RINGS', next: 'pluto', boss: 'THE PRISM', info: 'LASER GRIDS IN THE RINGS. AND SOMETHING ENORMOUS.', kit: [2, 2, 2, 1, 1, 2, 0, 0] },
@@ -1081,5 +1081,5 @@ for (const id of ['earth', 'mars', 'jupiter', 'x']) LEVELS['arena-' + id] = { bu
 export const ARENAS_ON = false;
 // SHELVED content: built and playable from PRACTICE, but not part of the jam build's route. The Moon is shelved; so are the arenas while ARENAS_ON is false
 export const shelved = id => !!LEVELS[id]?.shelved || (!ARENAS_ON && !!LEVELS[id]?.isArena);
-export const ORDER = ['earth', 'sun', 'mars', 'jupiter', 'saturn', 'pluto', 'worm', 'x'];
+export const ORDER = ['earth', 'mars', 'sun', 'jupiter', 'saturn', 'pluto', 'worm', 'x'];
 export const buildLevel = id => LEVELS[id].build();

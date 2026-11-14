@@ -947,6 +947,20 @@ The solar map between stages no longer moves on by itself. Your ship flies its h
 
 The title screen shows the version number in its bottom-right corner. OPTIONS > MORE has a new ABOUT page: what the game is, which build you're playing, who made it, what it's built with, and where to find the source code.
 
+### 111. The trailer (r117)
+
+The game now has a trailer, and the trailer is the game. Nothing in it is recorded video: every shot is the real engine flying a real stretch of a real stage, cut together by a script.
+
+- **What's in it:** about 80 seconds. The story is teased on cards, then the four views roll past on one stretch of city. All eight worlds follow in quick cuts, then the sky whale, the squid, the stampede, the dragon and the face in the wormhole. Three predators and seven bosses get a cut each, then it goes quiet for Planet X and ends on the logo.
+- **How it works:** a shot is a stage, a place to start, a view and a length. The autopilot flies and nothing can hurt the ship. Each shot's game is built and flown up to its cut in the background, a few milliseconds a frame, so cuts don't stutter. Letterbox bars, captions, slams, flashes and glitches are drawn over the top. Slow motion is the simulation running at half speed.
+- **Where to watch it:** OPTIONS > MORE > PLAY TRAILER, and from a TRAILER button on the ArcadeGridz site and app. Any button skips it, and it ends on the title screen.
+
+### 112. Mars first, then the Sun (r117)
+
+The route is now Earth, Mars, the Sun, Jupiter. After Mars the signal is already at Jupiter and the Belt is in the way, so the slingshot round the Sun is how you jump it. The story scenes are rewritten to match, and the solar map draws the slingshot as a wide swing back to the Sun and out over the Belt.
+
+Also: the CONTINUE button on the PLAY menu is now a split capsule, with the stage and difficulty in its own half.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

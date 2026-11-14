@@ -23,8 +23,8 @@ What a view flattens does not exist for collisions, so a wall in one view is ope
 | # | Stage | What is in it | Boss |
 |---|---|---|---|
 | 1 | Earth, Neo Terra | skyscrapers, skyways, firewall gates, hover traffic | OVERSEER |
-| 2 | The Sun, Corona | a clear channel through plasma fog, sunspots, solar wind | HELIOS |
-| 3 | Mars, The Forge | lava geysers, fire arcs, a labyrinth, alien stone heads | THE COLOSSUS |
+| 2 | Mars, The Forge | lava geysers, fire arcs, a labyrinth, alien stone heads | THE COLOSSUS |
+| 3 | The Sun, Corona | a slingshot over the Belt: a clear channel through plasma fog, sunspots, solar wind | HELIOS |
 | 4 | Jupiter, Storm Deck | lightning chains, storm walls, wraiths, the deep | THE EYE |
 | 5 | Saturn, The Rings | laser grids, a climb through the ring layers, the loom, a space whale | THE PRISM |
 | 6 | Pluto, The Cold Edge | ice shelves, snow comets, black ice, a blizzard | FROST WARDEN |
