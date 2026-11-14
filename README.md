@@ -5,9 +5,9 @@ A shoot-'em-up where **you** shift reality: barrel-roll between four views of th
 Made for **GitHub Game Off 2026** (theme: **SHIFT**).
 
 ## Status
-Playable start to finish: four planets, four bosses with minibosses, an ending with scrolling credits, then loop mode (keep your upgrades, loops get much harder). Each planet hides two warps: a bonus stage and a themed wave arena that drops you back at the next checkpoint.
+Playable start to finish: ten stages from Earth to Planet X, each with its own boss, an ending with scrolling credits, then loop mode (keep your upgrades, loops get much harder). Earth, Mars, Jupiter and Planet X each hide a warp to a themed wave arena that drops you back at the next checkpoint. Finishing the game on Easy, Normal and Hard unlocks one ship skin each.
 
-Also in the game: Boss Rush (every boss and miniboss back to back, timed), 30 achievements, Perfect Shifts, medals and ranks, wave-order targeting bonuses, 1UP drops, hills and slopes, two-player co-op and an AI wingman (RIVET-9). Built during November 2026 for the jam. See `DEVLOG.md` for how it was made.
+Also in the game: Boss Rush (every boss and miniboss back to back, timed), 36 achievements, Perfect Shifts, medals and ranks, wave-order targeting bonuses, 1UP drops, hills and slopes, two-player co-op and an AI wingman (RIVET-9). Built during November 2026 for the jam. See `DEVLOG.md` for how it was made.
 
 ## The four views
 | View | What it is | What it flattens |
@@ -20,12 +20,18 @@ Also in the game: Boss Rush (every boss and miniboss back to back, timed), 30 ac
 What a view flattens does not exist for collisions, so a wall in one view is open sky in another.
 
 ## Levels
-| # | Planet | Hazards | Boss | Hidden bonus stage |
-|---|---|---|---|---|
-| 1 | Earth, Neo Terra | skyscrapers, skyways, firewall gates | OVERSEER | The Moon |
-| 2 | Mars, The Forge | lava geysers, fire arcs, alien stone heads | THE COLOSSUS | The Sun |
-| 3 | Jupiter, Storm Deck | lightning chains, storm walls, wraiths | THE EYE | Asteroid Belt |
-| 4 | Planet X, The Bloom | tentacles, membranes, spores | THE SHIFTER | Pluto |
+| # | Stage | What is in it | Boss |
+|---|---|---|---|
+| 1 | Earth, Neo Terra | skyscrapers, skyways, firewall gates, hover traffic | OVERSEER |
+| 2 | The Moon, Sea of Quiet | low gravity trench, a dead base that flips over, the mass driver, meteors | THE SENTINEL |
+| 3 | The Sun, Corona | a clear channel through plasma fog, sunspots, solar wind | HELIOS |
+| 4 | Mars, The Forge | lava geysers, fire arcs, a labyrinth, alien stone heads | THE COLOSSUS |
+| 5 | Asteroid Belt, The Rubble | rock storms, a mining colony, magnetic lodestones, the crushers | THE MOTHER ROCK |
+| 6 | Jupiter, Storm Deck | lightning chains, storm walls, wraiths, the deep | THE EYE |
+| 7 | Saturn, The Rings | laser grids, a climb through the ring layers, the loom, a space whale | THE PRISM |
+| 8 | Pluto, The Cold Edge | ice shelves, snow comets, black ice, a blizzard | FROST WARDEN |
+| 9 | The Wormhole, The Throat | every world remixed: fold rapids, a gravity knot, time stretch | THE PARADOX |
+| 10 | Planet X, The Bloom | tentacles, membranes, spores, the hyper run | THE SHIFTER |
 
 ## Controls
 | Action | Keyboard | Controller | Touch |

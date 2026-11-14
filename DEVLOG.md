@@ -806,6 +806,32 @@ RIVET was talking too much. Narration is now split in two. RIVET's chat window a
 
 Some tentacles in the Writhing Grove flipped upside down as they pumped. Each one now settles which end is its root the first time it is drawn, and it keeps that. The grove also has four kinds of tentacle now: the triple strand, a thick barbed one with a hooked tip, a twisted frond that curls into a spiral, and a forked one with three grasping fingers.
 
+### 93. Ten stages (r99)
+
+The biggest change since the game was first playable. The four hidden bonus stages are now full main stages, and there are two brand new ones, for ten in all:
+
+Earth, the Moon, the Sun, Mars, the Asteroid Belt, Jupiter, Saturn, Pluto, the Wormhole, Planet X.
+
+The order is the route out from Earth, with one cheat: after the Moon the ship slingshots round the Sun to catch up with the signal it is chasing.
+
+- **The Moon.** Low gravity in the trench and out on the plains, so the ship drifts. An abandoned base whose gravity plant fails halfway, flipping the stage over. The mass driver, which grabs the ship and throws it down its barrel. A meteor shower where rings on the ground show the impacts. Boss: the Sentinel.
+- **The Sun.** The clear channel through the plasma fog, then a cooler sunspot field with rivers of plasma, a stretch of solar wind that blows in gusts, and a storm of fire arcs and serpents. Boss: Helios.
+- **The Asteroid Belt.** The rock storm and the mining colony, then lodestones (glowing rocks that drag the ship towards them), a collapsing bore that will not let you slow down, and jaws of rock that grind open and shut. Boss: the Mother Rock.
+- **Saturn.** New. Lasers everywhere: pink ones blink, blue ones sweep and never switch off. A laser grid, laser frames, a climb straight up through the ring layers with the stage turned on end, and a loom of light where one dark lane walks from side to side. A space whale crosses the stage three times, and damage carries over between passes. Boss: the Prism.
+- **Pluto.** The ice shelf and the snow comets, then a crevasse of black ice where the ship slides, drifting bergs with ice wyrms, and a blizzard. Boss: the Frost Warden.
+- **The Wormhole.** New, and the last stop before Planet X. It remixes every other world and keeps changing the rules. Fold rapids: four short worlds, each in a different view, with a wall at every seam that only exists in the view you are leaving. A gravity knot that turns the stage a quarter at a time. Time stretch: forced to a crawl through tight gaps, then forced to full speed with only flashes to warn you. An event horizon with a current that drags the ship in circles. Boss: the Paradox, whose shots fly out, stop, and come back.
+
+Each new stage has its own enemies with their own flight paths (corkscrews, figure eights, pincers, dives, low-gravity hops) and their own attacks (lasers down the lane, rings, crosses, curtains, homing shards).
+
+Other changes in this build:
+
+- Earth's early skyscraper run is played in ISO instead of TOP, with some blocks low enough to fly over. Top-down sections are now rare.
+- The stage warps are gone. The four arena warps stay.
+- Ship skins are prizes for finishing the game: Pixie on Easy, Fire Mage on Normal, Dark Lord on Hard. A harder finish also pays out the easier skins.
+- The solar map shows all ten stops and the slingshot.
+- Six new music tracks, one per new stage, and a new title track: half-time glitch-trap with a sliding 808, rolling hats and a lead that stutters.
+- New story scenes between every pair of stages.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

@@ -1,4 +1,4 @@
-// 2DISO SHIFT — every level. Four planets, each with a hidden warp to a bonus stage.
+// 2DISO SHIFT — every level. Ten stages from Earth to Planet X; four of them hide a warp to a bonus arena.
 // Each stretch is built so one view is the way through; the banner and the flashing view pip say which.
 import { glitch, info, addEnemy, addObs, addRing, addPod, bullet, aimed, explode, hint, doShift, pop, near, SPAWN_Z, DT, VIEWS } from './game.js';
 const SIDE = 0, ISO = 1, CHASE = 2, TOP = 3;
@@ -9,11 +9,12 @@ function kit(id) {
   const ev = [], zones = [], checkpoints = [], hills = []; let gid = 0; const hill = (z0, z1, h) => hills.push([z0, z1, h]);
   const at = (z, fn) => ev.push({ z: z - SPAWN_Z, src: z, fn });
   const far = (z, fn, ob) => { const e = { z: z - FAR, lim: z - SPAWN_Z, src: z, oz: ob ? z : null }; e.fn = g => fn(g, e.d || 0); ev.push(e); }; // e.d: how far a cut moved it // scenery is placed well beyond the old horizon and fades in, so nothing pops up in your face
-  const obs = (z, o) => { far(z, (g, d) => addObs(g, { ...o, z: z + d - g.camZ }), true); if (o.ghost && o.kind !== 'safe') ev[ev.length - 1].keep = true; }; // a gate's safe hole is cleared with its walls, so no gate is ever left as a floating hole // ghosts (fog, clouds, channels) are not cleared around a change of view
+  const obs = (z, o) => { far(z, (g, d) => addObs(g, { ...o, z: z + d - g.camZ }), true); if (o.ghost && o.kind !== 'safe' || o.keep) ev[ev.length - 1].keep = true; }; // a gate's safe hole is cleared with its walls, so no gate is ever left as a floating hole // ghosts (fog, clouds, channels) are not cleared around a change of view
   const ring = (z, r) => far(z, (g, d) => addRing(g, { ...r, z: z + d - g.camZ }), true);
   const en = (z, o) => at(z, g => addEnemy(g, o));
   const ground = (z, o) => far(z, (g, d) => addEnemy(g, { rel: false, z: z + d - g.camZ, y: 0.5, y0: 0.5, type: 'turret', ...o }));
   const wing = (z, n, o, gap = 2.2) => { const gr = id + (++gid); if (gid % 3 === 1) ev.push({ z: z - SPAWN_Z - 7, src: z, fn: g => g.warns.push({ x: o.x ?? 0, y: o.y ?? 4.5, t: 80, col: o.col || '#ff4d6d' }) }); /* every third wave flashes a warning where it will come in */ for (let i = 0; i < n; i++) at(z + i * gap, g => addEnemy(g, { type: 'pop', group: gr, gn: n, hp: 2, ph: i * 0.5, ...o })); };
+  const form = (z, n, fn, gap = 1.6) => { const gr = id + (++gid); for (let i = 0; i < n; i++) at(z + i * gap, g => addEnemy(g, { type: 'pop', group: gr, gn: n, hp: 2, ...fn(i, n) })); }; // a formation: fn(i) says where each one flies and what it does
   const untilChase = z => { const c = zones.filter(q => q.view === CHASE && q.z0 > z + 20).sort((a, b) => a.z0 - b.z0)[0]; return c ? c.z0 - 45 : null; }; // a warp closes before the next stretch that is played in chase anyway, so nobody falls into it by accident and skips that stretch
   const warp2 = (z, x, y) => ev.push({ z, src: z, fn: g => { if (g.flags.arena) return; addRing(g, { x, y, z: 10, r: 2, kind: 'warp', to: 'arena', stay: true, t: 0, life: 1200, until: untilChase(z) }); info(g, 'anomaly detected. chase view to reach it'); g.fx.push('ring'); } }); // the second warp: it leads to this planet's arena
   const warp = (z, x, y) => ev.push({ z, src: z, fn: g => { if (g.flags.warp) return; addRing(g, { x, y, z: 10, r: 2, kind: 'warp', stay: true, t: 0, life: 1200, until: untilChase(z) }); info(g, 'anomaly detected. chase view to reach it'); g.fx.push('ring'); } });
@@ -42,7 +43,7 @@ function kit(id) {
   const done = extra => { applyCuts(); if (extra.endZ) extra.endZ = cmap(extra.endZ, true); // nothing solid sits right around a change of view: you get a clear run to make the shift
     for (let i = ev.length - 1; i >= 0; i--) { const e = ev[i]; if (e.oz != null && !e.keep && zones.some((q, k) => k > 0 && e.oz > q.z0 - 30 && e.oz < q.z0 + 8)) ev.splice(i, 1); }
     ev.sort((a, b) => a.z - b.z); return { id, events: ev, zones, checkpoints, hills, tilts, len: extra.endZ || zones.find(q => q.z1 > 1e8)?.z0 || 0, ...extra }; };
-  return { at, obs, ring, en, ground, wing, zone, gate, warp, warp2, fill, hill, checkpoints, cut, tilt, done };
+  return { at, obs, ring, en, ground, wing, form, zone, gate, warp, warp2, fill, hill, checkpoints, cut, tilt, done };
 }
 
 // ---------- boss engine: stages that are only open from one view, attacks that fill the screen in the wrong one ----------
@@ -119,8 +120,8 @@ function earth() {
   sign(48, 2, 7.6); sign(78, -3, 2.6); sign(96, 0, 7.2);
   wing(38, 5, { ...dart, y: 6.5, ay: 1.6, x: 0 }); wing(58, 5, { ...dart, y: 4.2, ay: 1.4, x: -2 }); carrier(72, { y: 6, x: 2 }); wing(86, 6, { ...dart, y: 7, ay: 1.5, x: 3 }); carrier(100, { y: 5, x: -2 });
 
-  zone(110, 335, TOP, 'SKYSCRAPERS - SHIFT TO TOP VIEW');
-  for (let i = 0, z = 146; z < 322; z += 16, i++) { for (const x of i % 2 ? [-3.2, 3.2] : [-6.4, 0, 6.4]) tower(z, x, 9.5);
+  zone(110, 335, ISO, 'SKYSCRAPERS - SHIFT TO ISO VIEW');
+  for (let i = 0, z = 146; z < 322; z += 16, i++) { (i % 2 ? [-3.2, 3.2] : [-6.4, 0, 6.4]).forEach((x, k) => tower(z, x, (i + k) % 3 === 0 ? 3.4 + (i % 2) : 9.5)); // some blocks are low enough to fly over
     if (i % 2) { obs(z, { x: -8.1, y: 4.75, hx: 0.5, hy: 4.75, hz: 1.3, col: C.tower, kind: 'tower' }); obs(z, { x: 8.1, y: 4.75, hx: 0.5, hy: 4.75, hz: 1.3, col: C.tower, kind: 'tower' }); }
     if (i % 3 === 1) turret(z + 8, i % 2 ? 0 : 3.2); if (i % 3 === 2) turret(z + 8, -3.2);
     if (i % 4 === 0 && i) car(z + 8, -8 + i, 5, i % 8 ? 2.6 : -2.6, 2.4); if (i % 4 === 2) fence(z + 8, i % 8 === 2 ? 6.4 : -6.4, i * 30);
@@ -154,7 +155,7 @@ function earth() {
 
   zone(1010, 1220, CHASE, 'HOVER TRAFFIC - SHIFT TO CHASE VIEW'); K.tilt(1030, 1215, { sway: 0.16, w: 0.011, px: 34, py: 16 }); // the whole street banks as you weave through it
   for (let i = 0, z = 1048; z < 1210; z += 10, i++) { const y = [2.4, 5, 7.4][i % 3], d = i % 2 ? 4 : -4; car(z, -8 + (i * 5) % 16, y, d); car(z, 2 - (i * 3) % 10, y, d); car(z + 5, 6 - (i * 7) % 14, [5, 7.4, 2.4][i % 3], -d * 1.4, i % 3 === 0 ? 2.4 : 1.3); car(z + 2.5, -6 + (i * 4) % 13, [7.4, 2.4, 5][i % 3], d * 0.8); car(z + 7.5, 5 - (i * 6) % 12, [2.4, 5, 7.4][(i + 1) % 3], -d); if (i % 4 === 1) obs(z + 5, { x: ((i * 5) % 11) - 5, y: 4.75, hx: 0.7, hy: 4.75, hz: 0.7, col: C.pylon, kind: 'pylon' }); if (i % 6 === 3 && z < 900) slab(z + 5, false, { hz: 0.8 }); }
-  K.warp(58, 3, 6.4); K.warp2(342, -3, 6);
+  K.warp2(342, -3, 6);
   K.hill(56, 86, 1.7); K.hill(636, 700, 1.5); K.hill(880, 940, 1.7); K.hill(1090, 1150, 1.4); K.hill(170, 222, 1.7); K.hill(258, 312, 2.1); K.hill(1238, 1272, 1.3); // overpasses and embankments: the ground rises and the ship rides over
   wing(1062, 5, { ...dart, x: 0, y: 6, ax: 3, ay: 1 }); saucer(1094, { x: -2, y: 6.5 }); carrier(1126, { x: -4, y: 4 }); wing(1162, 6, { ...dart, x: 2, y: 3.5, ax: 4, ay: 1.5 }); carrier(1190, { x: 2, y: 6 });
   K.checkpoints.push(1224);
@@ -198,7 +199,7 @@ function mars() {
   const boulder = (z, x, y, o) => obs(z, { x, y, hx: 1.1, hy: 1.1, hz: 1.1, col: ROCK, kind: 'boulder', hp: 7, score: 120, ...o }); // basalt you can blast apart
   const forge = (z, o) => en(z, { type: 'saucer', col: STONE, hp: 8, r: 0.95, score: 400, hold: 15, dur: 420, ax: 3, ay: 1.5, fire: 120, fan: 2, shape: 'head', pod: true, ...o });
 
-  zone(-99, 95, SIDE, 'SECTOR 2 // MARS - THE FORGE');
+  zone(-99, 95, SIDE, 'SECTOR 4 // MARS - THE FORGE');
   for (let z = 44; z < 92; z += 24) obs(z, { x: ((z * 3) % 11) - 5, y: 1.3, hx: 0.8, hy: 1.3, hz: 0.8, col: STONE, kind: 'statue' });
   for (let z = 30; z < 92; z += 13) cone(z, ((z * 5) % 13) - 6, 1.6 + (z % 3) * 0.5);
   river(58, 0, 0); river(82, 0, 2); river(404, 0, 1);
@@ -213,7 +214,7 @@ function mars() {
   // the Sun warp sits down inside a crater: nothing but TOP view can reach it
   zone(300, 520, SIDE, 'FIRE ARCS - SHIFT TO SIDE VIEW');
   for (let i = 0, z = 334; z < 420; z += 15, i++) arc(z, i % 2 ? 6.6 : 2.6, { osc: { ax: 0, ay: 1.5, w: 2, ph: i } });
-  K.warp(42, -3, 6); K.warp2(306, 3, 5); K.hill(28, 52, 1.6); K.hill(62, 86, 2); K.hill(590, 642, 1.7); K.hill(968, 1022, 1.4); K.hill(128, 176, 1.9); K.hill(214, 268, 2.3); K.hill(1060, 1100, 1.3); /* dunes and ridges */ fall(424, 0); fall(446, 85); fall(468, 170); at(398, g => hint(g, 'LAVAFALLS - WAIT FOR THEM TO STOP', 200));
+  K.warp2(306, 3, 5); K.hill(28, 52, 1.6); K.hill(62, 86, 2); K.hill(590, 642, 1.7); K.hill(968, 1022, 1.4); K.hill(128, 176, 1.9); K.hill(214, 268, 2.3); K.hill(1060, 1100, 1.3); /* dunes and ridges */ fall(424, 0); fall(446, 85); fall(468, 170); at(398, g => hint(g, 'LAVAFALLS - WAIT FOR THEM TO STOP', 200));
   for (let i = 0, z = 472; z < 512; z += 15, i++) arc(z, i % 2 ? 2.4 : 6.8, { osc: { ax: 0, ay: 1.6, w: 2.4, ph: i * 2 } });
   worm(350, 0); worm(388, 0, 7); wing(410, 5, { ...ember, y: 5, ay: 1.2 }); forge(436, { x: 0, y: 6.5, ax: 1 }); worm(486, 0, 7);
   K.checkpoints.push(523);
@@ -288,7 +289,7 @@ function jupiter() {
   const buoy = (z, x, y) => K.ground(z, { x, x0: x, y, y0: y, col: '#ffe14a', hp: 5, r: 0.75, score: 250, fire: 135, fan: 3, bs: 6.5, bcol: ZAP, shape: 'sat', ph: (x + 9) * 0.3, pod: true }); // storm buoys: floating gun platforms
   const wraith = (z, o) => en(z, { type: 'saucer', col: '#ffffff', hp: 6, r: 0.9, score: 500, hold: 13, dur: 400, ax: 4, ay: 2, fire: 100, fan: 3, shape: 'wraith', phase: ISO, haunt: true, pod: true, ...o });
 
-  zone(-99, 95, SIDE, 'SECTOR 3 // JUPITER - STORM DECK');
+  zone(-99, 95, SIDE, 'SECTOR 6 // JUPITER - STORM DECK');
   fog(44, 0, 6.5, { vx: 0.6, wrap: 12 }); fog(70, 0, 2.8, { vx: -0.5, wrap: 12 }); crystal(60, 4.8, { gem: true }); crystal(90, 6.4); buoy(78, 3, 3);
   const gas = (z, x, y, w, h, c) => obs(z, { x, y, hx: w, hy: h, hz: 3.4, par: 0.5, col: c, kind: 'gas', ghost: true }); // big slow gas clouds drifting through: they move slower than the deck, so things slide in and out behind them
   for (let i = 0, z = 40; z < 1130; z += 31, i++) if (z < 760 || z > 905) gas(z, (i % 2 ? 1 : -1) * (2.5 + (i * 1.7) % 3.5), 3 + (i * 2.3) % 4.5, 4.6 + (i % 3) * 0.9, 2.2 + (i % 2) * 0.9, ['#3dffb0', '#9d5bff', '#e23dff', '#5affd0'][i % 4]);
@@ -304,7 +305,7 @@ function jupiter() {
   // the Asteroid warp hangs outside the lane: only SIDE view, which ignores left and right, can touch it
   zone(300, 520, TOP, 'STORM WALLS - SHIFT TO TOP VIEW');
   for (let i = 0, z = 334; z < 410; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7.5]; xs.forEach((x, k) => k === i % 3 ? head(z, x) : vbolt(z, x, i * 31 + k * 45)); }
-  K.warp(48, 3.5, 3.4); K.warp2(306, -3, 6); K.hill(30, 62, 1.8); K.hill(128, 172, 1.6); K.hill(598, 652, 1.8); /* swells in the cloud deck */ funnel(420, -4, 0); funnel(434, 4, 2); funnel(448, 0, 4, 4.5); buoy(441, 6.5, 5); at(392, g => hint(g, 'TORNADOES - THEY WANDER', 180));
+  K.warp2(306, -3, 6); K.hill(30, 62, 1.8); K.hill(128, 172, 1.6); K.hill(598, 652, 1.8); /* swells in the cloud deck */ funnel(420, -4, 0); funnel(434, 4, 2); funnel(448, 0, 4, 4.5); buoy(441, 6.5, 5); at(392, g => hint(g, 'TORNADOES - THEY WANDER', 180));
   for (let i = 0, z = 462; z < 512; z += 14, i++) { const xs = i % 2 ? [-5, 0, 5] : [-2.5, 2.5, 7.5]; xs.forEach((x, k) => k === (i + 1) % 3 ? head(z, x) : vbolt(z, x, i * 29 + k * 45)); }
   wing(350, 5, { ...spark, x: 0, ax: 5, y: 5 }); jelly(392, { x: 0, y: 5 }); wing(474, 6, { ...spark, x: 0, ax: 5, y: 4 }); shark(372, { x: -4, ax: 2 }); shark(456, { x: 4, ax: 2 }); jelly(500, { x: 3, y: 5 }); wing(410, 5, { ...spark, x: 0, ax: 6, y: 5 });
   K.checkpoints.push(523);
@@ -372,7 +373,7 @@ function planetx() {
   const mine = (z, x, y) => ground(z, { x, x0: x, y, y0: y, col: ACID, hp: 3, r: 0.85, score: 120, burst: 10, shape: 'spore' }); // fat spore pods that burst into a ring of acid
   const memb = (z, low, ph) => obs(z, low ? { x: 0, y: 1.8, hx: 8.6, hy: 1.8, hz: 1, col: FLESH, kind: 'membrane', osc: { ax: 0, ay: 0.7, w: 1.6, ph } } : { x: 0, y: 7.3, hx: 8.6, hy: 2.2, hz: 1, col: FLESH, kind: 'membrane', osc: { ax: 0, ay: 0.7, w: 1.6, ph } });
 
-  zone(-99, 85, SIDE, 'SECTOR 4 // PLANET X - THE BLOOM');
+  zone(-99, 85, SIDE, 'SECTOR 10 // PLANET X - THE BLOOM');
   blob(78, { pod: true }); at(46, g => hint(g, 'BLOB WALL - SHOOT IT UNTIL IT BURSTS', 220)); mine(60, 0, 3); mine(68, 0, 7); mine(40, 0, 2.4); mine(48, 0, 7.4);
   wing(24, 6, { ...spore, y: 6.5, ay: 1.5, ax: 0 }, 1.4); wing(34, 8, { ...spore, y: 5, ay: 2.5, ax: 0 }, 1.4); spitter(52, { x: 0, y: 6 }); wing(64, 8, { ...spore, y: 4, ay: 3 }, 1.4); spitter(72, { x: 0, y: 3 });
   for (let z = 30; z < 82; z += 11) eye(z, 0, (z / 11 | 0) % 2 === 0); // eyes on stalks, floor and roof, watching you come in
@@ -394,7 +395,7 @@ function planetx() {
   // the Pluto warp is tucked into the roof here, and only exists in CHASE
   zone(285, 475, SIDE, 'MEMBRANES - SHIFT TO SIDE VIEW'); K.tilt(352, 462, { rot: 3.1416, sway: 0.06, w: 0.015 }); at(352 + SPAWN_Z, g => hint(g, 'THE FOLD JUST TURNED US UPSIDE DOWN!', 220)); // the fold flips the whole stage over
   for (let i = 0, z = 320; z < 466; z += 17, i++) { memb(z, i % 2 === 0, i); eye(z + 8, (i % 3 - 1) * 4, i % 2 === 1); if (i % 3 === 2) blob(z + 9, { hp: 7, gem: true }); }
-  K.warp(38, -3.5, 6.2); K.warp2(292, 3, 4); K.hill(28, 60, 1.8); K.hill(518, 572, 1.5); K.hill(606, 652, 1.3); /* mounds of tissue */
+  K.warp2(292, 3, 4); K.hill(28, 60, 1.8); K.hill(518, 572, 1.5); K.hill(606, 652, 1.3); /* mounds of tissue */
   wing(336, 8, { ...spore, y: 5, ay: 1 }, 1.4); spitter(372, { x: 0, y: 5, ay: 0.5 }); wing(430, 8, { ...spore, y: 4.5, ay: 1.2 }, 1.4);
   K.checkpoints.push(478);
 
@@ -433,79 +434,428 @@ function planetx() {
 }
 
 // =====================================================================================
-// BONUS STAGES — no ships lost here: one hit ends the stage, the end pays a big bonus
+// STAGE-SPECIFIC ENEMIES: each stage's own craft fly their own paths (e.move) and fire their own attacks (e.atk)
 // =====================================================================================
-function moon() { // low gravity trench run: the ship drifts, nothing shoots back
-  const K = kit('moon'), { at, obs, ring, en, zone } = K, GREY = '#c8d0e0';
-  zone(-99, 190, CHASE, 'BONUS // THE MOON - LOW GRAVITY TRENCH RUN'); K.tilt(30, 185, { sway: 0.09, w: 0.006, px: 24, py: 24 }); /* low gravity: the trench floats about */ zone(190, 1e9, ISO, 'CRATER FIELD - SHIFT TO ISO VIEW');
-  for (let z = 30, i = 0; z < 330; z += 6, i++) for (const sd of [-1, 1]) { const h = 1.1 + Math.abs(Math.sin(i * 1.7 + sd)) * 1.6, w = 1.1 + Math.abs(Math.sin(i * 2.3 - sd)) * 0.7; obs(z, { x: sd * (7.6 - w * 0.4 + Math.sin(i * 0.9) * 0.4), y: h, hx: w, hy: h, hz: 3.2, col: i % 3 ? GREY : '#9aa4c0', kind: 'rockwall' }); } // the trench walls: a ragged line of boulders of all sizes
-  for (let i = 0; i < 34; i++) { const z = 40 + i * 8.4; ring(z, { x: Math.sin(i * 0.55) * 4, y: 3.5 + Math.sin(i * 0.4) * 2.2, r: 1.5 }); }
-  for (let i = 0; i < 7; i++) { const z = 62 + i * 40; obs(z, { x: 0, y: 7.6, hx: 8.6, hy: 1.9, hz: 1, col: GREY, kind: 'arch' }); obs(z + 18, { x: (i % 2 ? 3.4 : -3.4), y: 1.4, hx: 1.2, hy: 1.4, hz: 1.2, col: '#7df9ff', kind: 'ice', hp: 4, gem: true, score: 150 }); }
-  for (let i = 0; i < 8; i++) en(50 + i * 36, { type: 'pop', x: (i % 2 ? 4 : -4), y: 6, ax: 2, ay: 1, vz: -5, hp: 3, r: 0.8, col: '#ffe14a', score: 300, shape: 'sat', pod: i % 3 === 1 });
-  K.cut(130, 180); K.cut(250, 285); // shorter run in, same miniboss
-  const tick = stageMini(K, 'moon', 322);
-  return K.done({ name: 'THE MOON', title: 'SEA OF QUIET', bonus: true, tick, endZ: 345, endBonus: 10000, rules: { inertia: true }, theme: { sky: 'moon', grid: '#5a6480' } });
+const tri = u => Math.abs(((u % 2) + 2) % 2 - 1) * 2 - 1;
+const fly = fn => (g, e, dt) => { e.z += e.vz * dt; const q = fn(e.t * 0.02 * (e.w || 1) + e.ph, e); e.x = Math.max(-8.5, Math.min(8.5, q[0])); e.y = Math.max(0.7, Math.min(9, q[1])); };
+const PATH = {
+  eight: fly((u, e) => [e.x0 + Math.sin(u) * e.ax, e.y0 + Math.sin(u * 2) * e.ay]), // a figure of eight
+  hop: fly((u, e) => [e.x0 + Math.sin(u * 0.4) * e.ax, 0.9 + Math.abs(Math.sin(u)) * e.ay]), // bounding along the ground in low gravity
+  cork: fly((u, e) => { const r = Math.max(0.6, 1 - e.t / 420); return [e.x0 + Math.cos(u) * e.ax * r, e.y0 + Math.sin(u) * e.ay * r]; }), // a corkscrew that tightens as it comes
+  pincer: fly((u, e) => { const k = Math.max(0, 1 - e.t / 150); return [e.x0 * k + Math.sin(u) * 0.8, e.y0 + Math.sin(u * 1.3) * e.ay]; }), // sweeps in from the side to the middle
+  dive: fly((u, e) => { const k = Math.min(1, e.t / 140); return [e.x0 + Math.sin(u) * e.ax, e.y0 + (e.y1 - e.y0) * k * k * (3 - 2 * k)]; }), // comes in high (or low) and swoops across
+  saw: fly((u, e) => [e.x0 + Math.sin(u * 0.5) * e.ax, e.y0 + tri(u * 0.6) * e.ay]) }; // straight zigzags, top to bottom
+const ATK = {
+  laser: (col = '#ff3df0', w = 0.3) => (g, e) => { const hz = Math.max(1, (e.z - 1.5) / 2); addObs(g, { rel: true, kind: 'beam', x: e.x, y: e.y, z: hz + 0.5, hx: w, hy: w, hz, warm: 66, life: 20, col }); g.fx.push('charge'); }, // a thin laser straight down the lane: it sights, locks, fires
+  ring: (n = 8, sp = 3, col) => (g, e) => { for (let i = 0; i < n; i++) { const a = i / n * 6.283 + e.t * 0.01; bullet(g, e.x, e.y, e.z, Math.cos(a) * sp, Math.sin(a) * sp, -5, col || e.col); } g.fx.push('eshot'); },
+  cross: (sp = 3.5, col) => (g, e) => { for (const [vx, vy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) bullet(g, e.x, e.y, e.z, vx * sp, vy * sp, -5.5, col || e.col); g.fx.push('eshot'); },
+  twin: (sp = 8, col) => (g, e) => { aimed(g, e, sp, -0.1, col); aimed(g, e, sp, 0.1, col); g.fx.push('eshot'); },
+  rain: (n = 5, col) => (g, e) => { for (let i = 0; i < n; i++) bullet(g, e.x + (i - (n - 1) / 2) * 1.2, e.y, e.z, 0, -2.5, -4.5, col || e.col); g.fx.push('eshot'); }, // a curtain dropped straight down
+  shard: col => (g, e) => { for (let i = -1; i <= 1; i++) addEnemy(g, { type: 'kami', x: e.x + i * 1.2, y: e.y, z: e.z - 0.5, vz: -8, hp: 1, r: 0.4, col: col || '#ffffff', shape: 'shard', score: 40 }); g.fx.push('missile'); } }; // splits off three homing shards
+// lodestones: glowing rocks that drag the ship towards them while they are close
+const magPull = g => { const p = g.players[0]; for (const o of g.obs) if (o.kind === 'magnet' && !o.dead && Math.abs(o.z - p.z) < 9) { const dx = o.x - p.x, dy = o.y - p.y; g.pull = [Math.sign(dx) * Math.min(1.7, Math.abs(dx) * 0.5), Math.sign(dy) * Math.min(1, Math.abs(dy) * 0.3), 0]; return; } };
+const gearAt = (K, z, gear, msg, say) => K.at(z + SPAWN_Z, g => { if (g.forceGear == null) g.gearWas = g.gear; g.forceGear = gear; if (msg) hint(g, msg, 230); g.fx.push('gear'); if (say) g.fx.push('say:' + say); });
+const gearFree = (K, z) => K.at(z + SPAWN_Z, g => { g.forceGear = null; g.gear = Math.min(2, g.gearWas ?? 1); g.fx.push('gear'); });
+// the space whale of Saturn's rings: it crosses the stage three times. Hurt it and the damage carries over to its next pass
+const WHALE = [
+  (g, e, dt) => { e.x += 3.4 * dt; e.z = 17 + Math.sin(e.t * 0.01) * 2; e.y = 5 + Math.sin(e.t * 0.02) * 1.2; e.hd = [1, 0.12 * Math.cos(e.t * 0.02), 0]; e.hpk = e.hp / e.max; if (e.x > 24) { e.left = true; e.z = -50; } },
+  (g, e, dt) => { e.z -= 7.5 * dt; e.x = Math.sin(e.t * 0.012) * 2.5; e.y = 7.9 + Math.sin(e.t * 0.02) * 0.5; e.hd = [0, 0, -1]; e.hpk = e.hp / e.max; if (e.z < -3) e.left = true; },
+  (g, e, dt) => { e.y += 2.4 * dt; e.z = 16 - e.t * 0.012; e.x = Math.sin(e.t * 0.01) * 2; e.hd = [0, 1, -0.25]; e.hpk = e.hp / e.max; if (e.y > 17) { e.left = true; e.z = -50; } }];
+const whale = (K, z, pass) => K.at(z, g => { const old = g.whale; if (old && !old.left && old.hp <= 0) return; /* it was killed on an earlier pass */
+  const e = addEnemy(g, { type: 'pop', shape: 'whale', x: pass === 0 ? -24 : 0, y: pass === 2 ? -6 : pass ? 7.9 : 5, z: pass === 1 ? 62 : 17, vz: 0, hp: 110, r: 2.6, big: true, col: '#9fe9ff', score: 20000, pod: true, move: WHALE[pass], hd: [1, 0, 0] });
+  if (old && old.hpk) e.hp = Math.max(1, Math.round(e.max * old.hpk)); g.whale = e; g.fx.push('bossin'); g.shake = Math.max(g.shake, 6); });
+
+// =====================================================================================
+// LEVEL 2 — THE MOON // SEA OF QUIET: low gravity, a dead base, the mass driver, a meteor shower
+// =====================================================================================
+function moon() {
+  const K = kit('moon'), { at, obs, ring, en, ground, zone, gate, form } = K, GREY = '#c8d0e0', DUSK = '#9aa4c0', BASE = '#2ee6ff', WARN = '#ffe14a';
+  const probe = { col: WARN, shape: 'probe', hp: 2, r: 0.7, score: 120 }, hopper = { col: '#ff9ef2', shape: 'orb', hp: 3, r: 0.75, score: 150, move: PATH.hop, vz: -5 };
+  const walls = (a, b) => { for (let z = a, i = 0; z < b; z += 6, i++) for (const sd of [-1, 1]) { const h = 1.1 + Math.abs(Math.sin(i * 1.7 + sd)) * 1.6, w = 1.1 + Math.abs(Math.sin(i * 2.3 - sd)) * 0.7; obs(z, { x: sd * (7.6 - w * 0.4 + Math.sin(i * 0.9) * 0.4), y: h, hx: w, hy: h, hz: 3.2, col: i % 3 ? GREY : DUSK, kind: 'rockwall' }); } }; // the trench walls: a ragged line of boulders of all sizes
+  const crater = (z, x, w = 1.6) => obs(z, { x, y: 0.55, hx: w, hy: 0.55, hz: w, col: GREY, kind: 'crater' });
+  const needle = (z, x) => obs(z, { x, y: 4.75, hx: 0.8, hy: 4.75, hz: 0.8, col: DUSK, kind: 'spire' });
+  const jet = (z, x, ph) => obs(z, { x, y: 4.75, hx: 1.05, hy: 4.75, hz: 1.05, col: '#e8ecff', kind: 'geyser', pulse: [70, 90, ph] }); // dust jets venting from under the crust
+  const bounce = (z, x, big) => at(z, g => addEnemy(g, { type: 'rock', rel: false, size: big ? 3 : 2, x, y: 2 + g.rand() * 5, z: SPAWN_Z, vx: (g.rand() - 0.5) * 2, vy: (g.rand() < 0.5 ? -1 : 1) * (2.5 + g.rand() * 2), vz: -1, hp: big ? 7 : 4, r: big ? 1.5 : 1, col: GREY, score: big ? 80 : 50, shape: 'rock', pod: big })); // boulders bouncing slowly in the low gravity
+  const rover = (z, x, o) => ground(z, { type: 'walker', x, vx: x > 0 ? -1.4 : 1.4, y: 0.75, y0: 0.75, col: WARN, hp: 5, r: 0.9, score: 220, fire: 140, bs: 6, shape: 'tank', ...o });
+  const slab = (z, low) => obs(z, low ? { x: 0, y: 2, hx: 8.6, hy: 2, hz: 1.2, col: BASE, kind: 'slab', man: true } : { x: 0, y: 7.1, hx: 8.6, hy: 2.4, hz: 1.2, col: BASE, kind: 'slab', man: true });
+  const crate = (z, x, y, o) => obs(z, { x, y, hx: 1, hy: 1, hz: 1, col: WARN, kind: 'crate', hp: 6, score: 150, gem: true, man: true, ...o });
+  const guard = (z, o) => en(z, { type: 'saucer', col: BASE, hp: 7, r: 0.9, score: 400, hold: 15, dur: 400, ax: 2, ay: 2.4, fire: 110, atk: ATK.cross(3.4, BASE), shape: 'sat', pod: true, ...o }); // base defence satellites: they fire a cross of four
+
+  zone(-99, 185, CHASE, 'SECTOR 2 // THE MOON - LOW GRAVITY TRENCH RUN'); K.tilt(30, 180, { sway: 0.09, w: 0.006, px: 24, py: 24 }); at(40, g => hint(g, 'LOW GRAVITY - THE SHIP DRIFTS. STEER EARLY', 220));
+  walls(30, 182);
+  for (let i = 0; i < 17; i++) ring(40 + i * 8.4, { x: Math.sin(i * 0.55) * 4, y: 3.5 + Math.sin(i * 0.4) * 2.2, r: 1.5 });
+  for (let i = 0; i < 4; i++) { const z = 62 + i * 30; obs(z, { x: 0, y: 7.6, hx: 8.6, hy: 1.9, hz: 1, col: GREY, kind: 'arch' }); obs(z + 15, { x: (i % 2 ? 3.4 : -3.4), y: 1.4, hx: 1.2, hy: 1.4, hz: 1.2, col: '#7df9ff', kind: 'ice', hp: 4, gem: true, score: 150 }); }
+  form(50, 5, i => ({ ...probe, x: 0, y: 5, ax: 2.6, ay: 2.6, w: 1.2, ph: i * 1.25, vz: -6 })); form(96, 6, i => ({ ...probe, x: 0, y: 4.6, ax: 3, ay: 2, w: 1, ph: i * 1.05, vz: -6, move: PATH.eight })); form(140, 5, i => ({ ...probe, x: 0, y: 5, ax: 2.6, ay: 2.6, w: 1.4, ph: i * 1.25, vz: -6, pod: i === 4 }));
+  K.checkpoints.push(188);
+
+  zone(185, 400, ISO, 'CRATER FIELD - SHIFT TO ISO VIEW'); K.hill(230, 262, 1.4); K.hill(318, 356, 1.8);
+  for (let i = 0, z = 218; z < 392; z += 11, i++) { const m = i % 4, sd = i % 8 < 4 ? 1 : -1;
+    if (m === 0) { crater(z, -4.5 * sd, 2); crater(z + 4, 3 * sd, 1.4); needle(z + 6, 6.5 * sd); }
+    else if (m === 1) { jet(z, 0, i * 30); jet(z, 5.4 * sd, i * 30 + 60); rover(z + 5, -5 * sd); }
+    else if (m === 2) { needle(z, -2.5 * sd); needle(z, 4.5 * sd); bounce(z + 5, -5 * sd, i % 8 === 2); crater(z + 5, 0, 1.8); }
+    else { crate(z, 4.6 * sd, 1.2); bounce(z, -3 * sd); jet(z + 5, -6 * sd, i * 40); } }
+  form(232, 5, i => ({ ...hopper, x: -5 + i * 2.5, ax: 1.5, ay: 5, ph: i * 0.6 })); form(300, 6, i => ({ ...hopper, x: 5 - i * 2, ax: 2, ay: 6, ph: i * 0.5, fire: 150, atk: ATK.rain(3, '#ff9ef2') })); form(362, 5, i => ({ ...probe, x: (i % 2 ? 6 : -6), y: 3 + i, ay: 1, vz: -6, move: PATH.pincer }));
+  K.checkpoints.push(403);
+
+  // the old base: decks above and below, freight lifts, laser fences, rovers on the floor and the ceiling. Halfway through, its gravity plant fails
+  zone(400, 600, SIDE, 'TRANQUILITY BASE - SHIFT TO SIDE VIEW'); K.tilt(478, 590, { rot: 3.1416, sway: 0.04, w: 0.012 }); at(478 + SPAWN_Z, g => { hint(g, 'THE GRAVITY PLANT JUST FAILED - UP IS DOWN!', 220); g.shake = Math.max(g.shake, 6); });
+  for (let i = 0, z = 432; z < 592; z += 17, i++) { slab(z, i % 2 === 0); const m = i % 3;
+    if (m === 0) obs(z + 8, { x: 0, y: 4.75, hx: 2.2, hy: 0.55, hz: 1.1, col: '#3dffb0', kind: 'elevator', man: true, osc: { ax: 0, ay: 2.6, w: 1.1, ph: i } });
+    else if (m === 1) { obs(z + 8, { x: 0, y: 4.75, hx: 0.4, hy: 4.75, hz: 0.5, col: '#ff4d6d', kind: 'bolt', pulse: [60, 80, i * 25] }); crate(z + 12, 0, i % 2 ? 7 : 2.6); }
+    else { obs(z + 8, { x: 0, y: i % 2 ? 6.4 : 3, hx: 8.6, hy: 0.42, hz: 0.7, col: WARN, kind: 'girder', man: true }); rover(z + 11, 0, i % 2 ? { y: 8.9, y0: 8.9, ceil: true } : {}); } }
+  guard(446, { y: 5 }); form(470, 5, i => ({ ...probe, x: 0, y: 4.8, ax: 0, ay: 2.8, w: 1, ph: i * 0.9, vz: -6, move: PATH.saw })); guard(520, { y: 4 }); form(552, 6, i => ({ ...probe, x: 0, y: 2.5 + (i % 3) * 2.2, vz: -7, ph: i }));
+  K.checkpoints.push(603);
+
+  // the mass driver: the base's launch rail. It grabs the ship and throws it down the barrel, coil after coil
+  zone(600, 790, CHASE, 'THE MASS DRIVER - SHIFT TO CHASE VIEW');
+  gearAt(K, 612, 3, 'MASS DRIVER FIRING - HOLD ON AND THREAD THE COILS', 'mass driver'); gearFree(K, 784);
+  for (let i = 0; i < 7; i++) { const z = 640 + i * 21, x = Math.sin(i * 0.9) * 3.6, y = 4.8 + Math.cos(i * 0.7) * 1.6; gate(z, x, y, { col: BASE, man: true, org: 0, w: 2.7, h: 2.3 }); if (i % 2) crate(z + 10, -x, y, { pod: i === 3 }); }
+  form(626, 4, i => ({ ...probe, x: 0, y: 4.8, ax: 2.5, ay: 2.5, w: 1.6, ph: i * 1.57, vz: -9 }));
+  K.checkpoints.push(793);
+
+  zone(790, 980, ISO, 'SEA OF STORMS - METEOR SHOWER - SHIFT TO ISO VIEW'); K.hill(850, 890, 1.6); K.tilt(815, 970, { sway: 0.07, w: 0.008, px: 18 });
+  at(800 + SPAWN_Z, g => hint(g, 'METEORS! THE RINGS ON THE GROUND SHOW WHERE THEY LAND', 230));
+  for (let i = 0, z = 822; z < 972; z += 12, i++) { const sd = i % 2 ? 1 : -1; crater(z, 5 * sd, 2.2); if (i % 3 === 0) needle(z + 6, -3.5 * sd); if (i % 3 === 1) obs(z + 6, { x: 0, y: 7.8, hx: 8.6, hy: 1.7, hz: 1, col: GREY, kind: 'arch' }); if (i % 3 === 2) bounce(z + 6, 2 * sd, true); if (i % 4 === 3) rover(z + 3, -6 * sd); }
+  form(840, 6, i => ({ ...probe, x: (i % 2 ? 7 : -7), y: 2.5 + i * 0.9, ay: 1, vz: -6, move: PATH.pincer })); form(900, 6, i => ({ ...hopper, x: -6 + i * 2.4, ax: 1, ay: 6, ph: i * 0.5 })); form(946, 5, i => ({ ...probe, x: 0, y: 5, ax: 3.4, ay: 2.4, w: 1.1, ph: i * 1.25, vz: -6, move: PATH.cork, pod: i === 0 }));
+  K.checkpoints.push(983);
+  const tick = g => { if (g.camZ > 800 && g.camZ < 968 && !g.boss && g.tick % 44 === 0) { const p = g.players[0]; addObs(g, { kind: 'strike', x: g.rand() < 0.4 ? p.x : -7 + g.rand() * 14, y: 4.75, z: p.z + 12 + g.rand() * 12, hx: 1.3, hy: 4.75, hz: 1.3, warm: 85, life: 16, col: '#ffb070' }); } };
+
+  zone(980, 1e9, SIDE, 'WARNING // THE SENTINEL WAKES');
+  spawnBoss(K, 1030, { name: 'THE SENTINEL', look: 'sentinel', hp: 1050, col: BASE });
+  const B = boss({ name: 'THE SENTINEL', toast: 'THE MOON IS QUIET AGAIN', adds: { ...probe, hp: 3 }, addEvery: 620,
+    sig: { name: 'MOONFALL', fire(g, b, c) { if (c % 24 === 0) { const off = (c / 24 % 2) * 1.1; for (let i = 0; i < 8; i++) bullet(g, -8 + i * 2.2 + off, 9.6, b.z - 3 - (i % 3) * 4, 0, -2.6, -4.5, i % 2 ? '#ffffff' : BASE); } if (c % 60 === 30) fireRing(g, b, WARN, 12, 2, 3); } }, // curtains of moon dust raining down, with rings between
+    stages: [
+    { name: 'SHIELD ARRAY', vuln: [SIDE], rec: SIDE, col: BASE, bob: 2, attack(g, b, t) { if (t % 320 === 40) sheetH(g, 2 + g.rand() * 5.2, 1.6, { warm: 150, col: BASE }); if (t % 130 === 90) fan(g, b, 3, 6.5, BASE); } },
+    { name: 'TARGETING GRID', vuln: [ISO, CHASE], rec: CHASE, col: WARN, sway: 3, attack(g, b, t) { const p = near(g, b); if (t % 96 === 20) strike(g, p.x, p.z, { col: '#ffb070', warm: 80, hx: 1.2, hz: 1.2 }); if (t % 96 === 68) strike(g, -6 + g.rand() * 12, 4 + g.rand() * 12, { col: '#ffb070', warm: 80 }); if (t % 150 === 110) fan(g, b, 3, 6, WARN); } },
+    { name: 'CORE', vuln: [CHASE], rec: CHASE, col: '#ffffff', attack(g, b, t) { const c = t % 420; if (c >= 120 && c < 292) stare(g, b, c - 120, { col: BASE }); else if (t % 26 === 0) { const a = t * 0.07; for (const k of [0, 3.1416]) bullet(g, b.x, b.y, b.z - 2, Math.cos(a + k) * 3, Math.sin(a + k) * 3, -6, WARN); } } }] });
+  K.fill(probe, 200, 960, 55, 'crate', 'tank');
+  return K.done({ name: 'THE MOON', title: 'SEA OF QUIET', boss: B, tick, rules: { inertia: g => !g.boss && (g.camZ < 182 || (g.camZ > 792 && g.camZ < 976)) }, theme: { sky: 'moon', grid: '#5a6480' } });
 }
-function sun() { // the corona: a dense red plasma fog with one clear channel through it. Out of the channel you cook
-  const K = kit('sun'), { at, obs, en, zone } = K, HOT = '#ffb02e', FOG = '#ff3b1f';
+
+// =====================================================================================
+// LEVEL 3 — THE SUN // CORONA: plasma fog with one clear channel, sunspots, solar wind, a storm of fire
+// =====================================================================================
+function sun() {
+  const K = kit('sun'), { at, obs, en, zone, gate, form } = K, HOT = '#ffb02e', FOG = '#ff3b1f', FIRE = '#ff5a1f', GOLD = '#ffe14a';
   const chan = (z, x, y, hx, hy, full) => { obs(z, { x, y, hx, hy, hz: 3.1, col: HOT, kind: 'shade', ghost: true, fog: 1 }); // the channel itself (cool), and the fog packed around it
     const f = { col: FOG, kind: 'redfog', ghost: true, hz: 3.1 }, L0 = -9.6, R0 = 9.6, B0 = 0, T0 = 9.8;
     if (!full) { if (x - hx > L0 + 0.2) obs(z, { ...f, x: (L0 + x - hx) / 2, y: 4.9, hx: (x - hx - L0) / 2, hy: 4.9 }); if (x + hx < R0 - 0.2) obs(z, { ...f, x: (x + hx + R0) / 2, y: 4.9, hx: (R0 - x - hx) / 2, hy: 4.9 }); }
     const xl = full ? 0 : x, xw = full ? 9.6 : hx; if (y - hy > B0 + 0.2) obs(z, { ...f, x: xl, y: (B0 + y - hy) / 2, hx: xw, hy: (y - hy - B0) / 2 }); if (y + hy < T0 - 0.2) obs(z, { ...f, x: xl, y: (y + hy + T0) / 2, hx: xw, hy: (T0 - y - hy) / 2 }); };
-  zone(-99, 175, CHASE, 'BONUS // THE SUN - DENSE PLASMA FOG - FOLLOW THE CLEAR CHANNEL'); at(40, g => hint(g, 'OUTSIDE THE CHANNEL YOU OVERHEAT', 200)); K.hill(60, 104, 1.2);
-  for (let i = 0; i < 24; i++) { const z = 34 + i * 6, x = Math.sin(i * 0.42) * 4.4, y = 4.8 + Math.sin(i * 0.31 + 1) * 2.1; chan(z, x, y, 2.5, 1.9, false); if (i % 5 === 2) obs(z, { x, y, hx: 0.7, hy: 0.7, hz: 0.7, col: '#ffe14a', kind: 'ice', hp: 3, gem: true, score: 150 }); }
-  for (let i = 0; i < 4; i++) obs(64 + i * 28, { x: 0, y: 4.75, hx: 1.2, hy: 4.75, hz: 3.2, col: HOT, kind: 'flare', osc: { ax: 6.4, ay: 0, w: 0.55 + (i % 2) * 0.12, ph: i * 1.7 } }); // prominences whipping across the channel
-  zone(175, 1e9, SIDE, 'THE CHANNEL DIVES - SHIFT TO SIDE VIEW'); K.tilt(186, 322, { rot: 0.42, sway: 0.08, w: 0.01 }); // the dive: the whole stage tips nose-down
-  for (let i = 0; i < 26; i++) { const z = 178 + i * 6; chan(z, 0, 4.8 + Math.sin(i * 0.45) * 2.6, 9.6, 1.6, true); }
-  for (let i = 0; i < 4; i++) obs(206 + i * 27, { x: 0, y: 4.75, hx: 8.6, hy: 0.7, hz: 2.7, col: HOT, kind: 'flare', osc: { ax: 0, ay: 3.7, w: 0.85, ph: i * 2.1 } });
-  for (let i = 0; i < 9; i++) en(46 + i * 32, { type: 'pop', x: Math.sin((46 + i * 32 - 34) / 6 * 0.42) * 4.4 * (i < 4 ? 1 : 0), y: 3 + (i % 4) * 1.5, ax: 1.5, ay: 1, vz: -5, hp: 3, r: 0.8, col: HOT, score: 250, shape: 'plasma', pod: i % 3 === 0 });
-  K.cut(190, 274); // one full swing of the dive, so the channel stays continuous
-  const tick = stageMini(K, 'sun', 322);
-  return K.done({ name: 'THE SUN', title: 'CORONA', bonus: true, tick, endZ: 345, endBonus: 12000, rules: { heat: true }, theme: { sky: 'sun', grid: '#a8480c' } });
+  const ember = { col: FIRE, shape: 'ember', hp: 2, r: 0.65, score: 120 }, plasma = (z, o) => en(z, { type: 'saucer', col: GOLD, hp: 7, r: 0.9, score: 400, hold: 15, dur: 400, ax: 3, ay: 1.5, fire: 120, atk: ATK.ring(8, 2.8, HOT), shape: 'plasma', pod: true, ...o }); // plasma knots: they burst a ring of fire
+  const flareX = (z, i) => obs(z, { x: 0, y: 4.75, hx: 1.2, hy: 4.75, hz: 3.2, col: HOT, kind: 'flare', osc: { ax: 6.4, ay: 0, w: 0.55 + (i % 2) * 0.12, ph: i * 1.7 } }); // prominences whipping across the channel
+  const flareY = (z, i) => obs(z, { x: 0, y: 4.75, hx: 8.6, hy: 0.7, hz: 2.7, col: HOT, kind: 'flare', osc: { ax: 0, ay: 3.7, w: 0.85, ph: i * 2.1 } });
+  const erupt = (z, x, ph) => obs(z, { x, y: 4.75, hx: 1.05, hy: 4.75, hz: 1.05, col: FIRE, kind: 'geyser', pulse: [70, 80, ph] });
+  const knot = (z, x, y) => obs(z, { x, y, hx: 1.1, hy: 1.1, hz: 1.1, col: HOT, kind: 'boulder', hp: 7, score: 120, gem: true }); // a knot of cooling plasma you can blast apart
+
+  zone(-99, 190, CHASE, 'SECTOR 3 // THE SUN - PLASMA FOG - FOLLOW THE CLEAR CHANNEL'); at(40, g => hint(g, 'OUTSIDE THE CHANNEL YOU OVERHEAT', 200)); K.hill(60, 104, 1.2);
+  for (let i = 0; i < 26; i++) { const z = 34 + i * 6, x = Math.sin(i * 0.42) * 4.4, y = 4.8 + Math.sin(i * 0.31 + 1) * 2.1; chan(z, x, y, 2.5, 1.9, false); if (i % 5 === 2) obs(z, { x, y, hx: 0.7, hy: 0.7, hz: 0.7, col: GOLD, kind: 'ice', hp: 3, gem: true, score: 150 }); }
+  for (let i = 0; i < 4; i++) flareX(64 + i * 28, i);
+  for (let i = 0; i < 5; i++) { const z = 46 + i * 30, k = (z - 34) / 6; form(z, 3, j => ({ ...ember, x: Math.sin(k * 0.42) * 4.4, y: 4.8 + Math.sin(k * 0.31 + 1) * 2.1, ax: 1.2, ay: 1, w: 1.5, ph: j * 2.1, vz: -5, pod: i % 2 === 0 && j === 2 })); }
+  K.checkpoints.push(193);
+
+  zone(190, 385, SIDE, 'THE CHANNEL DIVES - SHIFT TO SIDE VIEW'); K.tilt(200, 372, { rot: 0.42, sway: 0.08, w: 0.01 }); // the dive: the whole stage tips nose-down
+  for (let i = 0; i < 31; i++) { const z = 193 + i * 6; chan(z, 0, 4.8 + Math.sin(i * 0.45) * 2.6, 9.6, 1.6, true); }
+  for (let i = 0; i < 5; i++) flareY(222 + i * 30, i);
+  for (let i = 0; i < 4; i++) { const z = 214 + i * 40, k = (z - 193) / 6; form(z, 3, j => ({ ...ember, x: 0, y: 4.8 + Math.sin(k * 0.45) * 2.6, ay: 0.9, w: 1.6, ph: j * 2, vz: -5, pod: i === 2 && j === 2 })); }
+  K.checkpoints.push(388);
+
+  // sunspots: darker, cooler ground between eruptions. No fog here, but rivers of plasma cross the lane and the surface keeps bursting
+  zone(385, 585, ISO, 'SUNSPOT FIELD - COOLER GROUND - SHIFT TO ISO VIEW'); K.hill(440, 480, 1.5); K.hill(530, 566, 1.3);
+  for (let i = 0, z = 418; z < 578; z += 12, i++) { const m = i % 4, sd = i % 8 < 4 ? 1 : -1;
+    if (m === 0) { erupt(z, -5 * sd, i * 30); erupt(z, 0, i * 30 + 50); erupt(z, 5 * sd, i * 30 + 100); }
+    else if (m === 1) { obs(z, { x: 0, y: 0.2, hx: 9.6, hy: 0.2, hz: 3.6, col: FIRE, kind: 'lava', ghost: true, flow: sd }); knot(z + 6, 3 * sd, 2); }
+    else if (m === 2) { obs(z, { x: 0, y: 4.75, hx: 1.1, hy: 4.75, hz: 1.4, col: HOT, kind: 'flare', osc: { ax: 6, ay: 0, w: 0.7, ph: i } }); knot(z + 6, -4 * sd, 6.5); }
+    else for (const x of [-6.5, -2.2, 2.2, 6.5]) if (x !== 2.2 * sd) obs(z, { x, y: 4.75, hx: 1, hy: 4.75, hz: 1, col: '#a8480c', kind: 'spire' }); }
+  form(430, 6, i => ({ ...ember, x: (i % 2 ? 6 : -6), y: 8, y1: 2.5, ax: 1.5, vz: -6, ph: i * 0.8, move: PATH.dive })); plasma(470, { x: -2, y: 6 }); form(510, 6, i => ({ ...ember, x: 0, y: 5, ax: 4, ay: 2.5, w: 1.2, ph: i * 1.05, vz: -6, move: PATH.eight })); plasma(548, { x: 3, y: 5 });
+  K.checkpoints.push(588);
+
+  zone(585, 785, CHASE, 'CORONAL LOOP - SOLAR WIND - SHIFT TO CHASE VIEW'); K.tilt(610, 775, { sway: 0.22, w: 0.008, py: 14 }); at(610 + SPAWN_Z, g => hint(g, 'SOLAR WIND! IT BLOWS IN GUSTS - LEAN INTO IT', 220));
+  [[0, 4.8], [3.4, 6], [-3.4, 3.4], [3, 3.2], [-3, 6.2], [0, 4.6], [4, 5], [-4, 4.4]].forEach(([x, y], i) => { const z = 624 + i * 20; gate(z, x, y, { col: HOT, w: 2.5, h: 2.1 }); if (i % 2) knot(z + 10, -x, y); });
+  form(600, 5, i => ({ ...ember, x: 0, y: 4.8, ax: 3, ay: 3, w: 1.3, ph: i * 1.25, vz: -7 })); plasma(690, { x: 0, y: 6.5 }); form(740, 6, i => ({ ...ember, x: 0, y: 4.8, ax: 3.5, ay: 3, w: 1, ph: i * 1.05, vz: -7, move: PATH.cork, pod: i === 5 }));
+  K.checkpoints.push(788);
+
+  zone(785, 960, SIDE, 'SOLAR STORM - SHIFT TO SIDE VIEW'); K.tilt(800, 950, { rot: -0.3, sway: 0.06, w: 0.012 });
+  const serpent = (z, n = 8) => { const gr = 'sp' + z; for (let i = 0; i < n; i++) at(z + i * 0.9, g => addEnemy(g, { type: 'pop', rel: false, z: 30 + i * 0.9, vz: 0, group: gr, gn: n, x: 0, y: 0, y0: 0.2, ay: 7.5, w: 1.3, ph: -i * 0.3, hp: 2, r: 0.6, col: i ? HOT : '#ffffff', score: 80, shape: 'worm' })); }; // fire serpents arcing out of the surface
+  for (let i = 0, z = 816; z < 950; z += 15, i++) { const m = i % 3; if (m === 0) { obs(z, { x: 0, y: 2.2, hx: 8.6, hy: 0.55, hz: 0.9, col: FIRE, kind: 'firearc' }); obs(z + 6, { x: 0, y: 7.4, hx: 8.6, hy: 0.55, hz: 0.9, col: FIRE, kind: 'firearc' }); } else if (m === 1) obs(z, { x: 0, y: 4.75, hx: 8.6, hy: 4.75, hz: 1.05, col: HOT, kind: 'lavafall', pulse: [70, 110, i * 35] }); else { serpent(z); flareY(z + 8, i); } }
+  form(830, 5, i => ({ ...ember, x: 0, y: 8.5, y1: 1.5 + i, vz: -6, ph: i, ax: 0, move: PATH.dive })); plasma(880, { y: 5, ax: 0 }); form(920, 6, i => ({ ...ember, x: 0, y: 4.8, ay: 3.2, ax: 0, w: 1.1, ph: i * 0.9, vz: -6, move: PATH.saw }));
+  at(940, g => addPod(g, 0, 5, SPAWN_Z, 'god'));
+  K.checkpoints.push(963);
+
+  zone(960, 1e9, SIDE, 'WARNING // HELIOS RISES');
+  spawnBoss(K, 1010, { name: 'HELIOS', look: 'helios', hp: 1500, col: HOT });
+  const B = boss({ name: 'HELIOS', toast: 'THE SUN SETTLES', adds: { ...ember, hp: 3 }, addEvery: 600,
+    sig: { name: 'SUPERNOVA', fire(g, b, c) { if (c % 20 === 0) { const n = 18, gap = (c / 20 * 2) % n; for (let i = 0; i < n; i++) if ((i - gap + n) % n >= 4) { const a = i / n * 6.283; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 2.7, Math.sin(a) * 2.7, -5.5, i % 2 ? GOLD : FIRE); } g.fx.push('eshot'); } } }, // shell after shell of fire, and the one gap walks round the ring
+    stages: [
+    { name: 'CORONA', vuln: [SIDE], rec: SIDE, col: HOT, bob: 2.2, attack(g, b, t) { if (t % 300 === 40) sheetH(g, 2 + g.rand() * 5.2, 1.5, { warm: 140, col: FIRE }); if (t % 110 === 70) for (let i = -1; i <= 1; i++) bullet(g, b.x, b.y + i * 1.6, b.z - 2, 0, i * 0.8, -6.5, GOLD); } },
+    { name: 'PHOTOSPHERE', vuln: [ISO, CHASE], rec: CHASE, col: FIRE, sway: 3.5, attack(g, b, t) { const p = near(g, b); if (t % 150 === 30) fireRing(g, b, HOT, 16, 2.6, 4); if (t % 90 === 60) { strike(g, p.x, p.z, { col: FIRE, warm: 75 }); strike(g, p.x + (g.rand() - 0.5) * 8, p.z + 3, { col: FIRE, warm: 75 }); } } },
+    { name: 'THE CORE', vuln: [CHASE], rec: CHASE, col: '#ffffff', attack(g, b, t) { const c = t % 400; if (c >= 110 && c < 282) stare(g, b, c - 110, { col: GOLD }); else if (t % 20 === 0) { const a = t * 0.08; for (let k = 0; k < 3; k++) bullet(g, b.x, b.y, b.z - 2, Math.cos(a + k * 2.094) * 2.8, Math.sin(a + k * 2.094) * 2.8, -6, HOT); } } }] });
+  K.fill(ember, 400, 940, 60, 'boulder', 'tank');
+  return K.done({ name: 'THE SUN', title: 'CORONA', boss: B, theme: { sky: 'sun', grid: '#a8480c' },
+    rules: { heat: g => g.camZ < 368 && !g.boss, wind: g => g.camZ > 610 && g.camZ < 778 && !g.boss ? [Math.sin(g.tick * 0.015) * 1.3, Math.cos(g.tick * 0.011) * 0.5] : [0, 0] } });
 }
-function asteroids() { // rock-busting frenzy: rocks split, and some carry pods. Halfway through you fly into a hollow asteroid that is being mined
-  const K = kit('belt'), { at, obs, en, wing, zone } = K, ROCK = '#c8a070', ORE = '#ffb02e', LAMP = '#3dffb0';
+
+// =====================================================================================
+// LEVEL 5 — ASTEROID BELT // THE RUBBLE: rock storms, a mining colony, lodestones, a collapsing bore, the crushers
+// =====================================================================================
+function asteroids() {
+  const K = kit('belt'), { at, obs, en, zone, gate, form } = K, ROCK = '#c8a070', DARK = '#9a7a50', ORE = '#ffb02e', LAMP = '#3dffb0';
   const rocks = (from, to, step) => { for (let i = 0, z = from; z < to; z += step, i++) { const big = i % 3 === 0; at(z, g => addEnemy(g, { type: 'rock', rel: false, size: big ? 3 : 2, x: -6.5 + g.rand() * 13, y: 1.5 + g.rand() * 6.5, z: SPAWN_Z, vx: (g.rand() - 0.5) * 4, vy: (g.rand() - 0.5) * 2, vz: -g.rand() * 2, hp: big ? 7 : 4, r: big ? 1.5 : 1, col: ROCK, score: big ? 80 : 50, shape: 'rock', pod: i % 7 === 3 })); } };
-  zone(-99, 140, CHASE, 'BONUS // ASTEROID BELT - BREAK EVERYTHING'); rocks(34, 132, 6.6);
+  const drone = { col: LAMP, shape: 'probe', hp: 2, r: 0.7, score: 120 }, driller = { col: ORE, shape: 'lancer', hp: 3, r: 0.75, score: 160, fire: 140, atk: ATK.twin(7.5, ORE) }; // mining drones, and drillers that fire twin bolts
+  const crate = (z, x, y, o) => obs(z, { x, y, hx: 1, hy: 1, hz: 1, col: ORE, kind: 'crate', hp: 6, score: 150, gem: true, ...o });
+  const magnet = (z, x, y) => obs(z, { x, y, hx: 1.1, hy: 1.1, hz: 1.1, col: '#ff3df0', kind: 'magnet', hp: 9, score: 200, gem: true });
+
+  zone(-99, 150, CHASE, 'SECTOR 5 // ASTEROID BELT - BREAK EVERYTHING'); rocks(34, 142, 6.6);
+  form(60, 4, i => ({ ...drone, x: 0, y: 4.8, ax: 3, ay: 2.6, w: 1.2, ph: i * 1.57, vz: -6 })); form(110, 5, i => ({ ...drone, x: 0, y: 4.8, ax: 3.4, ay: 2.6, w: 1, ph: i * 1.25, vz: -6, move: PATH.cork, pod: i === 4 }));
+  K.checkpoints.push(153);
+
   // THE MOTHERLODE: a mining colony dug out of one giant rock. Cave roof and floor close in, drill rigs pump up and down,
   // ore carts run the rails, laser fences guard the seams, and the ore crates are full of gems
-  zone(140, 268, SIDE, 'THE MOTHERLODE - A MINING COLONY INSIDE THE ROCK - SHIFT TO SIDE VIEW');
-  at(150, g => hint(g, 'A WHOLE COLONY DUG INTO ONE ROCK. MIND THE DRILLS', 220));
-  for (let i = 0, z = 150; z < 262; z += 5, i++) { const fl = 0.7 + Math.abs(Math.sin(i * 0.7)) * 1.3, rf = 0.7 + Math.abs(Math.sin(i * 0.53 + 1)) * 1.4; // the cave itself
-    obs(z, { x: 0, y: fl / 2, hx: 9, hy: fl / 2, hz: 2.6, col: i % 3 ? ROCK : '#9a7a50', kind: 'rockwall' }); obs(z, { x: 0, y: 9.6 - rf / 2, hx: 9, hy: rf / 2, hz: 2.6, col: i % 3 ? ROCK : '#9a7a50', kind: 'rockwall' }); }
-  for (let i = 0, z = 168; z < 252; z += 14, i++) { const m = i % 3;
+  zone(150, 335, SIDE, 'THE MOTHERLODE - A MINING COLONY INSIDE THE ROCK - SHIFT TO SIDE VIEW'); at(160, g => hint(g, 'A WHOLE COLONY DUG INTO ONE ROCK. MIND THE DRILLS', 220));
+  for (let i = 0, z = 160; z < 330; z += 5, i++) { const fl = 0.7 + Math.abs(Math.sin(i * 0.7)) * 1.3, rf = 0.7 + Math.abs(Math.sin(i * 0.53 + 1)) * 1.4;
+    obs(z, { x: 0, y: fl / 2, hx: 9, hy: fl / 2, hz: 2.6, col: i % 3 ? ROCK : DARK, kind: 'rockwall' }); obs(z, { x: 0, y: 9.6 - rf / 2, hx: 9, hy: rf / 2, hz: 2.6, col: i % 3 ? ROCK : DARK, kind: 'rockwall' }); }
+  for (let i = 0, z = 180; z < 322; z += 14, i++) { const m = i % 3;
     if (m === 0) obs(z, { x: 0, y: 4.75, hx: 8.6, hy: 0.6, hz: 1.1, col: ORE, kind: 'elevator', osc: { ax: 0, ay: 2.6, w: 1.2, ph: i } }); // a drill rig pumping up and down
-    else if (m === 1) { obs(z, { x: 0, y: 4.75, hx: 0.4, hy: 4.75, hz: 0.5, col: '#ff4d6d', kind: 'bolt', pulse: [60, 80, i * 25] }); obs(z + 6, { x: 0, y: 3, hx: 1, hy: 1, hz: 1, col: ORE, kind: 'crate', hp: 6, score: 150, gem: true }); } // a laser fence, then an ore crate
+    else if (m === 1) { obs(z, { x: 0, y: 4.75, hx: 0.4, hy: 4.75, hz: 0.5, col: '#ff4d6d', kind: 'bolt', pulse: [60, 80, i * 25] }); crate(z + 6, 0, 3); } // a laser fence, then an ore crate
     else { obs(z, { x: 0, y: i % 2 ? 6.6 : 2.8, hx: 8.6, hy: 0.42, hz: 0.7, col: '#ffe14a', kind: 'girder' }); obs(z + 6, { x: -8, y: i % 2 ? 2.6 : 6.8, hx: 1.3, hy: 0.6, hz: 0.7, vx: 3.2, wrap: 11, col: ORE, kind: 'car' }); } } // a gantry, then an ore cart on the rails
-  for (let k = 0; k < 4; k++) en(176 + k * 22, { type: 'pop', x: 0, y: 3.5 + (k % 2) * 2.5, ay: 1.4, vz: -5, hp: 3, r: 0.75, col: LAMP, score: 200, shape: 'sat', pod: k === 2 }); // mining drones
-  zone(268, 1e9, ISO, 'BACK OUT IN THE BELT - SHIFT TO ISO VIEW'); rocks(276, 331, 6.6);
-  const tick = stageMini(K, 'belt', 327);
-  return K.done({ name: 'ASTEROID BELT', title: 'THE RUBBLE', bonus: true, tick, endZ: 350, endBonus: 10000, theme: { sky: 'space', grid: '#3a3a5a', nofloor: true, cave: [140, 268], caveCol: '#c8a070' } });
+  for (let k = 0; k < 4; k++) form(190 + k * 34, 4, i => ({ ...drone, x: 0, y: 4.8, ax: 0, ay: 2.2, w: 1.2, ph: i * 0.9, vz: -5.5, move: k % 2 ? PATH.saw : undefined, pod: k === 2 && i === 3 }));
+  K.checkpoints.push(338);
+
+  zone(335, 525, ISO, 'LODESTONE FIELD - MAGNETIC ROCKS - SHIFT TO ISO VIEW'); at(345 + SPAWN_Z, g => hint(g, 'THE GLOWING ROCKS ARE MAGNETS. THEY DRAG THE SHIP - SHOOT THEM OR FIGHT THE PULL', 260));
+  for (let i = 0, z = 366; z < 518; z += 13, i++) { const sd = i % 2 ? 1 : -1, m = i % 4;
+    if (m === 0) { magnet(z, 5 * sd, 4.8); obs(z + 6, { x: -2 * sd, y: 4.75, hx: 0.8, hy: 4.75, hz: 0.8, col: DARK, kind: 'spire' }); }
+    else if (m === 1) { obs(z, { x: 0, y: 4.75, hx: 0.4, hy: 4.75, hz: 0.5, col: '#ff4d6d', kind: 'bolt', osc: { ax: 5, ay: 0, w: 0.7, ph: i } }); crate(z + 6, 4 * sd, 2); } // a cutting laser sweeping the field
+    else if (m === 2) { magnet(z, -4 * sd, 2.5); magnet(z + 6, 4 * sd, 7); }
+    else { obs(z, { x: -5.5 * sd, y: 4.75, hx: 1.6, hy: 4.75, hz: 1.4, col: ROCK, kind: 'rockwall' }); obs(z, { x: 5.5 * sd, y: 2, hx: 1.6, hy: 2, hz: 1.4, col: DARK, kind: 'rockwall' }); } }
+  rocks(352, 512, 16);
+  form(380, 3, i => ({ ...driller, x: (i - 1) * 4.5, y: 5 + (i % 2), vz: -4, ax: 1, ay: 1, w: 0.7, ph: i })); form(440, 6, i => ({ ...drone, x: 0, y: 5, ax: 4.2, ay: 2.5, w: 1.1, ph: i * 1.05, vz: -6, move: PATH.eight })); form(490, 4, i => ({ ...driller, x: (i % 2 ? 6 : -6), y: 3 + i * 1.2, ay: 1, vz: -5, move: PATH.pincer, pod: i === 3 }));
+  K.checkpoints.push(528);
+
+  // the bore: the colony's main shaft, and it is coming down. No slowing, the tunnel lurches, rocks let go of the roof
+  zone(525, 725, CHASE, 'THE BOREHOLE - IT IS COLLAPSING - SHIFT TO CHASE VIEW'); K.tilt(545, 715, { rot: 0.35, sway: 0.3, w: 0.007 });
+  gearAt(K, 540, 2, 'THE BORE IS COMING DOWN BEHIND US - NO SLOWING DOWN'); gearFree(K, 718);
+  [[0, 4.6], [3.2, 5.8], [-3.2, 3.4], [2.6, 3], [-2.8, 6.2], [0, 5], [3.8, 4.4], [-3.8, 5]].forEach(([x, y], i) => { const z = 562 + i * 20; gate(z, x, y, { col: ROCK, w: 2.5, h: 2.1 }); if (i % 2) obs(z + 10, { x: -x * 0.8, y: 8.6, hx: 0.95, hy: 0.95, hz: 0.95, col: ROCK, kind: 'boulder', hp: 6, score: 120, drop: 13 }); else crate(z + 10, -x, 1, { pod: i === 4 }); });
+  form(552, 4, i => ({ ...drone, x: 0, y: 4.8, ax: 2.6, ay: 2.6, w: 1.5, ph: i * 1.57, vz: -8 }));
+  K.checkpoints.push(728);
+
+  zone(725, 905, SIDE, 'THE CRUSHERS - SHIFT TO SIDE VIEW'); at(735 + SPAWN_Z, g => hint(g, 'THE JAWS GRIND OPEN AND SHUT. GO THROUGH WHEN THEY OPEN', 220));
+  for (let i = 0, z = 756; z < 896; z += 16, i++) { const ph = i * 1.3; // two jaws of rock, grinding open and shut
+    obs(z, { x: 0, y: 1.3, hx: 8.6, hy: 1.7, hz: 2.2, col: ROCK, kind: 'rockwall', osc: { ax: 0, ay: 0.9, w: 1, ph } }); obs(z, { x: 0, y: 8.3, hx: 8.6, hy: 1.7, hz: 2.2, col: DARK, kind: 'rockwall', osc: { ax: 0, ay: -0.9, w: 1, ph } });
+    if (i % 2) obs(z + 8, { x: 0, y: 4.8, hx: 8.6, hy: 0.85, hz: 0.7, col: '#9fe9ff', kind: 'crystal', hp: 6, score: 120, gem: i % 4 === 1 }); else crate(z + 8, 0, i % 4 ? 3 : 6.6, { pod: i % 4 === 0, gem: false }); }
+  form(770, 5, i => ({ ...drone, x: 0, y: 4.8, ay: 1.4, ax: 0, w: 1.2, ph: i * 0.9, vz: -6 })); form(840, 3, i => ({ ...driller, x: 0, y: 3.4 + i * 1.4, vz: -4.5, ay: 0.6, w: 0.8, ph: i }));
+  K.checkpoints.push(908);
+  const tick = g => { magPull(g); if (g.camZ > 545 && g.camZ < 715 && g.tick % 50 === 0) g.shake = Math.max(g.shake, 4); };
+
+  zone(905, 1e9, SIDE, 'WARNING // THE MOTHER ROCK');
+  spawnBoss(K, 955, { name: 'THE MOTHER ROCK', look: 'rock', hp: 2000, col: ROCK });
+  const chuck = (g, b, n, sp) => { for (let i = 0; i < n; i++) addEnemy(g, { type: 'rock', x: b.x + (g.rand() - 0.5) * 4, y: b.y + (g.rand() - 0.5) * 4, z: b.z - 2, vz: -sp, vx: (g.rand() - 0.5) * 3, vy: (g.rand() - 0.5) * 3, hp: 3, r: 0.9, col: ROCK, shape: 'rock', score: 60, size: 2 }); g.fx.push('missile'); };
+  const B = boss({ name: 'THE MOTHER ROCK', toast: 'THE BELT IS JUST ROCKS AGAIN', adds: { ...drone, hp: 3 }, addEvery: 640,
+    sig: { name: 'AVALANCHE', fire(g, b, c) { if (c % 8 === 0) { const k = c / 8, dir = (c / 80 | 0) % 2 ? -1 : 1; bullet(g, -9 + (k * 3.7) % 18, 9.6, b.z - 3 - (k % 4) * 3.5, dir * 1.3, -3, -4.5, k % 2 ? ORE : '#ffffff'); } if (c % 80 === 40) chuck(g, b, 2, 5.5); } }, // gravel pouring down slantwise, switching sides, with boulders thrown through it
+    stages: [
+    { name: 'CRUST', vuln: [SIDE], rec: SIDE, col: ROCK, bob: 2, attack(g, b, t) { if (t % 330 === 40) sheetH(g, 2 + g.rand() * 5.2, 1.6, { warm: 150, col: ORE }); if (t % 120 === 80) chuck(g, b, 2, 5.5); } },
+    { name: 'MANTLE', vuln: [ISO, CHASE], rec: CHASE, col: DARK, sway: 3, attack(g, b, t) { if (t % 250 === 30) throwGate(g, b, { vz: -5.5, col: ROCK }); if (t % 125 === 90) { aimed(g, b, 6.5, -0.12, ORE); aimed(g, b, 6.5, 0.12, ORE); g.fx.push('eshot'); } } },
+    { name: 'THE HEART', vuln: [SIDE, ISO], rec: SIDE, col: ORE, bob: 2.4, attack(g, b, t) { if (t % 160 === 30) fireRing(g, b, ORE, 14, 2.4, 4); if (t % 200 === 150) chuck(g, b, 3, 6); if (t % 330 === 250) sheetH(g, 2 + g.rand() * 5.2, 1.5, { warm: 130, col: ORE }); } }] });
+  K.fill(drone, 345, 890, 60, 'crate', 'tank');
+  return K.done({ name: 'ASTEROID BELT', title: 'THE RUBBLE', boss: B, tick, theme: { sky: 'space', grid: '#3a3a5a', nofloor: true, cave: [150, 335], caveCol: '#c8a070' } });
 }
-function pluto() { // the cold edge: shatter the shelf, dodge the snowflake comets and the cryo geysers, weave the icicles and the drifting bergs
-  const K = kit('pluto'), { at, obs, en, zone } = K, ICE = '#9fe9ff', DEEP = '#5ea0ff', SNOW = '#ffffff';
+
+// =====================================================================================
+// LEVEL 7 — SATURN // THE RINGS: ice, mirrors, more lasers than anywhere else, and something enormous swimming in them
+// =====================================================================================
+function saturn() {
+  const K = kit('saturn'), { at, obs, ring, en, ground, zone, form } = K, ICE = '#cfe8ff', GOLDR = '#e8c98a', LAS = '#ff3df0', LAS2 = '#7df9ff', MIR = '#b06bff';
+  const chunk = (z, x, y, w = 1.2, o) => obs(z, { x, y, hx: w, hy: w * 0.8, hz: w, col: ICE, kind: 'berg', ...o }); // a lump of ring ice
+  const prism = (z, x, y, o) => obs(z, { x, y, hx: 0.9, hy: 0.9, hz: 0.9, col: LAS2, kind: 'ice', hp: 5, score: 150, gem: true, ...o });
+  const hl = (z, y, ph, o) => obs(z, { x: 0, y, hx: 8.6, hy: 0.35, hz: 0.5, col: LAS, kind: 'bolt', pulse: [60, 70, ph], ...o }); // pink lasers blink
+  const vl = (z, x, ph, o) => obs(z, { x, y: 4.75, hx: 0.38, hy: 4.75, hz: 0.5, col: LAS, kind: 'bolt', pulse: [60, 70, ph], ...o });
+  const sweepV = (z, ph, ax = 5.5) => obs(z, { x: 0, y: 4.75, hx: 0.38, hy: 4.75, hz: 0.5, col: LAS2, kind: 'bolt', osc: { ax, ay: 0, w: 0.8, ph } }); // blue lasers never switch off: they sweep
+  const sweepH = (z, ph, ay = 3.2) => obs(z, { x: 0, y: 4.75, hx: 8.6, hy: 0.35, hz: 0.5, col: LAS2, kind: 'bolt', osc: { ax: 0, ay, w: 0.8, ph } });
+  const mirror = (z, x, y, hx = 3) => obs(z, { x, y, hx, hy: 0.42, hz: 0.7, col: MIR, kind: 'girder' });
+  const lancer = { col: LAS, shape: 'lancer', hp: 3, r: 0.7, score: 180, fire: 130, atk: ATK.laser(LAS) }, manta = { col: LAS2, shape: 'manta', hp: 2, r: 0.8, score: 140 }; // lancers fire a laser down the lane; mantas glide in formation
+  const post = (z, o) => en(z, { ...lancer, type: 'saucer', hold: 16, dur: 380, ax: 2, ay: 2.5, hp: 6, score: 380, pod: true, ...o });
+  const buoy = (z, x, y) => ground(z, { x, x0: x, y, y0: y, col: GOLDR, hp: 5, r: 0.75, score: 250, fire: 120, atk: ATK.laser(LAS2, 0.25), shape: 'prism', ph: (x + 9) * 0.3, pod: true }); // prism buoys: fixed laser posts
+  for (let z = 20; z < 990; z += 12) if (z < 585 || z > 775) { obs(z, { x: 0, y: 0.2, hx: 9.6, hy: 0.12, hz: 6, col: GOLDR, kind: 'ringband', ghost: true }); obs(z, { x: 0, y: 9.45, hx: 9.6, hy: 0.12, hz: 6, col: '#9fb0ff', kind: 'ringband', ghost: true }); } // we fly between two sheets of ring
+
+  zone(-99, 170, SIDE, 'SECTOR 7 // SATURN - THE RING PLANE'); at(40, g => hint(g, 'PINK LASERS BLINK. BLUE LASERS SWEEP. NEITHER IS FRIENDLY', 240));
+  for (let i = 0, z = 36; z < 162; z += 13, i++) { const m = i % 4; if (m === 0) hl(z, 2.4 + (i % 3) * 2.2, i * 20); else if (m === 1) { chunk(z, 0, 1.6, 1.5); chunk(z + 5, 0, 7.8, 1.4); } else if (m === 2) { sweepH(z, i); prism(z + 6, 0, 4.8); } else { hl(z, 2.2, i * 20); hl(z, 7.2, i * 20 + 65); } }
+  form(40, 5, i => ({ ...manta, x: 0, y: 5, ax: 0, ay: 2.6, w: 1.1, ph: i * 0.8, vz: -6, move: PATH.saw })); post(74, { y: 5 }); form(104, 6, i => ({ ...manta, x: 0, y: 8.5, y1: 1.5 + i * 1.1, ax: 0, vz: -6, ph: i, move: PATH.dive })); post(138, { y: 4.5 });
+  K.checkpoints.push(173);
+
+  zone(170, 380, ISO, 'THE CASSINI GAP - LASER GRID - SHIFT TO ISO VIEW');
+  for (let i = 0, z = 204; z < 372; z += 12, i++) { const m = i % 5, sd = i % 2 ? 1 : -1;
+    if (m === 0) { vl(z, -5.4, i * 20); vl(z, 0, i * 20 + 45); vl(z, 5.4, i * 20 + 90); }
+    else if (m === 1) { mirror(z, -4.6 * sd, 2.6); mirror(z, 4.6 * sd, 6.8); prism(z + 6, 4 * sd, 2.4); }
+    else if (m === 2) sweepV(z, i);
+    else if (m === 3) { chunk(z, -5 * sd, 3, 1.5); chunk(z, 3 * sd, 7, 1.2); buoy(z + 6, -2 * sd, 5); }
+    else { hl(z, 2.2, i * 25); vl(z, 3.5 * sd, i * 25 + 60); } }
+  whale(K, 200, 0); at(204, g => hint(g, 'WHOA. SOMETHING ENORMOUS IS SWIMMING THROUGH THE RINGS', 240));
+  form(214, 5, i => ({ ...manta, x: (i - 2) * 2.6, y: 5 + Math.abs(i - 2) * 0.9, z: SPAWN_Z + Math.abs(i - 2) * 1.6, vz: -7, ax: 0.6, w: 1 }), 0); form(262, 3, i => ({ ...lancer, x: (i - 1) * 4.5, y: 4 + i, vz: -4, ax: 1, ay: 1, w: 0.7, ph: i })); form(310, 7, i => ({ ...manta, x: 0, y: 5, ax: 4.5, ay: 2.6, w: 1, ph: i * 0.9, vz: -6, move: PATH.eight })); form(350, 5, i => ({ ...manta, x: (i % 2 ? 7 : -7), y: 3 + i, ay: 1, vz: -6, move: PATH.pincer, pod: i === 4 }));
+  K.checkpoints.push(383);
+
+  zone(380, 580, CHASE, 'SHEPHERD MOONS - LASER FRAMES - SHIFT TO CHASE VIEW'); K.tilt(400, 570, { sway: 0.14, w: 0.009, px: 26, py: 14 });
+  for (let i = 0; i < 8; i++) { const z = 412 + i * 20, x = Math.sin(i * 1.1) * 3.6, y = 4.8 + Math.cos(i * 0.8) * 1.7; // a frame of lasers round a ring: the uprights never blink, the cross-bars do
+    if (i % 2 === 0) { vl(z, x - 2.4, 0, { pulse: undefined }); vl(z, x + 2.4, 0, { pulse: undefined }); hl(z, y - 2, i * 30); hl(z, y + 2, i * 30 + 65); ring(z, { x, y, r: 1.4 }); } else { sweepV(z, i * 1.3, 5); chunk(z + 8, -x, y, 1.3); } }
+  whale(K, 432, 1); at(452, g => hint(g, 'IT IS COMING BACK - RIGHT OVER US. STAY LOW!', 220));
+  form(396, 5, i => ({ ...manta, x: 0, y: 4.8, ax: 3, ay: 2.6, w: 1.2, ph: i * 1.25, vz: -7, move: PATH.cork })); form(482, 3, i => ({ ...lancer, x: (i - 1) * 4, y: 3 + i * 1.4, vz: -4.5, ax: 1.2, ay: 0.8, w: 0.8, ph: i })); form(536, 6, i => ({ ...manta, x: 0, y: 4.8, ax: 3.4, ay: 2.8, w: 1.1, ph: i * 1.05, vz: -7, pod: i === 5 }));
+  K.checkpoints.push(583);
+
+  // straight up through the rings: the stage turns on end and every layer of ring is a sheet of ice with one gap in it
+  zone(580, 780, SIDE, 'THROUGH THE RINGS - WE ARE CLIMBING - SHIFT TO SIDE VIEW'); K.tilt(596, 770, { rot: -1.5708, sway: 0.05, w: 0.02 }); at(596 + SPAWN_Z, g => { hint(g, 'CLIMBING THROUGH THE RING LAYERS - FIND THE GAPS', 240); g.shake = Math.max(g.shake, 6); });
+  for (let i = 0, z = 622; z < 768; z += 14, i++) { const gy = [2.2, 6.8, 4.6, 7.4, 3, 5.6][i % 6], gh = 1.5;
+    obs(z, { x: 0, y: (gy - gh) / 2, hx: 8.6, hy: (gy - gh) / 2, hz: 0.8, col: ICE, kind: 'clouddeck' }); obs(z, { x: 0, y: (gy + gh + 9.6) / 2, hx: 8.6, hy: (9.6 - gy - gh) / 2, hz: 0.8, col: ICE, kind: 'clouddeck' });
+    if (i % 3 === 1) obs(z, { x: 0, y: gy, hx: 8.6, hy: gh, hz: 0.6, col: LAS2, kind: 'crystal', hp: 6, score: 120, gem: true }); if (i % 3 === 2) sweepH(z + 7, i, 2.6); if (i % 3 === 0) hl(z + 7, gy, i * 30); } // some gaps are plugged with crystal you can shoot out
+  whale(K, 688, 2); at(700, g => hint(g, 'THERE IT GOES AGAIN. I THINK IT LIKES US', 200));
+  form(640, 4, i => ({ ...manta, x: 0, y: 4.8, ay: 2.8, ax: 0, w: 1, ph: i * 0.9, vz: -6, move: PATH.saw })); post(724, { y: 5, ax: 0 });
+  K.checkpoints.push(783);
+
+  // the loom: the rings are being woven out of light. It pulls the ship through fast, and the one dark lane walks from side to side
+  zone(780, 960, ISO, 'THE LASER LOOM - SHIFT TO ISO VIEW'); gearAt(K, 800, 2, 'THE LOOM PULLS US THROUGH AT SPEED - FOLLOW THE DARK LANE'); gearFree(K, 950);
+  for (let i = 0, z = 814; z < 948; z += 7, i++) { const lane = [-6.4, -3.2, 0, 3.2, 6.4], open = Math.round(2 + 2 * Math.sin(i * 0.45)), free = open + (i % 2 ? 1 : -1);
+    lane.forEach((x, k) => { if (k !== open && k !== free) vl(z, x, 0, { pulse: undefined, col: k % 2 ? LAS : LAS2 }); }); if (i % 4 === 3) hl(z + 3.5, i % 8 === 3 ? 2 : 7.4, i * 20); if (i % 6 === 2) prism(z + 3.5, lane[open], 4.8, { pod: i === 8 }); }
+  K.checkpoints.push(963);
+
+  zone(960, 1e9, SIDE, 'WARNING // THE PRISM - IT SPLITS THE LIGHT');
+  spawnBoss(K, 1010, { name: 'THE PRISM', look: 'prism', hp: 2300, col: LAS2 });
+  const lance = (g, b, ys, col) => { const hz = (b.z - 2.5) / 2; for (const y of ys) addObs(g, { rel: true, kind: 'beam', x: 0, y, z: hz + 0.5, hx: 9, hy: 0.42, hz, warm: 95, life: 34, col }); g.fx.push('charge'); };
+  const RB = ['#ff4d6d', '#ff8a2b', '#ffe14a', '#3dffb0', '#2ee6ff', '#5e7bff', '#b06bff'];
+  const B = boss({ name: 'THE PRISM', toast: 'THE RINGS GO DARK', adds: { ...manta, hp: 3 }, addEvery: 620,
+    sig: { name: 'SPECTRUM', fire(g, b, c) { if (c % 5 === 0) { const k = c / 5, a = Math.sin(k * 0.13) * 2.4 + 1.5708, col = RB[k % 7]; for (const s of [1, -1]) bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3.4 * s, Math.sin(a) * 3.4 * s, -5.5, col); } if (c % 48 === 24) for (let i = 0; i < 7; i++) bullet(g, b.x, b.y, b.z - 2, (i - 3) * 0.9, c % 96 === 24 ? 2 : -2, -5, RB[i]); } }, // white light split into seven colours: two fans sweeping like a pendulum, and rainbow bars between
+    stages: [
+    { name: 'RED SHIFT', vuln: [SIDE], rec: SIDE, col: LAS, bob: 2, attack(g, b, t) { const p = near(g, b); if (t % 190 === 40) lance(g, b, [p.y, Math.max(0.8, p.y - 2.6), Math.min(8.8, p.y + 2.6)], LAS); if (t % 190 === 135) lance(g, b, [1.2, 4.8, 8.4], LAS2); } },
+    { name: 'CROSSHAIR', vuln: [ISO, CHASE], rec: CHASE, col: LAS2, sway: 3, attack(g, b, t) { if (t % 300 === 40) sheetV(g, -5 + g.rand() * 10, 2, { warm: 140, col: LAS }); if (t % 300 === 110) sheetH(g, 2.2 + g.rand() * 5, 1.7, { warm: 140, col: LAS2 }); if (t % 150 === 100) fan(g, b, 3, 6.5, LAS); } },
+    { name: 'WHITE LIGHT', vuln: [ISO], rec: ISO, col: '#ffffff', attack(g, b, t) { const c = t % 400; if (c >= 110 && c < 282) stare(g, b, c - 110, { col: '#ffffff' }); else if (t % 12 === 0) { const a = t * 0.05; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3, Math.sin(a) * 3, -6, RB[(t / 12 | 0) % 7]); } } }] });
+  K.fill(manta, 180, 780, 62, 'ice', 'tank');
+  return K.done({ name: 'SATURN', title: 'THE RINGS', boss: B, theme: { sky: 'saturn', grid: '#6a5a3a', nofloor: true } });
+}
+
+// =====================================================================================
+// LEVEL 8 — PLUTO // THE COLD EDGE: an ice shelf to shatter, snow comets, black ice, drifting bergs, a blizzard
+// =====================================================================================
+function pluto() {
+  const K = kit('pluto'), { at, obs, en, zone, gate, form } = K, ICE = '#9fe9ff', DEEP = '#5ea0ff', SNOW = '#ffffff';
   const flake = (z, x, y, o = {}) => en(z, { type: 'kami', x, y, vz: -9, hp: 2, r: 0.6, col: '#c8f4ff', score: 150, shape: 'flake', ...o }); // a snowflake comet streaking in
   const cryo = (z, x, ph) => obs(z, { x, y: 4.75, hx: 1.1, hy: 4.75, hz: 1.1, col: ICE, kind: 'cryo', pulse: [80, 120, ph] }); // an ice geyser that blasts and stops
   const icicle = (z, x, h) => obs(z, { x, y: 9.6 - h / 2, hx: 0.7, hy: h / 2, hz: 0.7, col: ICE, kind: 'icicle' }); // hangs from the roof
   const spike = (z, x, h) => obs(z, { x, y: h / 2, hx: 0.75, hy: h / 2, hz: 0.75, col: DEEP, kind: 'icicle' }); // and grows from the floor
-  const berg = (z, x, y, w, h, ox = 0) => obs(z, { x, y, hx: w, hy: h, hz: 1.4, col: ICE, kind: 'berg', osc: ox ? { ax: ox, ay: 0.4, w: 0.6, ph: x } : undefined }); // a drifting chunk of ice
-  zone(-99, 120, ISO, 'BONUS // PLUTO - SHATTER THE ICE SHELF');
-  for (let i = 0; i < 7; i++) { const z = 34 + i * 11; for (let k = 0; k < 4; k++) if ((i + k) % 4 !== 1) obs(z, { x: 0, y: 1.2 + k * 2.3, hx: 8.6, hy: 1.05, hz: 0.9, col: k % 2 ? ICE : DEEP, kind: 'ice', hp: 5, gem: (i + k) % 3 === 0, score: 80 }); }
-  for (let i = 0; i < 6; i++) icicle(40 + i * 13, (i % 3 - 1) * 5, 2.2 + (i % 2) * 1.4);
-  for (let i = 0; i < 4; i++) flake(60 + i * 16, (i % 2 ? 4 : -4), 3 + i % 3 * 2);
-  zone(120, 230, CHASE, 'SNOW COMETS - SHIFT TO CHASE VIEW'); K.tilt(130, 225, { sway: 0.14, w: 0.01, px: 20 }); // blizzard gusts rock the stage
-  for (let i = 0; i < 14; i++) flake(128 + i * 7, Math.sin(i * 2.3) * 6, 2 + Math.abs(Math.sin(i * 1.7)) * 6, { vz: -11 - (i % 3) * 2 });
-  for (let i = 0; i < 6; i++) cryo(140 + i * 15, [-5, 0, 5, -2.5, 2.5, 6][i], i * 30);
-  for (let i = 0; i < 7; i++) { const z = 134 + i * 13; icicle(z, (i % 2 ? -1 : 1) * (2 + i % 3 * 2), 3 + (i % 3)); if (i % 2) spike(z + 6, (i % 3 - 1) * 4, 2.5 + i % 2); }
-  for (let i = 0; i < 4; i++) obs(146 + i * 22, { x: (i % 2 ? 1 : -1) * 4, y: 4.75, hx: 0.8, hy: 4.75, hz: 0.8, col: DEEP, kind: 'spire' });
-  K.hill(150, 190, 1.4);
-  zone(230, 1e9, ISO, 'DRIFTING BERGS - SHIFT TO ISO VIEW'); K.hill(240, 270, 1.6);
-  for (let i = 0; i < 7; i++) berg(240 + i * 7, (i % 2 ? 1 : -1) * (3 + i % 3), 1.5 + (i % 3) * 2.6, 1.6 + (i % 2) * 0.8, 1.1, i % 3 === 0 ? 2.5 : 0);
-  for (let i = 0; i < 5; i++) flake(236 + i * 9, (i - 2) * 3, 7.5, { vz: -8 });
-  for (let i = 0; i < 4; i++) en(244 + i * 10, { type: 'kami', x: (i % 3 - 1) * 4, y: 3 + (i % 3) * 2, vz: -7, hp: 2, r: 0.55, col: SNOW, score: 150, shape: 'shard', pod: i % 2 === 1 });
-  K.cut(75, 100);
-  const tick = stageMini(K, 'pluto', 322);
-  return K.done({ name: 'PLUTO', title: 'THE COLD EDGE', bonus: true, tick, endZ: 345, endBonus: 12000, theme: { sky: 'ice', grid: '#2a5a9a' } });
+  const berg = (z, x, y, w, h, ox = 0, oy = 0.4) => obs(z, { x, y, hx: w, hy: h, hz: 1.4, col: ICE, kind: 'berg', osc: ox || oy > 0.4 ? { ax: ox, ay: oy, w: 0.6, ph: x + z } : undefined }); // a drifting chunk of ice
+  const shardling = { col: SNOW, shape: 'shard', hp: 2, r: 0.6, score: 130 }, wisp = { col: ICE, shape: 'orb', hp: 3, r: 0.75, score: 170, fire: 150, atk: ATK.shard('#c8f4ff') }; // wisps split off homing shards
+  const wyrm = (z, x, n = 9) => { const gr = 'wy' + z; for (let i = 0; i < n; i++) at(z + i * 0.9, g => addEnemy(g, { type: 'pop', rel: false, z: 30 + i * 0.9, vz: 0, group: gr, gn: n, x, y: 0, y0: 0.2, ay: 6.5, w: 1.2, ph: -i * 0.3, hp: 2, r: 0.6, col: i ? ICE : SNOW, score: 80, shape: 'worm' })); }; // ice wyrms arcing up through the floe
+
+  zone(-99, 170, ISO, 'SECTOR 8 // PLUTO - SHATTER THE ICE SHELF');
+  for (let i = 0; i < 10; i++) { const z = 34 + i * 12; for (let k = 0; k < 4; k++) if ((i + k) % 4 !== 1) obs(z, { x: 0, y: 1.2 + k * 2.3, hx: 8.6, hy: 1.05, hz: 0.9, col: k % 2 ? ICE : DEEP, kind: 'ice', hp: 5, gem: (i + k) % 3 === 0, score: 80 }); }
+  for (let i = 0; i < 9; i++) icicle(40 + i * 13, (i % 3 - 1) * 5, 2.2 + (i % 2) * 1.4);
+  for (let i = 0; i < 6; i++) flake(60 + i * 16, (i % 2 ? 4 : -4), 3 + i % 3 * 2);
+  form(100, 5, i => ({ ...shardling, x: 0, y: 5, ax: 4, ay: 2.4, w: 1.1, ph: i * 1.25, vz: -6, move: PATH.eight, pod: i === 4 }));
+  K.checkpoints.push(173);
+
+  zone(170, 365, CHASE, 'SNOW COMETS - SHIFT TO CHASE VIEW'); K.tilt(185, 355, { sway: 0.14, w: 0.01, px: 20 }); K.hill(210, 250, 1.4); // blizzard gusts rock the stage
+  for (let i = 0; i < 22; i++) flake(182 + i * 8, Math.sin(i * 2.3) * 6, 2 + Math.abs(Math.sin(i * 1.7)) * 6, { vz: -11 - (i % 3) * 2 });
+  for (let i = 0; i < 10; i++) cryo(196 + i * 16, [-5, 0, 5, -2.5, 2.5, 6][i % 6], i * 30);
+  for (let i = 0; i < 11; i++) { const z = 190 + i * 15; icicle(z, (i % 2 ? -1 : 1) * (2 + i % 3 * 2), 3 + (i % 3)); if (i % 2) spike(z + 6, (i % 3 - 1) * 4, 2.5 + i % 2); }
+  for (let i = 0; i < 6; i++) obs(206 + i * 26, { x: (i % 2 ? 1 : -1) * 4, y: 4.75, hx: 0.8, hy: 4.75, hz: 0.8, col: DEEP, kind: 'spire' });
+  form(240, 3, i => ({ ...wisp, x: (i - 1) * 4, y: 6, vz: -4, ax: 1, ay: 1, w: 0.7, ph: i })); form(320, 3, i => ({ ...wisp, x: (i - 1) * 3.5, y: 4, vz: -4, ax: 1.4, ay: 1, w: 0.7, ph: i, pod: i === 1 }));
+  K.checkpoints.push(368);
+
+  // the crevasse: a canyon of ice, and the air in it is so cold the ship slides as if it were on black ice
+  zone(365, 565, SIDE, 'THE CREVASSE - BLACK ICE - SHIFT TO SIDE VIEW'); at(374 + SPAWN_Z, g => hint(g, 'BLACK ICE - THE SHIP SLIDES. STEER EARLY', 220));
+  for (let i = 0, z = 392; z < 560; z += 5, i++) { const fl = 0.6 + Math.abs(Math.sin(i * 0.6)) * 1.3, rf = 0.6 + Math.abs(Math.sin(i * 0.47 + 1)) * 1.3; obs(z, { x: 0, y: fl / 2, hx: 9, hy: fl / 2, hz: 2.6, col: i % 2 ? DEEP : '#3a6ac0', kind: 'rockwall' }); obs(z, { x: 0, y: 9.6 - rf / 2, hx: 9, hy: rf / 2, hz: 2.6, col: i % 2 ? DEEP : '#3a6ac0', kind: 'rockwall' }); }
+  for (let i = 0, z = 406; z < 552; z += 13, i++) { const m = i % 4; if (m === 0) { icicle(z, 0, 3.6); spike(z + 6, 0, 3.2); } else if (m === 1) obs(z, { x: 0, y: 4.8, hx: 8.6, hy: 0.85, hz: 0.7, col: ICE, kind: 'crystal', hp: 6, score: 120, gem: true }); else if (m === 2) cryo(z, 0, i * 30); else berg(z, 0, 4.8, 1.4, 1, 0, 2.2); }
+  form(420, 5, i => ({ ...shardling, x: 0, y: 4.8, ay: 2, ax: 0, w: 1.1, ph: i * 0.9, vz: -6, move: PATH.saw })); form(486, 3, i => ({ ...wisp, x: 0, y: 3.4 + i * 1.5, vz: -4.5, ay: 0.6, w: 0.8, ph: i })); form(530, 5, i => ({ ...shardling, x: 0, y: 7.4, y1: 2.6 + (i % 2) * 2, ax: 0, vz: -6, ph: i, move: PATH.dive, pod: i === 4 }));
+  K.checkpoints.push(568);
+
+  zone(565, 765, ISO, 'DRIFTING BERGS - SHIFT TO ISO VIEW'); K.hill(590, 630, 1.6); K.tilt(600, 755, { sway: 0.1, w: 0.008, py: 18 }); // the floe rides the swell
+  for (let i = 0; i < 14; i++) berg(596 + i * 12, (i % 2 ? 1 : -1) * (3 + i % 3), 1.5 + (i % 3) * 2.6, 1.6 + (i % 2) * 0.8, 1.1, i % 3 === 0 ? 2.5 : 0);
+  for (let i = 0; i < 4; i++) wyrm(612 + i * 38, (i % 2 ? 3 : -3)); for (let i = 0; i < 8; i++) flake(600 + i * 19, (i - 3.5) * 1.8, 7.5, { vz: -8 });
+  for (let i = 0; i < 6; i++) en(610 + i * 24, { type: 'kami', x: (i % 3 - 1) * 4, y: 3 + (i % 3) * 2, vz: -7, hp: 2, r: 0.55, col: SNOW, score: 150, shape: 'shard', pod: i % 3 === 1 });
+  form(680, 6, i => ({ ...shardling, x: (i % 2 ? 7 : -7), y: 2.5 + i, ay: 1, vz: -6, move: PATH.pincer }));
+  K.checkpoints.push(768);
+
+  zone(765, 950, CHASE, 'THE BLIZZARD - SHIFT TO CHASE VIEW'); K.tilt(785, 940, { rot: 0.5, sway: 0.25, w: 0.008 }); at(785 + SPAWN_Z, g => hint(g, 'BLIZZARD! THE WIND SHOVES US ABOUT - HOLD A LINE THROUGH THE ICE GATES', 240));
+  [[0, 4.8], [3.2, 5.6], [-3.2, 3.6], [0, 6], [3, 3.4], [-3, 5.4]].forEach(([x, y], i) => { const z = 806 + i * 23; gate(z, x, y, { col: ICE, w: 2.7, h: 2.2 }); if (i % 2) cryo(z + 11, -x, i * 40); else obs(z + 11, { x: -x || 4, y: 4.75, hx: 0.8, hy: 4.75, hz: 0.8, col: DEEP, kind: 'spire' }); });
+  for (let i = 0; i < 16; i++) flake(792 + i * 9, Math.sin(i * 2.3) * 6, 2 + Math.abs(Math.sin(i * 1.7)) * 6, { vz: -12 - (i % 3) * 2 });
+  at(930, g => addPod(g, 0, 5, SPAWN_Z, 'god'));
+  K.checkpoints.push(953);
+
+  zone(950, 1e9, SIDE, 'WARNING // THE FROST WARDEN');
+  spawnBoss(K, 1000, { name: 'FROST WARDEN', look: 'frost', hp: 3200, col: ICE });
+  const B = boss({ name: 'FROST WARDEN', toast: 'THE EDGE IS OPEN', adds: { ...shardling, hp: 3 }, addEvery: 600,
+    sig: { name: 'WHITEOUT', fire(g, b, c) { const dir = (c / 80 | 0) % 2 ? -1 : 1; if (c % 5 === 0) for (let k = 0; k < 6; k++) { const a = dir * c * 0.03 + k * 1.0472; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 2.9, Math.sin(a) * 2.9, -5.5, k % 2 ? SNOW : ICE); } } }, // a six-armed snowflake of shot, turning one way and then the other
+    stages: [
+    { name: 'RIME', vuln: [SIDE], rec: SIDE, col: ICE, bob: 2, attack(g, b, t) { if (t % 330 === 40) sheetH(g, 2 + g.rand() * 5.2, 1.5, { warm: 145, col: DEEP }); if (t % 90 === 30) for (let i = 0; i < 5; i++) bullet(g, 0, 9.6, 5 + i * 3.6 + (t / 90 % 2) * 1.8, 0, -3.2, -1.2, SNOW); } }, // icicles raining the length of the lane
+    { name: 'GLACIER', vuln: [ISO, CHASE], rec: CHASE, col: DEEP, sway: 3.2, attack(g, b, t) { const p = near(g, b); if (t % 170 === 60) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'kami', x: b.x + (i - 1.5) * 2.2, y: b.y + (i % 2 ? 1.4 : -1.4), z: b.z - 1, vz: -6, hp: 1, r: 0.45, col: SNOW, shape: 'shard', score: 60 }); if (t % 80 === 40) strike(g, p.x, p.z, { col: ICE, warm: 78 }); if (t % 320 === 200) throwGate(g, b, { vz: -5.5, col: ICE }); } },
+    { name: 'ABSOLUTE ZERO', vuln: [CHASE], rec: CHASE, col: SNOW, attack(g, b, t) { const c = t % 400; if (c >= 110 && c < 282) stare(g, b, c - 110, { col: ICE }); else if (t % 60 === 20) for (let k = 0; k < 6; k++) { const a = k * 1.0472 + t * 0.004; for (const sp of [2.2, 3.2]) bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * sp, Math.sin(a) * sp, -6, sp > 3 ? SNOW : ICE); } } }] });
+  K.fill(shardling, 180, 930, 60, 'ice', 'tank');
+  return K.done({ name: 'PLUTO', title: 'THE COLD EDGE', boss: B, theme: { sky: 'ice', grid: '#2a5a9a' },
+    rules: { inertia: g => !g.boss && g.camZ > 374 && g.camZ < 560, wind: g => g.camZ > 785 && g.camZ < 942 && !g.boss ? [Math.sin(g.tick * 0.02) * 1.5, 0] : [0, 0] } });
+}
+
+// =====================================================================================
+// LEVEL 9 — THE WORMHOLE // THE THROAT: every world you crossed, folded together, and the rules keep changing
+// =====================================================================================
+function wormhole() {
+  const K = kit('worm'), { at, obs, ring, en, zone, gate, form } = K, W = '#b06bff', PK = '#ff3df0', CY = '#2ee6ff', GR = '#3dffb0', YL = '#ffe14a';
+  const echo = { col: '#ffffff', shape: 'echo', hp: 2, r: 0.7, score: 150 }, rift = (z, o) => en(z, { type: 'saucer', col: PK, hp: 8, r: 0.95, score: 450, hold: 15, dur: 400, ax: 3, ay: 1.6, fire: 115, atk: ATK.ring(10, 2.8, W), shape: 'prism', pod: true, ...o });
+  const tent = (z, x, ph, v) => obs(z, { x, y: 4.75, hx: 0.75, hy: 4.75, hz: 0.75, col: PK, kind: 'tentacle', tvar: v, osc: { ax: 1.2, ay: 0, w: 1.3, ph } });
+  const magnet = (z, x, y) => obs(z, { x, y, hx: 1.1, hy: 1.1, hz: 1.1, col: PK, kind: 'magnet', hp: 9, score: 200, gem: true });
+  const phase = (z, v) => obs(z, { x: 0, y: 4.8, hx: 9.6, hy: 4.8, hz: 0.5, col: '#ffffff', kind: 'phase', phase: v, keep: true }); // a wall that only exists in one view: be in any other and you fly straight through it
+
+  zone(-99, 150, CHASE, 'SECTOR 9 // THE WORMHOLE - THE THROAT'); K.tilt(26, 146, { spin: 0.003 }); at(40, g => hint(g, 'IT IS TURNING. EVERYTHING IN HERE IS BORROWED FROM SOMEWHERE WE HAVE BEEN', 260));
+  for (let i = 0; i < 15; i++) ring(36 + i * 7.4, { x: Math.cos(i * 0.6) * 4, y: 4.8 + Math.sin(i * 0.6) * 2.6, r: 1.4 });
+  [[0, 4.8, CY], [3, 6, '#ffb02e'], [-3, 3.6, '#9fe9ff'], [0, 5.4, PK]].forEach(([x, y, c], i) => gate(62 + i * 22, x, y, { col: c, org: 0, w: 2.6, h: 2.2, noRing: true }));
+  form(46, 5, i => ({ ...echo, x: 0, y: 4.8, ax: 3.2, ay: 2.8, w: 1.2, ph: i * 1.25, vz: -6, move: PATH.cork })); form(118, 5, i => ({ ...echo, x: 0, y: 4.8, ax: 3, ay: 2.6, w: 1.3, ph: i * 1.25, vz: -7, pod: i === 4 }));
+  K.checkpoints.push(153);
+
+  // FOLD RAPIDS: four worlds in a row, a different view for each, and a wall at every seam that only exists in the view you are leaving
+  at(150, g => hint(g, 'FOLD RAPIDS - EACH WHITE WALL ONLY EXISTS IN THE VIEW YOU ARE LEAVING. SHIFT, OR SPLAT', 300));
+  [[SIDE, 'RAPIDS - SIDE VIEW! SKYWAYS'], [ISO, 'RAPIDS - ISO VIEW! THE GROVE'], [CHASE, 'RAPIDS - CHASE VIEW! FIREWALL'], [SIDE, 'RAPIDS - SIDE VIEW! LIGHTNING']].forEach(([v, msg], i, A) => { const z0 = 150 + i * 70; zone(z0, z0 + 70, v, msg); phase(z0 + 13, i ? A[i - 1][0] : CHASE);
+    if (i === 0) { obs(z0 + 23, { x: 0, y: 2.1, hx: 8.6, hy: 2.1, hz: 1.2, col: PK, kind: 'slab' }); obs(z0 + 38, { x: 0, y: 6.95, hx: 8.6, hy: 2.55, hz: 1.2, col: CY, kind: 'slab' }); obs(z0 + 31, { x: 0, y: 4.75, hx: 2.2, hy: 0.55, hz: 1.1, col: GR, kind: 'elevator', osc: { ax: 0, ay: 2.7, w: 1.1, ph: 1 } }); }
+    else if (i === 1) { [-5.2, 0, 5.2].forEach((x, k) => tent(z0 + 24, x, k, k)); [-2.6, 2.6, 7.4, -7.4].forEach((x, k) => tent(z0 + 38, x, k + 2, (k + 1) % 4)); }
+    else if (i === 2) { gate(z0 + 23, -3, 5.4, { col: YL, org: 0 }); gate(z0 + 39, 3, 3.8, { col: YL, org: 0 }); }
+    else for (let k = 0; k < 3; k++) obs(z0 + 22 + k * 8, { x: 0, y: [2.4, 7, 4.7][k], hx: 8.6, hy: 0.4, hz: 0.5, col: '#7df9ff', kind: 'bolt', pulse: [70, 60, k * 40] });
+    form(z0 + 16, 4, k => ({ ...echo, x: v === SIDE ? 0 : (k - 1.5) * 2.4, y: 3 + k * 1.2, vz: -7, ax: v === SIDE ? 0 : 1, ay: 1, ph: k })); K.checkpoints.push(z0 + 73); });
+
+  // the knot: the throat turns a quarter at a time, and it is full of things that pull, sweep and burst
+  zone(430, 630, ISO, 'THE GRAVITY KNOT - SHIFT TO ISO VIEW'); K.tilt(446, 502, { rot: 1.5708 }); K.tilt(502, 562, { rot: 3.1416 }); K.tilt(562, 622, { rot: -1.5708 });
+  for (const z of [446, 502, 562]) at(z + SPAWN_Z, g => { hint(g, 'THE THROAT TURNS A QUARTER - KEEP YOUR HEAD', 150); g.shake = Math.max(g.shake, 5); g.fx.push('charge'); });
+  for (let i = 0, z = 462; z < 624; z += 12, i++) { const m = i % 6, sd = i % 2 ? 1 : -1;
+    if (m === 0) obs(z, { x: 0, y: 4.75, hx: 1.1, hy: 4.75, hz: 1.4, col: '#ffb02e', kind: 'flare', osc: { ax: 6, ay: 0, w: 0.7, ph: i } });
+    else if (m === 1) { magnet(z, 5 * sd, 4.8); tent(z + 6, -3 * sd, i, i % 4); }
+    else if (m === 2) for (const x of [-5.4, 0, 5.4]) obs(z, { x, y: 4.75, hx: 0.38, hy: 4.75, hz: 0.5, col: PK, kind: 'bolt', pulse: [60, 70, i * 20 + (x + 6) * 8] });
+    else if (m === 3) { obs(z, { x: 4.5 * sd, y: 4.75, hx: 1.05, hy: 4.75, hz: 1.05, col: '#ff5a1f', kind: 'geyser', pulse: [70, 80, i * 30] }); obs(z, { x: -3 * sd, y: 2, hx: 1.5, hy: 1.1, hz: 1.4, col: '#9fe9ff', kind: 'berg' }); }
+    else if (m === 4) { magnet(z, -4 * sd, 6.5); obs(z + 6, { x: 3 * sd, y: 3, hx: 1, hy: 1, hz: 1, col: YL, kind: 'crate', hp: 6, score: 150, gem: true }); }
+    else obs(z, { x: 0, y: 4.75, hx: 0.38, hy: 4.75, hz: 0.5, col: CY, kind: 'bolt', osc: { ax: 5.5, ay: 0, w: 0.8, ph: i } }); }
+  rift(480, { x: -2, y: 6 }); form(520, 6, i => ({ ...echo, x: 0, y: 5, ax: 4.2, ay: 2.6, w: 1.1, ph: i * 1.05, vz: -6, move: PATH.eight })); rift(580, { x: 2, y: 5 });
+  K.checkpoints.push(633);
+
+  // time stretch: it crawls, then it snaps. Slow through the tight parts, then HYPER with only the flashes to warn you
+  zone(630, 830, SIDE, 'TIME STRETCH - SHIFT TO SIDE VIEW');
+  gearAt(K, 640, 0, 'TIME SLOWS TO A CRAWL - THREAD IT'); gearAt(K, 692, 4, 'AND SNAPS FORWARD! THE FLASHES SHOW WHERE THE WALLS WILL BE', 'time snap'); gearAt(K, 762, 0, 'CRAWLING AGAIN'); gearAt(K, 792, 4, 'SNAP!'); gearFree(K, 826);
+  const tight = (a, b) => { for (let i = 0, z = a; z < b; z += 6, i++) { const m = i % 3; if (m === 0) obs(z, { x: 0, y: i % 2 ? 2.6 : 7, hx: 8.6, hy: 0.4, hz: 0.5, col: '#7df9ff', kind: 'bolt', pulse: [50, 50, i * 17] }); else if (m === 1) obs(z, { x: 0, y: 4.8, hx: 8.6, hy: 0.85, hz: 0.7, col: '#9fe9ff', kind: 'crystal', hp: 5, score: 120, gem: true }); else { obs(z, { x: 0, y: 1.5, hx: 8.6, hy: 1.5, hz: 0.8, col: W, kind: 'slab' }); obs(z, { x: 0, y: 8.2, hx: 8.6, hy: 1.4, hz: 0.8, col: W, kind: 'slab' }); } } };
+  const snap = (a, b) => { const F = { col: W, kind: 'slab', warm: 128 }; for (let i = 0, z = a; z < b; z += 8, i++) { const gy = [2.2, 4.8, 7.2, 3.4, 6.2, 4.8][(i * 7 + (i >> 2)) % 6], gh = 1.55; if (gy - gh > 0.4) obs(z, { ...F, x: 0, y: (gy - gh) / 2, hx: 8.6, hy: (gy - gh) / 2, hz: 0.6 }); if (gy + gh < 9.4) obs(z, { ...F, x: 0, y: (gy + gh + 9.6) / 2, hx: 8.6, hy: (9.6 - gy - gh) / 2, hz: 0.6 }); } };
+  tight(662, 694); snap(714, 764); tight(772, 792); snap(810, 826);
+  K.checkpoints.push(833);
+
+  // the event horizon: traffic, gates, lasers and a current that drags the ship round in circles, all of it rolling
+  zone(830, 1010, CHASE, 'THE EVENT HORIZON - SHIFT TO CHASE VIEW'); K.tilt(850, 1000, { spin: -0.0032 }); at(850 + SPAWN_Z, g => hint(g, 'THE CURRENT IS DRAGGING US ROUND - STEER AGAINST IT', 220));
+  for (let i = 0, z = 866; z < 1000; z += 11, i++) { const m = i % 4, y = [2.4, 5, 7.4][i % 3];
+    if (m === 0) { obs(z, { x: -8 + (i * 5) % 16, y, hx: 1.3, hy: 0.45, hz: 0.7, vx: i % 2 ? 4 : -4, wrap: 11, col: '#ff8a2b', kind: 'car' }); obs(z + 5, { x: 6 - (i * 7) % 14, y: [5, 7.4, 2.4][i % 3], hx: 2.4, hy: 0.6, hz: 0.7, vx: i % 2 ? -5 : 5, wrap: 11, col: YL, kind: 'car' }); }
+    else if (m === 1) gate(z, Math.sin(i) * 3.4, 4.8 + Math.cos(i * 0.7) * 1.5, { col: CY, org: 0, w: 2.6, h: 2.2 });
+    else if (m === 2) obs(z, { x: 0, y: 4.75, hx: 0.38, hy: 4.75, hz: 0.5, col: PK, kind: 'bolt', osc: { ax: 5, ay: 0, w: 0.9, ph: i } });
+    else { tent(z, (i % 8 === 3 ? 4 : -4), i, i % 4); obs(z + 5, { x: (i % 8 === 3 ? -3 : 3), y: 4.8, hx: 1, hy: 1, hz: 1, col: YL, kind: 'crate', hp: 5, score: 150, gem: true, pod: i === 7 }); } }
+  form(860, 5, i => ({ ...echo, x: 0, y: 4.8, ax: 3.4, ay: 3, w: 1.3, ph: i * 1.25, vz: -7 })); rift(930, { x: 0, y: 6.4 }); at(992, g => addPod(g, 0, 5, SPAWN_Z, 'god'));
+  K.checkpoints.push(1013);
+  const tick = g => magPull(g);
+
+  zone(1010, 1e9, SIDE, 'WARNING // THE PARADOX - IT HAS ALREADY HAPPENED');
+  spawnBoss(K, 1060, { name: 'THE PARADOX', look: 'paradox', hp: 3600, col: W, score: 30000 });
+  const B = boss({ name: 'THE PARADOX', glitchy: true, toast: 'THE WAY TO PLANET X IS OPEN', adds: { ...echo, hp: 3 }, addEvery: 600,
+    sig: { name: 'TIME LOOP', fire(g, b, c) { const k = c % 80; if (k === 0) { const n0 = g.ebul.length, n = 16, off = c * 0.01; for (let i = 0; i < n; i++) { const a = i / n * 6.283 + off; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3.6, Math.sin(a) * 3.6, -3.4, i % 2 ? W : '#ffffff'); } b.tl = g.ebul.slice(n0); g.fx.push('eshot'); } if (k === 46 && b.tl) { for (const q of b.tl) if (q.life > 0) { q.vx *= -1.25; q.vy *= -1.25; q.col = PK; } g.fx.push('zap'); } } }, // a ring flies out, stops, and comes back in the way it went
+    stages: [
+    { name: 'YESTERDAY', vuln: [SIDE], rec: SIDE, col: CY, bob: 2, attack(g, b, t) { if (t % 310 === 40) sheetH(g, 2 + g.rand() * 5.2, 1.6, { warm: 145, col: CY }); if (t % 120 === 80) fan(g, b, 3, 6.5, CY); if (t % 310 === 200) for (let i = 0; i < 5; i++) bullet(g, 0, 9.6, 5 + i * 3.6, 0, -3.2, -1.2, '#ffffff'); } },
+    { name: 'TOMORROW', vuln: [ISO, CHASE], rec: CHASE, col: GR, sway: 3.2, attack(g, b, t) { const p = near(g, b); if (t % 76 === 30) strike(g, p.x, p.z, { col: GR, warm: 78 }); if (t % 280 === 150) throwGate(g, b, { vz: -5.5, col: GR }); if (t % 160 === 100) fireRing(g, b, YL, 14, 2.4, 4); } },
+    { name: 'NOW', vuln: [CHASE], rec: CHASE, col: PK, attack(g, b, t) { const c = t % 400; if (c >= 110 && c < 282) stare(g, b, c - 110, { col: PK }); else if (t % 16 === 0) { const a = t * 0.07; for (const s of [1, -1]) bullet(g, b.x, b.y, b.z - 2, Math.cos(a * s) * 3, Math.sin(a * s) * 3, -6, s > 0 ? W : CY); } } }] });
+  K.fill(echo, 440, 620, 60, 'crate', 'tank');
+  return K.done({ name: 'THE WORMHOLE', title: 'THE THROAT', boss: B, tick, theme: { sky: 'worm', grid: '#5a2a9a', nofloor: true, trippy: true },
+    rules: { wind: g => g.camZ > 850 && g.camZ < 1002 && !g.boss ? [Math.cos(g.tick * 0.02) * 1.3, Math.sin(g.tick * 0.02) * 0.9] : [0, 0] } });
 }
 
 // =====================================================================================
@@ -576,14 +926,16 @@ function arena(of) {
 }
 
 export const LEVELS = {
-  earth: { build: earth, n: 1, name: 'EARTH', sub: 'NEO TERRA', next: 'mars', bonus: 'moon', boss: 'OVERSEER', info: 'CYBER CITY. SKYSCRAPERS, SKYWAYS, FIREWALL GATES.' },
-  mars: { build: mars, n: 2, name: 'MARS', sub: 'THE FORGE', next: 'jupiter', bonus: 'sun', boss: 'THE COLOSSUS', info: 'LAVA GEYSERS, FIRE ARCS, ALIEN STONE HEADS.', kit: [1, 1, 1, 0, 0, 1, 0, 0] },
-  jupiter: { build: jupiter, n: 3, name: 'JUPITER', sub: 'STORM DECK', next: 'x', bonus: 'belt', boss: 'THE EYE', info: 'LIGHTNING CHAINS, STORM WALLS, HIDDEN WRAITHS.', kit: [2, 2, 1, 1, 1, 1, 0, 0] },
-  x: { build: planetx, n: 4, name: 'PLANET X', sub: 'THE BLOOM', next: null, bonus: 'pluto', boss: 'THE SHIFTER', info: 'THE SOURCE OF THE SHIFT. EVERYTHING IS ALIVE.', kit: [3, 2, 2, 2, 2, 2, 0, 0] },
-  moon: { build: moon, name: 'THE MOON', sub: 'SEA OF QUIET', isBonus: true, of: 'earth', info: 'LOW GRAVITY TRENCH RUN. NOTHING SHOOTS BACK.', kit: [1, 1, 0, 0, 0, 0, 0, 0] },
-  sun: { build: sun, name: 'THE SUN', sub: 'CORONA', isBonus: true, of: 'mars', info: 'SURF THE FLARES. STAY IN THE SHADOW LANE.', kit: [1, 1, 1, 0, 0, 1, 0, 0] },
-  belt: { build: asteroids, name: 'ASTEROID BELT', sub: 'THE RUBBLE', isBonus: true, of: 'jupiter', info: 'ROCKS SPLIT. SOME CARRY UPGRADE PODS.', kit: [2, 2, 1, 1, 1, 1, 0, 0] },
-  pluto: { build: pluto, name: 'PLUTO', sub: 'THE COLD EDGE', isBonus: true, of: 'x', info: 'SHATTER THE ICE SHELF, THREAD THE SPIRES.', kit: [3, 2, 2, 2, 2, 2, 0, 0] } };
+  earth: { build: earth, n: 1, name: 'EARTH', sub: 'NEO TERRA', next: 'moon', boss: 'OVERSEER', info: 'CYBER CITY. SKYSCRAPERS, SKYWAYS, FIREWALL GATES.' },
+  moon: { build: moon, n: 2, name: 'THE MOON', sub: 'SEA OF QUIET', next: 'sun', boss: 'THE SENTINEL', info: 'LOW GRAVITY. A DEAD BASE, THE MASS DRIVER, METEORS.', kit: [1, 1, 0, 0, 0, 0, 0, 0] },
+  sun: { build: sun, n: 3, name: 'THE SUN', sub: 'CORONA', next: 'mars', boss: 'HELIOS', info: 'A SLINGSHOT ROUND THE SUN. STAY IN THE CLEAR CHANNEL.', kit: [1, 1, 1, 0, 0, 1, 0, 0] },
+  mars: { build: mars, n: 4, name: 'MARS', sub: 'THE FORGE', next: 'belt', boss: 'THE COLOSSUS', info: 'LAVA GEYSERS, FIRE ARCS, ALIEN STONE HEADS.', kit: [2, 1, 1, 1, 0, 1, 0, 0] },
+  belt: { build: asteroids, n: 5, name: 'ASTEROID BELT', sub: 'THE RUBBLE', next: 'jupiter', boss: 'THE MOTHER ROCK', info: 'ROCK STORMS, A MINING COLONY, MAGNETIC LODESTONES.', kit: [2, 2, 1, 1, 0, 1, 0, 0] },
+  jupiter: { build: jupiter, n: 6, name: 'JUPITER', sub: 'STORM DECK', next: 'saturn', boss: 'THE EYE', info: 'LIGHTNING CHAINS, STORM WALLS, HIDDEN WRAITHS.', kit: [2, 2, 1, 1, 1, 1, 0, 0] },
+  saturn: { build: saturn, n: 7, name: 'SATURN', sub: 'THE RINGS', next: 'pluto', boss: 'THE PRISM', info: 'LASER GRIDS IN THE RINGS. AND SOMETHING ENORMOUS.', kit: [2, 2, 2, 1, 1, 2, 0, 0] },
+  pluto: { build: pluto, n: 8, name: 'PLUTO', sub: 'THE COLD EDGE', next: 'worm', boss: 'FROST WARDEN', info: 'ICE SHELVES, SNOW COMETS, BLACK ICE, A BLIZZARD.', kit: [3, 2, 2, 2, 1, 2, 0, 0] },
+  worm: { build: wormhole, n: 9, name: 'THE WORMHOLE', sub: 'THE THROAT', next: 'x', boss: 'THE PARADOX', info: 'EVERY WORLD FOLDED TOGETHER. THE RULES KEEP CHANGING.', kit: [3, 2, 2, 2, 2, 2, 0, 0] },
+  x: { build: planetx, n: 10, name: 'PLANET X', sub: 'THE BLOOM', next: null, boss: 'THE SHIFTER', info: 'THE SOURCE OF THE SHIFT. EVERYTHING IS ALIVE.', kit: [3, 2, 2, 2, 2, 2, 0, 0] } };
 for (const id of ['earth', 'mars', 'jupiter', 'x']) LEVELS['arena-' + id] = { build: () => arena(id), name: ARENAS[id].name, sub: ARENAS[id].title, isBonus: true, isArena: true, of: id, info: 'FIVE WAVES AND A MINIBOSS. GUNS FIRE THE WAY YOU FACE. L / R FLIPS TOP AND ISO.', kit: LEVELS[id].kit ? LEVELS[id].kit.map(v => Math.min(5, v + 1)) : [1, 1, 1, 0, 0, 1, 0, 0] };
-export const ORDER = ['earth', 'mars', 'jupiter', 'x'];
+export const ORDER = ['earth', 'moon', 'sun', 'mars', 'belt', 'jupiter', 'saturn', 'pluto', 'worm', 'x'];
 export const buildLevel = id => LEVELS[id].build();
