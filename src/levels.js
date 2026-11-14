@@ -703,6 +703,11 @@ function saturn() {
     else if (m === 3) { chunk(z, -5 * sd, 3, 1.5); chunk(z, 3 * sd, 7, 1.2); buoy(z + 6, -2 * sd, 5); }
     else { hl(z, 2.2, i * 25); vl(z, 3.5 * sd, i * 25 + 60); } }
   whale(K, 200, 0); at(204, g => hint(g, 'WHOA. SOMETHING ENORMOUS IS SWIMMING THROUGH THE RINGS', 240));
+  // and it is not alone: pods of sky whales cruise the far side of the rings all through the stage, big ones and calves, now and then rising up through the ring plane
+  const pod = (z, n, dir, rise) => { for (let i = 0; i < n; i++) at(z + i * 2.2, g => { const calf = i > 0 && i % 2 === 0, sp = (calf ? 3.4 : 2.8) * dir;
+      addEnemy(g, { type: 'pop', shape: 'whale', x: -26 * dir - i * 4 * dir, y: rise ? -7 - i * 2 : 2.5 + (i % 3) * 2.4, z: 30 + (i % 3) * 5, vz: 0, hp: calf ? 40 : 80, r: calf ? 1.3 : 2 + (i % 2) * 0.4, big: true, col: ['#9fe9ff', '#c8a0ff', '#e8c98a'][i % 3], score: calf ? 1500 : 3000, ph: i * 1.3,
+        move: rise ? (g2, e, dt) => { e.y += 2.2 * dt; e.x = Math.sin(e.t * 0.008 + e.ph) * 6; e.hd = [0, 1, 0.2]; if (e.y > 18) e.z = -50; } : (g2, e, dt) => { e.x += sp * dt; e.y = Math.max(-2, Math.min(11, e.y + Math.sin(e.t * 0.02 + e.ph) * 0.01)); e.hd = [dir, 0.1 * Math.cos(e.t * 0.02 + e.ph), 0]; if (Math.abs(e.x) > 30) e.z = -50; } }); }); };
+  [[24, 3, 1], [92, 2, -1], [150, 4, 1, 1], [244, 3, -1], [330, 5, 1], [418, 3, -1, 1], [500, 4, 1], [604, 3, -1], [690, 4, 1, 1], [780, 5, -1], [860, 3, 1], [930, 4, -1]].forEach(([z, n, d, r]) => pod(z, n, d, r));
   form(214, 5, i => ({ ...manta, x: (i - 2) * 2.6, y: 5 + Math.abs(i - 2) * 0.9, z: SPAWN_Z + Math.abs(i - 2) * 1.6, vz: -7, ax: 0.6, w: 1 }), 0); form(262, 3, i => ({ ...lancer, x: (i - 1) * 4.5, y: 4 + i, vz: -4, ax: 1, ay: 1, w: 0.7, ph: i })); form(310, 7, i => ({ ...manta, x: 0, y: 5, ax: 4.5, ay: 2.6, w: 1, ph: i * 0.9, vz: -6, move: PATH.eight })); form(350, 5, i => ({ ...manta, x: (i % 2 ? 7 : -7), y: 3 + i, ay: 1, vz: -6, move: PATH.pincer, pod: i === 4 }));
   K.checkpoints.push(383);
 

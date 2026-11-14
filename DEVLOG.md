@@ -883,6 +883,10 @@ Jupiter is full of life now. Blooms of jellyfish drift through the whole stage: 
 
 Boss signature storms also play out in full now. Their shots can't be cancelled by shifting, bombs, lasers, drones or shields, so you always see the whole pattern. Ordinary boss shots still can be.
 
+### 101. Whale song (r107)
+
+The big whale of Saturn isn't alone any more. Twelve pods of sky whales, adults and calves, cruise the far side of the rings through the whole stage. Some swim across, and some rise up through the ring plane. They stay well back from the lane, so they're scenery you can shoot at rather than something that can hit you.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
