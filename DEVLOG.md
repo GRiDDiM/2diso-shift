@@ -865,6 +865,10 @@ The stage isn't deleted. It is shelved, along with the bonus arenas, and all of 
 
 PRACTICE replaces the old bug test checklist and looks like part of the game now. It has three panels: STAGES (the route, plus boss rush and the ending), BOSSES (each one on its own) and SHELVED (content that is built but not in this version). A diamond fills in when you clear something, and each panel counts its own. Skin, loadout and reset sit along the bottom.
 
+### 97. A real eruption (r103)
+
+The Colossus's MAGMA BLOOM looked weak: a few rings that were hard to see in SIDE view. Now it erupts. Every few seconds it throws a fountain of about forty-five globs of magma up out of its crown. They arc over and rain down across the whole lane. The big bombs among them burst into four when they reach the top. Between eruptions, embers keep falling from the sky. Big shots are also drawn bigger now, so the bombs read as bombs.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

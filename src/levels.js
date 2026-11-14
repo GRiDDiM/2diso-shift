@@ -256,7 +256,11 @@ function mars() {
   zone(1120, 1e9, TOP, 'WARNING // THE COLOSSUS WAKES');
   spawnBoss(K, 1170, { name: 'THE COLOSSUS', look: 'colossus', hp: 2400, col: STONE });
   // THE COLOSSUS: a giant alien stone head. It makes the ground erupt, floods the lane with lava and ash, then spits rings of fire and its own small heads.
-  const B = boss({ name: 'THE COLOSSUS', sig: { name: 'MAGMA BLOOM', fire(g, b, c) { if (c % 14 === 0) { const n = 20, r0 = c * 0.05; for (let i = 0; i < n; i++) { const a = i / n * 6.2832 + r0, sp = 1.8 + 1.5 * Math.abs(Math.sin(3 * a + r0)); bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * sp, Math.sin(a) * sp, -5, (c / 14 | 0) % 2 ? '#ffe14a' : '#ff5a1f'); } } } }, // rings that open like a turning flower, petal by petal
+  const B = boss({ name: 'THE COLOSSUS', sig: { name: 'MAGMA BLOOM', fire(g, b, c) { const side = g.view === SIDE, LAVA = ['#ffffff', '#ffe14a', '#ffb02e', '#ff8a2b', '#ff5a1f', '#ff2e1f'];
+    if (c % 44 === 0) { const n = 46; for (let i = 0; i < n; i++) { const u = g.rand(), big = i % 7 === 0; // an eruption: a fountain of magma thrown up out of its crown, arcing over and raining down across the whole lane
+        shot(g, b.x + (g.rand() - 0.5) * 2, b.y + 2.5, b.z - 2, side ? 0 : (g.rand() - 0.5) * 7, 5.5 + u * 5, -0.8 - g.rand() * 4.2, LAVA[1 + (u * 5 | 0)], big ? { gy: 4.6, r: 0.36, split: { t: 70, n: 4, spread: 0.6, gen: 1, cols: ['#ffe14a', '#ff5a1f'] } } : { gy: 4.6 }); }
+      g.shake = Math.max(g.shake, 7); g.flash = Math.max(g.flash || 0, 3); g.fx.push('boom'); g.fx.push('eshot'); }
+    if (c % 4 === 0 && c % 44 > 16) { const p = near(g, b); for (let k = 0; k < 2; k++) shot(g, side ? 0 : p.x + (g.rand() - 0.5) * 12, 10.6, p.z + 2 + g.rand() * 16, 0, -0.5, -1.2, LAVA[2 + (g.rand() * 4 | 0)], { gy: 3.2 }); } } }, // and between eruptions the sky keeps raining embers
     toast: 'MARS COOLED', adds: { shape: 'ember', col: '#ff8a2b', hp: 3, r: 0.6 }, addEvery: 540, stages: [
     { name: 'ERUPTION', vuln: [TOP], rec: TOP, col: STONE, sway: 2.5, bob: 0.3, attack(g, b, t) {
       if (t % 200 === 30) { const lanes = [-6, -3, 0, 3, 6], skip = g.rand() * 5 | 0; lanes.forEach((x, i) => { if (i !== skip) addObs(g, { rel: true, kind: 'geyser', x: x + (g.rand() - 0.5), y: 4.75, hx: 1.15, hy: 4.75, hz: 1.15, z: 1.5 + g.rand() * 9.5, warm: 95, life: 70, col: FIRE }); }); g.fx.push('charge'); }

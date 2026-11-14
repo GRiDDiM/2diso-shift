@@ -379,7 +379,7 @@ export function step(g, inputs) {
     if (b.w) { const c = Math.cos(b.w), s = Math.sin(b.w), vx = b.vx; b.vx = vx * c - b.vy * s; b.vy = vx * s + b.vy * c; } if (b.gy) b.vy -= b.gy * dt;
     if (b.split && b.life > 0 && --b.split.t <= 0) { const q = b.split, a0 = Math.atan2(b.vy, b.vx), sp = Math.hypot(b.vx, b.vy) || 2; b.split = null; if (g.ebul.length < 300) for (let k = 0; k < q.n; k++) { const a = a0 + (k - (q.n - 1) / 2) * q.spread; g.ebul.push({ ...b, vx: Math.cos(a) * sp * (q.gain || 1), vy: Math.sin(a) * sp * (q.gain || 1), col: q.cols ? q.cols[k % q.cols.length] : b.col, split: q.gen > 1 ? { ...q, gen: q.gen - 1, t: q.T || 40 } : null }); } b.life = 0; }
   }
-  for (const b of g.ebul) { b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; if (--b.life <= 0 || b.z < -3 || b.z > 46 || Math.abs(b.x) > (rules.arena ? 15 : 12) || b.y < -1 || b.y > 11) b.life = 0; }
+  for (const b of g.ebul) { b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; if (--b.life <= 0 || b.z < -3 || b.z > 46 || Math.abs(b.x) > (rules.arena ? 15 : 12) || b.y < -1 || b.y > (b.gy ? 18 : 11)) b.life = 0; }
   // ----- pods + rings -----
   if (g.blasts.length) blastStep(g, m);
   { const mg = P[0] && P[0].up[8] >= 2; for (const q of g.pods) { const p = P[0]; if (!p || p.dead > 0) continue; if (q.pull > 0 || g.vac > 0 || mg && Math.hypot(p.x - q.x, p.y - q.y, p.z - q.z) < 9) { const k = q.pull > 0 || g.vac > 0 ? 0.12 : 0.04; q.x += (p.x - q.x) * k; q.y += (p.y - q.y) * k; q.z += (p.z - q.z) * k + (q.pull > 0 || g.vac > 0 ? dz * 0.75 : 0); if (q.pull > 0) q.pull--; } } if (g.vac > 0) g.vac--; } // MAGNET, MAGNET COIL and the VACUUM bomb pull pickups in
