@@ -920,6 +920,12 @@ One last pass on look and feel before the jam build.
 - **Predators.** Around the middle of each stage a new SIDE-view section opens and a predator hunts you. The stage holds almost still, and you have thirty seconds to bring it down before it escapes; the faster the kill, the bigger the bonus. Each has two or three bullet storms of its own: the Warden Spider (a web, a lattice), the Phoenix (falling feathers, wings of fire, a ring that bursts), the Iron Scorpion, the Thunder Eel, the Ring Angler, the Ice Mammoth (a growing snowflake), the Chrono Mantis (clock hands, an echo that comes back) and the Hydra Bloom (three spirals, a sunflower bloom, dividing spores).
 - **Spare pods.** A pod that takes the upgrade bar all the way round, or arrives when there is nothing left to buy, is now a SPARE POD. It pays 500 points, and every tenth one is an extra ship. At the end of a stage, every pod you picked up pays 100 more.
 
+### 106. Hover tanks and popups (r112)
+
+- **Hover tanks:** the little wheeled ground guns are now hover tanks. Each has a wedge-shaped armoured hull riding on a cushion of light, a domed turret with a sensor eye and a heavy barrel, thrusters that flare behind it, and a blinking aerial.
+- **Popups:** popups that fired while a menu was open used to be hidden behind it, such as "Hard is locked" or a new skin. They now draw on top, tucked into the top-right corner.
+- **Reset to defaults:** shows a full report under the options panel of what was reset, and says that progress, scores and unlocks are kept.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
