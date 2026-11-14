@@ -873,6 +873,10 @@ The Colossus's MAGMA BLOOM looked weak: a few rings that were hard to see in SID
 
 The Asteroid Belt is shelved too, like the Moon. The route is now Earth, the Sun, Mars, Jupiter, Saturn, Pluto, the Wormhole, Planet X. The story goes straight from the Colossus to Jupiter, and the Belt is just scenery on the solar map. The stage and its boss are still in PRACTICE, under SHELVED.
 
+### 99. A quieter map (r105)
+
+The drifting arena station on the solar map is plain grey now, with no ??? under it. The Asteroid Belt has no label any more; its little cluster of rocks is grey too and bobs slowly up and down inside the belt.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
