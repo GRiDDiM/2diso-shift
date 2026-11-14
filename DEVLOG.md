@@ -926,6 +926,15 @@ One last pass on look and feel before the jam build.
 - **Popups:** popups that fired while a menu was open used to be hidden behind it, such as "Hard is locked" or a new skin. They now draw on top, tucked into the top-right corner.
 - **Reset to defaults:** shows a full report under the options panel of what was reset, and says that progress, scores and unlocks are kept.
 
+### 107. Results, replays and the ladder (r113)
+
+- **Results card:** rebuilt. It's a proper panel: stage name and difficulty along the top, the numbers on the left (with the par time and pod count under their rows), the rank on a glowing hex badge, and the medals in a tidy grid underneath. Nothing overlaps any more, and the leftover warp lines are gone.
+- **Replay:** the results screen has REPLAY STAGE, which runs the stage again from the state it started in. There's one on the game-over screen too.
+- **Stage select:** a new STAGE SELECT under PLAY opens the solar map. Any stage you've cleared can be replayed there, on any difficulty up to the hardest you've cleared it on. Replays save your records but don't post scores.
+- **The difficulty ladder:** EASY, NORMAL, HARD, then LOOP 1, LOOP 2 and on. Looping the game steps one rung up, so finishing on NORMAL and looping takes you to HARD. Labels everywhere now use the ladder's names.
+- **Boss weak spots:** solid, glowing cores set in armoured sockets, with a glint and bolts round the rim, instead of wireframe targets. When shielded they become dull bolted plates.
+- **Fewer pods:** the squadrons and predators drop fewer pods.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

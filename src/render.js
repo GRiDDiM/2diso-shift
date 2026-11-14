@@ -76,6 +76,7 @@ function drawQuads(ctx, L) { const quads = qlay[L]; if (!quads.length) return; q
     if (f.h) { const h = f.h; ctx.moveTo(h[0], h[1]); for (let i = 2; i < h.length; i += 2) ctx.lineTo(h[i], h[i + 1]); ctx.closePath(); } /* a wall with a hole cut through it */
     const fr = f.h ? 'evenodd' : 'nonzero'; if (f.dark) { ctx.fillStyle = '#02010a'; ctx.globalAlpha = f.dark; ctx.fill(fr); ctx.globalAlpha = 1; }
     if (GON && f.dark && !f.h) { GX.globalCompositeOperation = 'destination-out'; GX.globalAlpha = f.dark; GX.beginPath(); GX.moveTo(q[0], q[1]); for (let i = 2; i < q.length; i += 2) GX.lineTo(q[i], q[i + 1]); GX.closePath(); GX.fill(); GX.globalCompositeOperation = 'lighter'; } /* a solid face hides the glow of what is behind it */
+    if (f.orb) { const [cx, cy, r] = f.orb, gr = ctx.createRadialGradient(cx - r * 0.38, cy - r * 0.38, r * 0.04, cx, cy, r); f.st.forEach(([o, c]) => gr.addColorStop(o, c)); ctx.fillStyle = gr; ctx.fill(); continue; } /* a lit sphere: a glossy highlight up and to the left, shading to a dark rim */
     if (f.col) { const gr = f.h ? ctx.createRadialGradient(f.c[0], f.c[1], 4, f.c[0], f.c[1], f.r) : ctx.createLinearGradient((q[0] + q[2]) / 2, (q[1] + q[3]) / 2, (q[4] + q[6]) / 2, (q[5] + q[7]) / 2); gr.addColorStop(0, rgba(f.col, f.a0)); gr.addColorStop(1, rgba(f.col, f.a1)); ctx.fillStyle = gr; ctx.fill(fr); } }
   quads.length = 0; ctx.globalCompositeOperation = 'lighter'; }
 function holePoly(outer, hole, cx, cy, cz, col, a0, a1, key, dark = 0.9) { const q = [], h = []; for (const p of outer) { P(p[0], p[1], p[2]); if (!OK) return; q.push(X, Y); } for (const p of hole) { P(p[0], p[1], p[2]); if (!OK) return; h.push(X, Y); } P(cx, cy, cz); qlay[LAY].push({ q, h, c: [X, Y], col, a0, a1, key, dark, r: Math.max(60, S * 9) }); } // the hole's centre lights the face from the opening outwards
@@ -738,8 +739,23 @@ export function drawWorld(ctx, g, o = {}) { RCTX = ctx;
   if (g.shiftT > 0) { ctx.fillStyle = '#5ee7ff'; ctx.globalAlpha = 0.1 * g.shiftT; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
 }
 const STAGE_COLS = ['#ff3df0', '#2ee6ff', '#ffe14a'];
-// the weak spot: a hatched, pulsing target disc facing the camera. Bright gold when it can be hurt, a dim red cross when it is shielded.
+// a solid, lit sphere drawn as a filled shape (not lines): stops run from the highlight out to the rim. key orders orbs drawn at the same spot
+function orb(x, y, z, r, st, key) { P(x, y, z); if (!OK) return; const cx = X, cy = Y; const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0; P(pl === 2 ? x : x + r, y, pl === 2 ? z + r : z); const rr = Math.max(3, Math.hypot(X - cx, Y - cy)); const q = []; for (let i = 0; i < 22; i++) { const a = i / 22 * TAU; q.push(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+  depth(x, z); qlay[LAY].push({ q, orb: [cx, cy, rr], st, key, dark: 0.96 }); }
+// the weak spot: a solid glowing core set in an armoured socket, like a target you'd shoot in an arcade run-and-gun. Hot and pulsing when it can be hurt; a dull bolted plate when it is shielded
 function weak(x, y, z, r, open, t) {
+  const kz = z - 50; /* weak spots always sort in front of the boss's own fills */
+  if (!open) { orb(x, y, z, r * 1.45, [[0, '#6a6f8a'], [0.5, '#2a2e44'], [1, '#08070f']], kz + 0.02); orb(x, y, z, r * 1.05, [[0, '#9aa0c0'], [0.6, '#4a5070'], [1, '#1a1c2c']], kz + 0.01);
+    const pl0 = vB === 3 ? 1 : vB === 0 ? 2 : 0; LW = 3; circle(x, y, z, r * 1.45, '#3a3f5a', 1, 16, pl0); LW = 2.4; const U0 = pl0 === 2 ? [0, 0, 1] : [1, 0, 0], V0 = pl0 === 1 ? [0, 0, 1] : [0, 1, 0], d = r * 0.55; for (const [a, b2] of [[1, 1], [1, -1]]) seg(x - (U0[0] * a + V0[0] * b2) * d, y - (U0[1] * a + V0[1] * b2) * d, z - (U0[2] * a + V0[2] * b2) * d, x + (U0[0] * a + V0[0] * b2) * d, y + (U0[1] * a + V0[1] * b2) * d, z + (U0[2] * a + V0[2] * b2) * d, '#ff4d6d', 0.85); LW = 1; return; }
+  const pu = 1 + 0.1 * Math.sin(t * 0.25), R = r * pu, hot = (t >> 2) % 2;
+  orb(x, y, z, r * 1.55, [[0, '#5a2a1a'], [0.55, '#2a0d10'], [1, '#050206']], kz + 0.03); // the armoured socket
+  orb(x, y, z, R * 1.12, [[0, '#ffffff'], [0.18, '#ffe9a0'], [0.5, hot ? '#ff8a2b' : '#ff6a1f'], [0.85, '#c8180c'], [1, '#4a0608']], kz + 0.02); // the core itself: white-hot centre, molten orange, dark red rim
+  orb(x - R * 0.3, y + R * 0.3, z, R * 0.28, [[0, 'rgba(255,255,255,0.95)'], [1, 'rgba(255,255,255,0)']], kz + 0.01); // a glint
+  const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0; LW = 3; circle(x, y, z, r * 1.55, '#ffb02e', 0.95, 18, pl); LW = 1.6; circle(x, y, z, R * 1.12, '#ffe14a', 0.8, 18, pl);
+  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + t * 0.02, c = Math.cos(a), s2 = Math.sin(a), U = pl === 2 ? [0, 0, 1] : [1, 0, 0], V = pl === 1 ? [0, 0, 1] : [0, 1, 0], P1 = r * 1.55, P2 = r * 1.85; LW = 2.6; seg(x + (U[0] * c + V[0] * s2) * P1, y + (U[1] * c + V[1] * s2) * P1, z + (U[2] * c + V[2] * s2) * P1, x + (U[0] * c + V[0] * s2) * P2, y + (U[1] * c + V[1] * s2) * P2, z + (U[2] * c + V[2] * s2) * P2, '#ffe14a', 1); } LW = 1; // the bolts round its rim
+  NG = true; circle(x, y, z, R * (1.9 + 0.3 * Math.sin(t * 0.25)), '#ffffff', 0.35, 18, pl, t * 0.04); NG = false;
+}
+function weakOld(x, y, z, r, open, t) {
   const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0, U = pl === 2 ? [0, 0, 1] : [1, 0, 0], V = pl === 1 ? [0, 0, 1] : [0, 1, 0], pt = (u, v) => [x + U[0] * u + V[0] * v, y + U[1] * u + V[1] * v, z + U[2] * u + V[2] * v], ln = (a, b2, c, d, col, al) => { const p = pt(a, b2), q = pt(c, d); seg(p[0], p[1], p[2], q[0], q[1], q[2], col, al); };
   if (!open) { LW = 2; circle(x, y, z, r, '#ff4d6d', 0.7, 14, pl); ln(-r * 0.6, -r * 0.6, r * 0.6, r * 0.6, '#ff4d6d', 0.7); ln(-r * 0.6, r * 0.6, r * 0.6, -r * 0.6, '#ff4d6d', 0.7); LW = 1; return; }
   const pu = 1 + 0.12 * Math.sin(t * 0.25), R = r * pu; LW = 2.4; circle(x, y, z, R, '#ffe14a', 1, 18, pl); LW = 1.4;

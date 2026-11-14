@@ -963,7 +963,7 @@ const SQUAD = {
   moon: { shape: 'gunship', col: '#c8d0e0', n: 6, say: 'SENTRIES', mv: (e, u) => [(e.k - 2.5) * 2.4, 4.8 + Math.sin(u * 0.6 + e.k) * 2.5] },
   belt: { shape: 'scarab', col: '#c8a070', n: 6, say: 'ROCK CRABS', mv: (e, u) => [Math.sin(u * 0.5 + e.k) * 5, 2 + e.k * 1.1] } };
 const squadRun = (K, id, z0) => { const Q = SQUAD[id]; K.at(z0 + 6, g => { info(g, Q.say.toLowerCase() + ' squadron. take them down in order'); g.fx.push('charge'); });
-  for (let w = 0; w < 3; w++) K.form(z0 + 16 + w * 34, Q.n, k => ({ shape: Q.shape, med: true, col: Q.col, hp: 5, r: 1.55, vz: -3.1, score: 400, k, n: Q.n, x: 0, y: 4.8, ph: w * 1.3, pod: k === Q.n - 1, move: (g, e, dt) => { e.z += e.vz * dt; const q = Q.mv(e, e.t * 0.02 + e.ph + (w === 1 ? PI : 0)), s = Math.min(1, e.t / 60); e.x = Math.max(-8.4, Math.min(8.4, q[0] * (w === 1 ? -1 : 1))) * s; e.y = Math.max(0.9, Math.min(8.9, 4.8 + (q[1] - 4.8) * s)); } }), 2.2); };
+  for (let w = 0; w < 3; w++) K.form(z0 + 16 + w * 34, Q.n, k => ({ shape: Q.shape, med: true, col: Q.col, hp: 5, r: 1.55, vz: -3.1, score: 400, k, n: Q.n, x: 0, y: 4.8, ph: w * 1.3, pod: false, move: (g, e, dt) => { e.z += e.vz * dt; const q = Q.mv(e, e.t * 0.02 + e.ph + (w === 1 ? PI : 0)), s = Math.min(1, e.t / 60); e.x = Math.max(-8.4, Math.min(8.4, q[0] * (w === 1 ? -1 : 1))) * s; e.y = Math.max(0.9, Math.min(8.9, 4.8 + (q[1] - 4.8) * s)); } }), 2.2); };
 
 // --- predators: name, look, health, and two or three storms each. Storm functions get (g, e, c): c counts up through the storm
 const PRED = {
@@ -1006,7 +1006,7 @@ const predRun = (K, id, gs, ge) => { const M = PRED[id]; K.checkpoints.push(gs +
     g.mini = e; g.pred = { e, end: ge - 14, name: M.name }; }); };
 // called every tick from each stage's wrapped tick: ends the hunt, pays out, and lets the stage run on
 const predTick = g => { const q = g.pred; if (!q) return; const e = q.e; if (e.hp > 0 && !q.out && g.state === 'play') return; if (g.state !== 'play') return;
-  if (e.hp <= 0 && !q.out) { const fast = Math.max(0, e.tl || 0), bonus = 20000 + Math.round(fast / 60) * 500; g.score += bonus; g.shake = 16; g.flash = 12; g.fx.push('boom2', 'say:predator destroyed', 'toast:' + q.name + ' DESTROYED|+' + bonus + ' (' + Math.round(fast / 60) + 's LEFT)'); for (let i = 0; i < 4; i++) { addPod(g, (i - 1.5) * 2, 4.8, 16 + i); explode(g, e.x + (g.rand() - 0.5) * 4, e.y + (g.rand() - 0.5) * 3, e.z, i % 2 ? '#ffffff' : e.col, 30, 13); } g.stats.preds = (g.stats.preds || 0) + 1; }
+  if (e.hp <= 0 && !q.out) { const fast = Math.max(0, e.tl || 0), bonus = 20000 + Math.round(fast / 60) * 500; g.score += bonus; g.shake = 16; g.flash = 12; g.fx.push('boom2', 'say:predator destroyed', 'toast:' + q.name + ' DESTROYED|+' + bonus + ' (' + Math.round(fast / 60) + 's LEFT)'); for (let i = 0; i < 4; i++) { if (i % 2) addPod(g, (i - 1.5) * 2, 4.8, 16 + i); explode(g, e.x + (g.rand() - 0.5) * 4, e.y + (g.rand() - 0.5) * 3, e.z, i % 2 ? '#ffffff' : e.col, 30, 13); } g.stats.preds = (g.stats.preds || 0) + 1; }
   for (const b of g.ebul) b.life = Math.min(b.life, 30); g.mini = null; g.pred = null; if (g.camZ < q.end) g.ffTo = q.end; };
 
 // where each stage's squadron run and predator go (in that stage's own coordinates), and the mood of each of its sections, in order
