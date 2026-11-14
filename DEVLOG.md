@@ -742,6 +742,11 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - ALTITUDE METER can be switched off.
 - Compact HUD can also be toggled from the video test.
 
+### 83. Split-capsule settings (r89)
+
+- Every setting in the menus is now a split capsule: the setting's name on the left, its value on the right, with a slanted cut between them. Only the right side changes when you flip it: green for ON, dim for OFF and locked, cyan for anything else, with arrows around the value on the one you have selected.
+- The video settings no longer stretch across the screen: DYNAMIC FRAMERATE is now DYNAMIC FPS and drops the "(NOW REDUCED)" note. The video test still shows the level in use.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

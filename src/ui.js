@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r88';
+const VER = 'r89';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -148,7 +148,7 @@ export function mountShift(root, host = {}) {
       { name: 'VIDEO', items: [
         { label: () => 'GRAPHICS  ' + opt.gfx.toUpperCase(), adj: d => { const o = ['low', 'normal', 'high'], k = o.indexOf(opt.gfx); opt.gfx = o[(k + (d || 1) + 3) % 3]; q = 0; slow = 0; saveOpt(); fit(); } },
         { label: () => 'CLARITY  ' + onoff(opt.clarity), adj: () => { opt.clarity = !opt.clarity; saveOpt(); } }, // see-through own attacks, enemy bullets on top, fewer sparks, quieter backdrop
-        { label: () => 'DYNAMIC FRAMERATE  ' + onoff(opt.dyn) + (opt.dyn && q ? '  (NOW ' + TNAME[tier()] + ')' : ''), adj: () => { opt.dyn = !opt.dyn; q = 0; slow = 0; saveOpt(); fit(); } },
+        { label: () => 'DYNAMIC FPS  ' + onoff(opt.dyn), adj: () => { opt.dyn = !opt.dyn; q = 0; slow = 0; saveOpt(); fit(); } },
         { label: () => 'SOLID OBSTACLES  ' + onoff(opt.fill), adj: () => { opt.fill = !opt.fill; saveOpt(); } },
         { label: () => 'SCREEN SHAKE  ' + onoff(opt.shake), adj: () => { opt.shake = !opt.shake; saveOpt(); } },
         { label: () => 'CRT FILTER  ' + onoff(opt.crt), adj: () => { opt.crt = !opt.crt; saveOpt(); } }] },
@@ -437,8 +437,22 @@ export function mountShift(root, host = {}) {
     const gr = ctx.createLinearGradient(0, hy - 30, 0, hy + 10); gr.addColorStop(0, 'rgba(255,61,240,0)'); gr.addColorStop(1, 'rgba(255,61,240,0.22)'); ctx.globalAlpha = 1; ctx.fillStyle = gr; ctx.fillRect(0, hy - 30, W, 40); ctx.globalCompositeOperation = 'source-over'; } // a pink glow on the horizon
   function drawItems(m, cx, y, size, gap) { const t = performance.now() / 1000, labs = m.items.map(it => typeof it.label === 'function' ? it.label() : it.label), pill = gap >= 22;
     if (!pill) { labs.forEach((lab, k) => { const on = k === m.i, w = textWidth(lab, size, true), yy = y + k * gap; text(ctx, lab, cx, yy, size, on ? '#ffe14a' : '#8d9be0', { align: 'center', glow: on, bold: true }); if (on) text(ctx, '>', cx - w / 2 - size * 1.4, yy, size, '#ffe14a', { bold: true }); hits.push({ x: cx - w / 2 - 40, y: yy - 6, w: w + 80, h: size + 12, i: k }); }); return; }
-    const sz = Math.min(size, gap * 0.42), ph = Math.min(gap - 6, sz * 2.3), pw = Math.max(170, Math.max(...labs.map(l => textWidth(l, sz, true))) + sz * 4.4);
-    labs.forEach((lab, k) => { const it = m.items[k], on = k === m.i, lift = on ? 2 : 0, px = cx - pw / 2, py = y + k * gap - (ph - sz) / 2 - lift, r = ph / 2;
+    const sz = Math.min(size, gap * 0.42), ph = Math.min(gap - 6, sz * 2.3);
+    // settings ('NAME  VALUE' on an adjustable item) are split capsules: the name on the left, the value on the right, a slanted cut between them
+    const split = labs.map((l, k) => { const it = m.items[k]; if (!it.adj || it.tabRow || typeof l !== 'string') return null; const j = l.indexOf('  '); return j > 0 ? [l.slice(0, j), l.slice(j).trim().replace(/\s{2,}/g, ' ')] : null; });
+    const nW = Math.max(0, ...split.map(q => q ? textWidth(q[0], sz, true) : 0)), vW = Math.max(0, ...split.map(q => q ? textWidth(q[1], sz, true) : 0));
+    const pw = Math.max(170, ...labs.map((l, k) => split[k] ? 0 : textWidth(l, sz, true) + sz * 4.4), split.some(Boolean) ? nW + vW + sz * 10 : 0), cut = split.some(Boolean) ? Math.max(pw * 0.42, nW + sz * 3) : 0;
+    labs.forEach((lab, k) => { const it = m.items[k], on = k === m.i, lift = on ? 2 : 0, px = cx - pw / 2, py = y + k * gap - (ph - sz) / 2 - lift, r = ph / 2, sp = split[k];
+      if (sp) { const sx = px + cut, d = ph * 0.32, v = sp[1], isOn = v === 'ON', isOff = v === 'OFF' || /LOCKED/.test(v), vc = isOn ? '#3dffb0' : isOff ? '#3a3f6e' : '#2ee6ff', ty = py + (ph - sz) / 2;
+        ctx.save(); rr(px, py, pw, ph, r); ctx.clip();
+        ctx.fillStyle = on ? 'rgba(255,225,74,.22)' : 'rgba(9,6,22,.85)'; ctx.fillRect(px, py, pw, ph); // the name half
+        ctx.beginPath(); ctx.moveTo(sx + d, py); ctx.lineTo(px + pw, py); ctx.lineTo(px + pw, py + ph); ctx.lineTo(sx - d, py + ph); ctx.closePath(); ctx.fillStyle = vc; ctx.globalAlpha = on ? 1 : 0.82; ctx.fill(); ctx.globalAlpha = 1; // the value half
+        ctx.strokeStyle = on ? '#ffe14a' : '#0a0818'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx + d, py); ctx.lineTo(sx - d, py + ph); ctx.stroke(); ctx.restore();
+        rr(px, py, pw, ph, r); ctx.strokeStyle = on ? '#ffe14a' : '#2ee6ff'; if (on) { ctx.globalAlpha = 0.25 + 0.08 * Math.sin(t * 5); ctx.lineWidth = 12; ctx.stroke(); ctx.globalAlpha = 1; } else { ctx.globalAlpha = 0.16; ctx.lineWidth = 9; ctx.stroke(); ctx.globalAlpha = 1; } ctx.lineWidth = 2; ctx.globalAlpha = on ? 1 : 0.85; ctx.stroke(); ctx.globalAlpha = 1;
+        text(ctx, sp[0], px + r + sz * 0.4, ty, sz, on ? '#ffe14a' : '#2ee6ff', { glow: on, bold: true });
+        const vx = (sx + px + pw - r * 0.4) / 2; text(ctx, v, vx, ty, sz, isOff ? '#9aa0d0' : '#0a0818', { align: 'center', glow: false, bold: true });
+        if (on) { text(ctx, '<', sx + d + sz * 0.5, ty, sz, isOff ? '#ffe14a' : '#0a0818', { bold: true, glow: false }); text(ctx, '>', px + pw - r * 0.8 - sz * 0.5, ty, sz, isOff ? '#ffe14a' : '#0a0818', { bold: true, glow: false }); }
+        hits.push({ x: px, y: py, w: pw, h: ph, i: k }); return; }
       rr(px, py, pw, ph, r);
       if (on) { ctx.fillStyle = '#ffe14a'; ctx.globalAlpha = 0.22 + 0.06 * Math.sin(t * 5); ctx.lineWidth = 12; ctx.strokeStyle = '#ffe14a'; ctx.stroke(); ctx.globalAlpha = 1; ctx.fill(); ctx.strokeStyle = '#fff2a8'; ctx.lineWidth = 2; ctx.stroke(); }
       else { ctx.fillStyle = 'rgba(9,6,22,.8)'; ctx.fill(); ctx.strokeStyle = '#2ee6ff'; ctx.globalAlpha = 0.16; ctx.lineWidth = 9; ctx.stroke(); ctx.globalAlpha = 0.85; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1; }
