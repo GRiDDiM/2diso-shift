@@ -725,6 +725,10 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 
 - Every blob wall has about 30% less health: the ones in the Planet X level and the ones the Shifter throws at you.
 
+### 80. Clearer arenas (r86)
+
+- The bonus arenas are easier to read. The floor is a plain, faint grid, the planet's floor pattern is dimmed right down, the scenery around the edge is gone, and each arena has fewer hazards: two cars instead of four, three geysers instead of five, two lightning bars instead of three, and two tentacles instead of four.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

@@ -531,16 +531,16 @@ function stageMini(K, id, z) { const M = STAGE_MINI[id], spawn = g => { g.mini =
 const ARENAS = {
   earth: { name: 'GRID ZERO', title: 'NEO TERRA ARENA', theme: { sky: 'city', grid: '#2443c8' }, col: '#2ee6ff',
     grunt: { col: '#ff3df0', sp: 4.2, hp: 2 }, fast: { col: '#ff4d6d', sp: 6.2, hp: 1, shape: 'kami' }, gun: { col: '#3dffb0', hp: 6, shape: 'saucer', fire: 120, fan: 3 }, champ: { col: '#ffe14a', shape: 'carrier', name: 'GRID WARDEN' },
-    hazard(g) { for (let i = 0; i < 4; i++) addObs(g, { rel: true, kind: 'car', x: -9 + i * 5, y: 4.5, z: 5 + i * 8, hx: 1.3, hy: 0.45, hz: 0.7, vx: i % 2 ? 3.6 : -3.6, wrap: 14.5, col: '#ff8a2b' }); } },
+    hazard(g) { for (let i = 0; i < 2; i++) addObs(g, { rel: true, kind: 'car', x: -9 + i * 10, y: 4.5, z: 9 + i * 16, hx: 1.3, hy: 0.45, hz: 0.7, vx: i % 2 ? 3.6 : -3.6, wrap: 14.5, col: '#ff8a2b' }); } },
   mars: { name: 'THE CRUCIBLE', title: 'FORGE ARENA', theme: { sky: 'volcano', grid: '#8a2a12' }, col: '#ff5a1f',
     grunt: { col: '#ff8a2b', sp: 4, hp: 2, shape: 'ember' }, fast: { col: '#ffe14a', sp: 6, hp: 1, shape: 'ember' }, gun: { col: '#d98a5a', hp: 8, shape: 'head', fire: 130, fan: 2, r: 0.95 }, champ: { col: '#d98a5a', shape: 'head', name: 'STONE ELDER' },
-    hazard(g) { [[-7, 6], [7, 12], [-6, 21], [6.5, 28], [0, 17]].forEach(([x, z], i) => addObs(g, { rel: true, kind: 'geyser', x, y: 4.75, z, hx: 1.05, hy: 4.75, hz: 1.05, col: '#ff5a1f', pulse: [70, 110, i * 45] })); } },
+    hazard(g) { [[-7, 8], [7, 26], [0, 17]].forEach(([x, z], i) => addObs(g, { rel: true, kind: 'geyser', x, y: 4.75, z, hx: 1.05, hy: 4.75, hz: 1.05, col: '#ff5a1f', pulse: [70, 110, i * 45] })); } },
   jupiter: { name: 'EYE OF THE STORM', title: 'STORM ARENA', theme: { sky: 'cloud', grid: '#1e7a5a' }, col: '#7df9ff',
     grunt: { col: '#7df9ff', sp: 4.6, hp: 2, shape: 'spark', wob: 5 }, fast: { col: '#ffffff', sp: 6.8, hp: 1, shape: 'spark', wob: 8 }, gun: { col: '#b06bff', hp: 6, shape: 'jelly', burst: 8, fire: 150 }, champ: { col: '#b06bff', shape: 'jelly', name: 'THUNDER BLOOM' },
-    hazard(g) { [7, 17, 27].forEach((z, i) => addObs(g, { rel: true, kind: 'bolt', x: 0, y: 4.5, z, hx: 13, hy: 0.4, hz: 0.45, col: '#7df9ff', pulse: [55, 125, i * 60] })); } },
+    hazard(g) { [11, 24].forEach((z, i) => addObs(g, { rel: true, kind: 'bolt', x: 0, y: 4.5, z, hx: 13, hy: 0.4, hz: 0.45, col: '#7df9ff', pulse: [55, 125, i * 60] })); } },
   x: { name: 'THE HEART', title: 'BLOOM ARENA', theme: { sky: 'bio', grid: '#6a1e8a', trippy: true, splat: true }, col: '#3dffb0',
     grunt: { col: '#b6ff3d', sp: 3.6, hp: 1, shape: 'spore', r: 0.42, wob: 4 }, fast: { col: '#ff3df0', sp: 5.8, hp: 1, shape: 'spore', r: 0.42, wob: 7 }, gun: { col: '#ff3df0', hp: 8, shape: 'spitter', fire: 125, fan: 4, bcol: '#b6ff3d', bs: 7 }, champ: { col: '#ff3df0', shape: 'spitter', name: 'BROOD MOTHER' },
-    hazard(g) { [[-7, 7], [7, 14], [-4, 23], [6, 29]].forEach(([x, z], i) => addObs(g, { rel: true, kind: 'tentacle', x, y: 4.75, z, hx: 0.75, hy: 4.75, hz: 0.75, col: '#3dffb0', osc: { ax: 1.6, ay: 0, w: 1.2, ph: i * 2 } })); } } };
+    hazard(g) { [[-7, 9], [6, 25]].forEach(([x, z], i) => addObs(g, { rel: true, kind: 'tentacle', x, y: 4.75, z, hx: 0.75, hy: 4.75, hz: 0.75, col: '#3dffb0', osc: { ax: 1.6, ay: 0, w: 1.2, ph: i * 2 } })); } } };
 // each wave: [grunts, fast, gunners, phase grunts]; wave 5 adds the champion
 const WAVES = [[8, 0, 0, 0], [8, 5, 1, 0], [7, 4, 2, 5], [9, 5, 2, 6], [8, 7, 3, 6]]; // sized for about a minute per arena
 function arena(of) {
