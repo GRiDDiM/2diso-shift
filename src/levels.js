@@ -9,8 +9,8 @@ function kit(id) {
   const ev = [], zones = [], checkpoints = [], hills = []; let gid = 0; const hill = (z0, z1, h) => hills.push([z0, z1, h]);
   const at = (z, fn) => ev.push({ z: z - SPAWN_Z, src: z, fn });
   const far = (z, fn, ob) => { const e = { z: z - FAR, lim: z - SPAWN_Z, src: z, oz: ob ? z : null }; e.fn = g => fn(g, e.d || 0); ev.push(e); }; // e.d: how far a cut moved it // scenery is placed well beyond the old horizon and fades in, so nothing pops up in your face
-  const obs = (z, o) => { far(z, (g, d) => addObs(g, { ...o, z: z + d - g.camZ }), true); if (o.ghost) ev[ev.length - 1].keep = true; }; // ghosts (fog, clouds, channels) are not cleared around a change of view
-  const ring = (z, r) => far(z, (g, d) => addRing(g, { ...r, z: z + d - g.camZ }));
+  const obs = (z, o) => { far(z, (g, d) => addObs(g, { ...o, z: z + d - g.camZ }), true); if (o.ghost && o.kind !== 'safe') ev[ev.length - 1].keep = true; }; // a gate's safe hole is cleared with its walls, so no gate is ever left as a floating hole // ghosts (fog, clouds, channels) are not cleared around a change of view
+  const ring = (z, r) => far(z, (g, d) => addRing(g, { ...r, z: z + d - g.camZ }), true);
   const en = (z, o) => at(z, g => addEnemy(g, o));
   const ground = (z, o) => far(z, (g, d) => addEnemy(g, { rel: false, z: z + d - g.camZ, y: 0.5, y0: 0.5, type: 'turret', ...o }));
   const wing = (z, n, o, gap = 2.2) => { const gr = id + (++gid); if (gid % 3 === 1) ev.push({ z: z - SPAWN_Z - 7, src: z, fn: g => g.warns.push({ x: o.x ?? 0, y: o.y ?? 4.5, t: 80, col: o.col || '#ff4d6d' }) }); /* every third wave flashes a warning where it will come in */ for (let i = 0; i < n; i++) at(z + i * gap, g => addEnemy(g, { type: 'pop', group: gr, gn: n, hp: 2, ph: i * 0.5, ...o })); };
@@ -325,6 +325,9 @@ function jupiter() {
   zone(900, 1140, CHASE, 'THE DEEP - SHARKS AND JELLYFISH - SHIFT TO CHASE VIEW');
   for (let i = 0, z = 936; z < 1125; z += 10, i++) { const a = i * 2.39; drift(z, Math.sin(a) * 5.5, 4.8 + Math.cos(a * 1.3) * 3); if (i % 2) drift(z + 5, Math.sin(a + 2) * 5.5, 4.8 + Math.cos(a * 0.7 + 1) * 3); if (i % 3 === 0) fog(z + 3, Math.sin(a + 1) * 4, 4.8, { hy: 3.4, hx: 2.4 }); }
   for (let i = 0, z = 952; z < 1120; z += 21, i++) { const n = 2 + (i % 3); for (let k = 0; k < n; k++) shark(z + k * 1.6, { x: (k - (n - 1) / 2) * 3.2, y: 2.6 + ((k + i) % 3) * 2.2, ax: i % 2 ? 2.8 : 1.4, ph: k }); }
+  // two giant squid, one rising from the deep and one diving from above, sweeping right across the lane: shoot them for a big bonus or get out of the way
+  const squid = (z, x, up) => en(z, { type: 'swim', shape: 'squid', x, x0: x, y: up ? -6 : 15.5, vy: up ? 2.3 : -2.3, vz: -2.2, ax: 1.8, ph: x, hp: 60, r: 3.4, col: '#ff6ec7', score: 3000, pod: true });
+  at(996, g => hint(g, 'SOMETHING HUGE IS MOVING IN THE DEEP...', 200)); squid(1010, -2.5, true); squid(1085, 3, false);
   jelly(990, { x: 0, y: 5 }); jelly(1070, { x: 2, y: 6 }); at(940, g => hint(g, 'THE DEEP - JELLYFISH STING, SHARKS CHARGE', 200)); K.hill(964, 1008, 1.4); K.hill(1060, 1102, 1.7); K.tilt(940, 1130, { sway: 0.1, w: 0.007, py: 22 }); // the sea swells
   K.checkpoints.push(1144);
 

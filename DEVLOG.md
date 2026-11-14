@@ -762,6 +762,16 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - RESET TO DEFAULTS also puts the ship back to the PILOT skin.
 - IDLE MODE keeps going on its own: a few seconds after the results screen it continues to the next cutscene and level, even from a level picked in the menu.
 
+### 86. Squid, speed and smoother checkpoints (r92)
+
+- Hitches: RIVET-9's portrait was drawn with a canvas shadow blur, which is very slow. Every new message (and checkpoints arrive with one) could hitch. It's gone. Dynamic framerate also climbs back up far less eagerly and never mid-fight, because every step is a resize that can stutter.
+- Jupiter's deep has two GIANT SQUID: one rises from below and one dives from above, sweeping across the whole lane. Ribbed mantle, fins, glowing eyes, eight rippling arms and two long club tentacles. Shoot one for 3000 points and a pod, or get out of its way.
+- End-on lightning chains are now a living ball of forked branches with hot spots and a bright core, instead of a wheel of spokes.
+- IDLE MODE shifts straight up to TURBO like a pro (FAST in boss fights).
+- Beat the game and it shows your COMPLETION TIME for the whole run, in play time, at the ending and in the credits.
+- Fixed a leftover firewall gate between the firewall and construction sections on Earth: its walls had been cleared but its glowing hole and ring were not.
+- Menus are more colourful: deep purple-to-navy glass panels with a glow, an inner line, neon corner brackets, faint scanlines and a four-colour bar under the title. Buttons have gradient bodies, a coloured marker each, and the selected one is a warm yellow-to-orange. The options box is wider, so its tabs have room.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

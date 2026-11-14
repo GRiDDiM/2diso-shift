@@ -53,7 +53,7 @@ export function createGame({ seed = 1, level, start = null, players = 1, wing = 
   return g;
 }
 // what "save and quit" (and a level hand-over) stores: where you are and everything you carry
-export function snapshot(g) { const p = g.players[0]; return { r6: 1, level: g.level.id, z: g.checkpoint, score: g.score, lives: Math.max(p.lives, 0), bombs: p.bombs, up: [...p.up], shield: p.shield, cursor: p.cursor, dmode: p.dmode, gear: g.gear, warp: g.flags.warp, arena: g.flags.arena }; }
+export function snapshot(g) { const p = g.players[0]; return { r6: 1, level: g.level.id, z: g.checkpoint, score: g.score, lives: Math.max(p.lives, 0), bombs: p.bombs, up: [...p.up], shield: p.shield, cursor: p.cursor, dmode: p.dmode, gear: g.gear, warp: g.flags.warp, arena: g.flags.arena, runT: (g.runT0 || 0) + g.stats.ticks }; }
 
 // ---------- helpers the level scripts use ----------
 // loops: every time round the enemy is tougher, shoots faster and more often, and shoots back when it dies
@@ -325,6 +325,7 @@ export function step(g, inputs) {
     if (!e.rel) e.z -= dz;
     if ((e.type === 'walker' || e.type === 'turret') && e.y0 < 4 && g.level.hills) e.y = e.y0 + groundAt(g, e.z); // ground troops stand on the slope
     if (e.type === 'walker') { e.x += e.vx * dt; if (Math.abs(e.x) > 7.2) { e.vx = -e.vx; e.x = clamp(e.x, -7.2, 7.2); } } // things that walk or drive along the floor or the ceiling
+    else if (e.type === 'swim') { e.z += e.vz * dt; e.y += e.vy * dt; e.x = e.x0 + Math.sin(e.t * 0.012 + e.ph) * e.ax; if (e.y > 17 || e.y < -8) e.z = -50; } // a giant swimmer crossing the whole screen, top to bottom or bottom to top
     else if (e.type === 'pop') { e.z += e.vz * dt; e.x = e.x0 + e.ax * Math.sin(e.t * 0.02 * e.w + e.ph); e.y = e.y0 + e.ay * Math.sin(e.t * 0.02 * e.w + e.ph + (e.ax ? 1.57 : 0)); if (e.zig) e.x = e.x0 + e.ax * (Math.abs(((e.t * 0.02 * e.w + e.ph) % 2) - 1) * 2 - 1); }
     else if (e.type === 'saucer') { if (e.t < e.dur) { e.z += (e.hold - e.z) * 0.03; e.x = e.x0 + e.ax * Math.sin(e.t * 0.025 + e.ph); e.y = e.y0 + e.ay * Math.sin(e.t * 0.031 + e.ph); } else { e.z -= 14 * dt; } }
     else if (e.type === 'kami') { const p = near(g, e), s = 4.6 * dt; e.z += e.vz * dt; if (e.z > p.z) { e.x += clamp(p.x - e.x, -s, s) * m[0]; e.y += clamp(p.y - e.y, -s, s) * m[1]; } }
@@ -490,6 +491,6 @@ export function autopilot(g, i = 0) {
   if (bc > 150 && p.bombs > 0 && !pv.bomb && p.inv <= 0) out.bomb = true;
   const cu = p.cursor; if (cu >= 0 && !pv.upgrade) { const lo = Math.min(p.up[1], p.up[2], p.up[3], p.up[4], p.up[5]); if (cu === 8 && hyperOk(p) && p.up[8] < 6 || cu === 7 && lo >= 4 && p.up[7] < 6 || cu === 0 && p.up[0] <= lo + 1 && p.up[0] < 6 || cu >= 1 && cu <= 5 && p.up[cu] <= lo && p.up[cu] < 6 || cu === 6 && p.shield < 4) out.upgrade = true; }
   if (arena) { let bd = 1e9, be = null; for (const e of g.enemies) if (e.hp > 0 && live(e, v)) { const d = Math.hypot(e.x - p.x, e.z - p.z); if (d < bd) { bd = d; be = e; } } if (be) out.aim = [be.x - p.x, be.z - p.z]; } // the autopilot points its guns by hand, like a right stick
-  if (g.tick % 8 === 0) { if (g.overLava && g.gear < 3) { out.gear = true; g.apGear = true; } else if (!g.overLava && g.apGear) { if (g.gear !== 0) out.gear = true; else g.apGear = false; } } // idle mode shifts up through lava and back down after
+  if (g.tick % 8 === 0 && g.forceGear == null && g.intro <= 0 && !g.level.rules?.arena && !g.level.rules?.inertia && p.dead <= 0 && i === 0) { const want = g.boss || g.mini ? 2 : 3; if (g.gear < want) out.gear = true; } // idle mode flies like it means it: straight up to TURBO (FAST in a boss fight)
   return out;
 }
