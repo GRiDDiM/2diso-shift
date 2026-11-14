@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r86';
+const VER = 'r87';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -69,7 +69,7 @@ export function mountShift(root, host = {}) {
   let owned = LS.get('owned', []), forSale = [], prices = { 'shift-fire-mage': 500, 'shift-pixie': 650, 'shift-dark-lord': 800 }, skinView = opt.skin | 0; if (host.skins) Promise.resolve().then(() => host.skins()).then(r => { if (r && Array.isArray(r.owned)) { owned = r.owned; LS.set('owned', owned); } if (r && Array.isArray(r.forSale)) forSale = r.forSale; if (r && r.prices) Object.assign(prices, r.prices); }).catch(() => { });
   const skinOk = i => !i || BUGTEST && opt.skinTest || !!SKIN[i] && (!!LS.get('skinsWon', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinReal = i => !i || !!SKIN[i] && (!!LS.get('skinsWon', {})[SKIN[i][1]] || owned.includes(SKIN[i][3])), skinNow = () => skinOk(opt.skin | 0) ? opt.skin | 0 : 0;
   const audio = createAudio(opt);
-  let q = 0, slow = 0, ema = 16, upWait = 600, sinceUp = 1e9; // q: how many steps dynamic framerate has dropped below the chosen graphics setting
+  let fpsE = 16, q = 0, slow = 0, ema = 16, upWait = 600, sinceUp = 1e9; // q: how many steps dynamic framerate has dropped below the chosen graphics setting
   // quality tiers: 0 full glow at full resolution, 1 one soft halo at 3/4 resolution, 2 no glow at lower resolution, 3 no glow, half resolution, no far scenery
   const GBASE = { high: 0, normal: 1, low: 3 }, TNAME = ['HIGH', 'NORMAL', 'REDUCED', 'LOW', 'MINIMUM'], tier = () => Math.min(4, (GBASE[opt.gfx] ?? 0) + (opt.dyn ? q : 0)); // 4 is an emergency step only dynamic framerate reaches: lower resolution still and no solid shading
   let destroyed = false, raf = 0, last = performance.now(), acc = 0, scale = 1, res = 1, rotOk = false;
@@ -163,6 +163,7 @@ export function mountShift(root, host = {}) {
         ...(BUGTEST ? [{ label: 'BUG TEST', act: bugMenu }] : []),
         { label: 'CONTROLS', act: () => push({ title: 'CONTROLS', kind: 'controls', items: [{ label: 'BACK', act: popMenu }] }) },
         { label: 'CREDITS', act: () => scrollMenu('CREDITS', CREDITS) },
+        { label: 'VIDEO TEST', act: videoTest },
         { label: () => resetArm ? 'PRESS AGAIN TO RESET' : 'RESET TO DEFAULTS', act: resetOpts }] }]; resetArm = false;
     const m = push({ title: 'OPTIONS', gap: 28, tabs, tab: 0, items: [] }); setTab(m, 0); }
   // RESET TO DEFAULTS: every setting back to how a new player starts (the ship skin you picked stays). Asks once more first
@@ -171,6 +172,30 @@ export function mountShift(root, host = {}) {
     const keep = opt.skin, idle = opt.idle, assist = opt.assist; Object.assign(opt, OPT0, { skin: keep }); opt.idle = idle; opt.assist = assist;
     if (idle !== OPT0.idle) setIdle(OPT0.idle); if (assist !== OPT0.assist) setAssist(OPT0.assist); opt.idle = OPT0.idle; opt.assist = OPT0.assist;
     q = 0; slow = 0; audio.vol(); saveOpt(); fit(); toast('OPTIONS', 'BACK TO DEFAULTS'); audio.sfx('blip'); }
+  // VIDEO TEST: a busy stretch of the game plays itself behind a small panel, so every video setting can be tried with a live picture.
+  // Nothing is scored or recorded and nothing can hurt the ship. L / R on SCENE and VIEW pick what to look at
+  const VSCENES = [['MARS BOSS', 'mars', 1124], ['EARTH TRAFFIC', 'earth', 840], ['JUPITER DESCENT', 'jupiter', 694], ['WRITHING GROVE', 'x', 112], ['PLANET X BOSS', 'x', 1134], ['ARENA', 'arena-mars', 0]];
+  let vt = null;
+  function vtStart() { const [, id, z] = VSCENES[vt.s]; testRun = true; startLevel(id, { r6: 1, z: z || undefined, up: [6, 6, 6, 6, 6, 6, 0, 6, 0], shield: 6, bombs: 9, lives: 9 }); g.mut.bug = true; g.intro = 0; vt.t = 0; push(vt.m); }
+  function videoTest() { const m = { title: 'VIDEO TEST', kind: 'vtest', items: [
+      { label: () => 'SCENE  ' + VSCENES[vt.s][0], adj: d => { vt.s = (vt.s + (d < 0 ? VSCENES.length - 1 : 1)) % VSCENES.length; menus.length = 0; vtStart(); } },
+      { label: () => 'VIEW  ' + (vt.v < 0 ? 'AUTO' : VIEWS[vt.v]), adj: d => { vt.v = ((vt.v + 1 + (d < 0 ? 4 : 1)) % 5) - 1; } },
+      { label: () => 'GRAPHICS  ' + opt.gfx.toUpperCase(), adj: d => { const o = ['low', 'normal', 'high'], k = o.indexOf(opt.gfx); opt.gfx = o[(k + (d || 1) + 3) % 3]; q = 0; slow = 0; saveOpt(); fit(); } },
+      { label: () => 'DYNAMIC FPS  ' + onoff(opt.dyn), adj: () => { opt.dyn = !opt.dyn; q = 0; slow = 0; saveOpt(); fit(); } },
+      { label: () => 'CLARITY  ' + onoff(opt.clarity), adj: () => { opt.clarity = !opt.clarity; saveOpt(); } },
+      { label: () => 'SOLID OBSTACLES  ' + onoff(opt.fill), adj: () => { opt.fill = !opt.fill; saveOpt(); } },
+      { label: () => 'SCREEN SHAKE  ' + onoff(opt.shake), adj: () => { opt.shake = !opt.shake; saveOpt(); } },
+      { label: () => 'CRT FILTER  ' + onoff(opt.crt), adj: () => { opt.crt = !opt.crt; saveOpt(); } },
+      { label: () => 'GLITCH SAMPLE', act: () => { if (g) { g.glT = 40; g.glK = 0.9; } } },
+      { label: 'BACK', act: () => { vt = null; testRun = false; showTitle(); } }] };
+    vt = { s: 0, v: -1, m, t: 0, fps: 60 }; vtStart(); }
+  function vtTick() { // the scene keeps playing under the panel: autopilot flies, nothing is lost, and it starts over when the stretch ends
+    vt.t++; if (g.state !== 'play' || vt.t > 60 * 75) { menus.length = 0; vtStart(); return; }
+    for (const p of g.players) { p.lives = 9; } if (vt.v >= 0) { g.recView = vt.v; if (g.view !== vt.v && g.shiftT <= 0) { g.viewFrom = g.view; g.view = vt.v; g.shiftT = 1; g.shiftDir = 1; } g.lockShift = true; } else g.lockShift = false;
+    step(g, g.players.map((_, k) => autopilot(g, k))); if (g.glT > 0) glOn = 0; }
+  function drawVTest(m) { const x = 10, y = 146, w = 360, n = m.items.length, h = 70 + n * 22; panel(x, y, w, h, '#2ee6ff'); text(ctx, 'VIDEO TEST', x + w / 2, y + 16, 13, '#ffe14a', { align: 'center', bold: true });
+    text(ctx, (opt.dyn ? 'NOW ' + TNAME[tier()] : opt.gfx.toUpperCase()) + '   ' + Math.round(1000 / Math.max(1, fpsE)) + ' FPS', x + w / 2, y + 38, 8, '#3dffb0', { align: 'center', glow: false });
+    drawItems(m, x + w / 2, y + 58, 8.5, 22); }
   function setTab(m, k) { m.tab = (k + m.tabs.length) % m.tabs.length; m.items = [{ label: () => '<  ' + m.tabs[m.tab].name + '  >', tabRow: true, adj: d => setTab(m, m.tab + d) }, ...m.tabs[m.tab].items, { label: 'BACK', act: popMenu }]; m.i = Math.min(m.i, m.items.length - 1); }
   function setIdle(v) { opt.idle = v; saveOpt(); if (v) { assisted = true; rec = null; } }
   // RIVET-9 flies as your wingman and rolls into the right view before you do. Runs with him are tagged ASSISTED.
@@ -207,7 +232,7 @@ export function mountShift(root, host = {}) {
     if (it.adj && (e('left') || e('right'))) { it.adj(e('left') ? -1 : 1); audio.sfx('move'); }
     else if (e('ok')) { audio.sfx('ok'); if (it.act) it.act(); else it.adj?.(1); }
     else if (m.pause && (e('pause') || e('start'))) resume();
-    else if (e('back') && !m.root && !m.locked) { if (m.pause) resume(); else popMenu(); }
+    else if (e('back') && !m.root && !m.locked) { if (m.kind === 'vtest') { vt = null; testRun = false; showTitle(); } else if (m.pause) resume(); else popMenu(); }
     prevM = i;
   }
 
@@ -370,6 +395,7 @@ export function mountShift(root, host = {}) {
     if (scene === 'title') { titleT++; menuInput(i); return; } // no game runs behind the title any more: it is a still, cheap backdrop
     if (scene === 'credits') { if (menus.length) { menuInput(i); return; } cred.y = Math.min(cred.max, cred.y + (i.ok || i.down ? 3 : 0.5)); if (tap) { tap = null; cred.y = Math.min(cred.max, cred.y + 160); }
       if ((cred.y >= cred.max && ++cred.hold > 100) || (sceneT > 40 && ((i.pause && !prevM.pause) || (i.back && !prevM.back)))) creditsMenu(); prevM = i; return; }
+    if (menus.length && top().kind === 'vtest' && g) { vtTick(); if (menus.length) menuInput(i); return; }
     if (menus.length) { if (top().kind === 'end' && endInfo) { endInfo.t++; step(g, [{}]); } menuInput(i); return; }
     if (i.pause && !prevIn.pause) { pauseMenu(); prevIn = i; return; }
     let ins; if (opt.idle) { assisted = true; rec = null; ins = g.players.map((_, k) => autopilot(g, k)); } else if (coop) ins = [i.p1 || i, i.p2 || {}];
@@ -461,7 +487,7 @@ export function mountShift(root, host = {}) {
     const fs = (str, sz) => Math.min(sz, sz * (w - 22) / Math.max(1, textWidth(str, sz))); /* every line fits inside the dashed border with room to spare */ text(ctx, 'GITHUB', cx, 13, fs('GITHUB', 7.5), '#ffffff', { align: 'center', bold: true, glow: false }); text(ctx, 'GAME OFF', cx, 27, fs('GAME OFF', 9), '#ffffff', { align: 'center', bold: true, glow: true }); text(ctx, '2026', cx, 43, fs('2026', 17), '#ffe14a', { align: 'center', bold: true, tube: true });
     ctx.fillStyle = '#ff3df0'; ctx.fillRect(x + 16, 72, w - 32, 1.5); text(ctx, 'THEME', cx, 80, 6, '#d6a8ff', { align: 'center', bold: true, glow: false }); text(ctx, 'SHIFT', cx, 90, fs('SHIFT', 10), '#2ee6ff', { align: 'center', bold: true, glow: true }); ctx.restore(); }
   function drawMenu() {
-    hits = []; const m = top(); if (!m) return; const t = performance.now() / 1000;
+    hits = []; const m = top(); if (!m) return; const t = performance.now() / 1000; if (m.kind === 'vtest') { drawVTest(m); return; }
     if (m.kind === 'title') {
       const k = Math.min(1, titleT / 18), sc = 1 + (1 - k) * (1 - k) * 2.2; if (titleT < 26) ctx.translate((Math.random() - 0.5) * (26 - titleT) * 0.5, (Math.random() - 0.5) * (26 - titleT) * 0.5);
       drawLogo(ctx, 480, 34 - (sc - 1) * 30, sc, t); ctx.setTransform(res, 0, 0, res, 0, 0);
@@ -564,7 +590,7 @@ export function mountShift(root, host = {}) {
         const L = LEVELS[levelId]; if (g.intro > 0 || sceneT < INTRO + 110) { const a = g.intro > 0 ? 1 : Math.min(1, (INTRO + 110 - sceneT) / 30); text(ctx, (L.isArena ? 'BONUS ARENA' : L.isBonus ? 'BONUS STAGE' : 'LEVEL ' + L.n) + (loopN ? '   LOOP ' + (loopN + 1) : ''), 480, 178, 14, '#ffe14a', { bold: true, align: 'center', alpha: a }); text(ctx, L.name, 480, 204, 44, VCOL[(L.n || 2) % 4], { bold: true, align: 'center', alpha: a, weight: 4, tube: true }); text(ctx, L.sub, 480, 262, 12, '#ffffff', { bold: true, align: 'center', alpha: a }); if (g.intro > 0) text(ctx, 'HYPERSPACE', 480, 300, 8, '#7d8bd6', { bold: true, align: 'center', alpha: (sceneT >> 3) % 2 ? 1 : 0.4, glow: false }); }
         if (warpT > 0) { ctx.fillStyle = '#b06bff'; ctx.globalAlpha = Math.min(0.85, warpT / 80); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; text(ctx, 'WARP', 480, 240, 40, '#ffffff', { bold: true, align: 'center', weight: 4, tube: true }); } } }
     if (scene !== 'intro' && toasts.length) { let y = menus.length && top().kind === 'end' ? 392 : 114; for (const q of toasts) { q.t++; const tw = Math.max(250, textWidth(q.a, 11) + 32, textWidth(q.b, 7) + 32), k = Math.min(1, q.t / 14, (300 - q.t) / 20), x = W - 18 - tw * Math.max(0, k); if (k <= 0) continue; ctx.fillStyle = 'rgba(4,5,22,.88)'; ctx.fillRect(x, y, tw, 40); ctx.strokeStyle = '#3dffb0'; ctx.lineWidth = 2; ctx.strokeRect(x, y, tw, 40); /* the card grows to fit its text */ ctx.fillStyle = '#3dffb0'; ctx.fillRect(x, y, 5, 40); text(ctx, q.a, x + 16, y + 8, 11, '#ffffff'); text(ctx, q.b, x + 16, y + 26, 7, '#3dffb0', { glow: false }); y += 48; } while (toasts.length && toasts[0].t > 300) toasts.shift(); }
-    if (scene === 'play' && g && !menus.length) { const gk = glitchLevel(); if (gk > 0.04) glitchFx(gk); }
+    if (scene === 'play' && g && (!menus.length || top().kind === 'vtest')) { const gk = glitchLevel(); if (gk > 0.04) glitchFx(gk); }
     drawMenu();
     if (opt.crt) { if (!crtPat) { const c = document.createElement('canvas'); c.width = 2; c.height = 3; const x = c.getContext('2d'); x.fillStyle = 'rgba(0,0,0,.34)'; x.fillRect(0, 2, 2, 1); crtPat = ctx.createPattern(c, 'repeat'); }
       ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = crtPat; ctx.fillRect(0, 0, W, H); const vg = ctx.createRadialGradient(480, 270, 250, 480, 270, 590); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.6)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H); }
@@ -605,7 +631,7 @@ export function mountShift(root, host = {}) {
   function frame(now) {
     if (destroyed) return; raf = requestAnimationFrame(frame);
     let dt = (now - last) / 1000; last = now; if (dt > 0.25) dt = 0.25; if (focusPaused) return;
-    if (glOn < 30) glOn++; if (scene === 'play' && !menus.length && opt.dyn && glOn >= 30) { ema += (Math.min(100, dt * 1000) - ema) * 0.05; sinceUp++; const qmax = 4 - (GBASE[opt.gfx] ?? 0);
+    fpsE += (Math.min(100, dt * 1000) - fpsE) * 0.05; if (glOn < 30) glOn++; if (scene === 'play' && (!menus.length || top().kind === 'vtest') && opt.dyn && glOn >= 30) { ema += (Math.min(100, dt * 1000) - ema) * 0.05; sinceUp++; const qmax = 4 - (GBASE[opt.gfx] ?? 0);
       if (ema > 20.5 && q < qmax) { if (++slow > (ema > 28 ? 20 : 45)) { q++; slow = 0; ema = 16; if (sinceUp < 600) upWait = Math.min(7200, upWait * 2); /* it could not hold the better setting: wait longer before trying again */ fit(); } }
       else if (ema < 17.3 && q > 0) { if (--slow < -upWait) { q--; slow = 0; sinceUp = 0; fit(); } }
       else if (slow > 0) slow--; else if (slow < 0 && ema >= 17.3) slow = 0; } // dynamic framerate: drop a step within a second when frames run long (faster if it is bad), climb back one step after ten smooth seconds

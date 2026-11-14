@@ -729,6 +729,11 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 
 - The bonus arenas are easier to read. The floor is a plain, faint grid, the planet's floor pattern is dimmed right down, the scenery around the edge is gone, and each arena has fewer hazards: two cars instead of four, three geysers instead of five, two lightning bars instead of three, and two tentacles instead of four.
 
+### 81. Video test (r87)
+
+- New VIDEO TEST under OPTIONS > MORE. A busy stretch of the game plays itself behind a small panel, so you can try every video setting on a live picture: graphics level, dynamic framerate, clarity, solid obstacles, screen shake, the CRT filter, and a button that fires a sample glitch. It shows the graphics level in use right now and the frame rate.
+- Pick the scene (Mars boss, Earth traffic, Jupiter descent, the Writhing Grove, the Planet X boss, an arena) and lock the view to SIDE, ISO, CHASE or TOP, or leave it on AUTO. Nothing is scored or recorded and nothing can hurt the ship. BACK or Esc returns to the title.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
