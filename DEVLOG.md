@@ -793,6 +793,11 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - Enemies firing back on death was too much for NORMAL, so everything moves down a step. NORMAL is now the game's base rules. HARD is the old second-loop rules: tougher enemies, faster bullets, and enemies that fire back when they die.
 - EASY is new and gentler than NORMAL: enemies have about 30% less health and shoot less often, bosses and minibosses have 20% less health, and every bullet is slower.
 
+### 90. A fresh map for every run (r96)
+
+- The solar map now shows only the current run. A NEW GAME (or CO-OP) starts with a clean map: no ticks, grades or found warps from earlier games. When you loop, earlier grades stay, marked with the loop they were earned on (S L2). Your best ranks are still kept for achievements.
+- The map shown between levels stays up a couple of seconds longer, so you have time to look at it.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
