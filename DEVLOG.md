@@ -943,6 +943,10 @@ A wave you wipe out drops a pod, but now only one every five seconds. When sever
 
 The solar map between stages no longer moves on by itself. Your ship flies its hop, then the map waits: browse the other stops with left and right, and press CONTINUE when you're ready. Idle mode still carries on by itself.
 
+### 110. Version and About (r116)
+
+The title screen shows the version number in its bottom-right corner. OPTIONS > MORE has a new ABOUT page: what the game is, which build you're playing, who made it, what it's built with, and where to find the source code.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
