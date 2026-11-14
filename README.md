@@ -5,7 +5,7 @@ A shoot-'em-up where **you** shift reality: barrel-roll between four views of th
 Made for **GitHub Game Off 2026** (theme: **SHIFT**).
 
 ## Status
-Playable start to finish: nine stages from Earth to Planet X, each with its own boss, an ending with scrolling credits, then loop mode (keep your upgrades, loops get much harder). A Moon stage and four bonus arenas are built but shelved for the jam version; they can be played from PRACTICE. Finishing the game on Easy, Normal and Hard unlocks one ship skin each.
+Playable start to finish: eight stages from Earth to Planet X, each with its own boss, an ending with scrolling credits, then loop mode (keep your upgrades, loops get much harder). A Moon stage, an Asteroid Belt stage and four bonus arenas are built but shelved for the jam version; they can be played from PRACTICE. Finishing the game on Easy, Normal and Hard unlocks one ship skin each.
 
 Also in the game: Boss Rush (every boss and miniboss back to back, timed), 36 achievements, Perfect Shifts, medals and ranks, wave-order targeting bonuses, 1UP drops, hills and slopes, two-player co-op and an AI wingman (RIVET-9). Built during November 2026 for the jam. See `DEVLOG.md` for how it was made.
 
@@ -25,12 +25,11 @@ What a view flattens does not exist for collisions, so a wall in one view is ope
 | 1 | Earth, Neo Terra | skyscrapers, skyways, firewall gates, hover traffic | OVERSEER |
 | 2 | The Sun, Corona | a clear channel through plasma fog, sunspots, solar wind | HELIOS |
 | 3 | Mars, The Forge | lava geysers, fire arcs, a labyrinth, alien stone heads | THE COLOSSUS |
-| 4 | Asteroid Belt, The Rubble | rock storms, a mining colony, magnetic lodestones, the crushers | THE MOTHER ROCK |
-| 5 | Jupiter, Storm Deck | lightning chains, storm walls, wraiths, the deep | THE EYE |
-| 6 | Saturn, The Rings | laser grids, a climb through the ring layers, the loom, a space whale | THE PRISM |
-| 7 | Pluto, The Cold Edge | ice shelves, snow comets, black ice, a blizzard | FROST WARDEN |
-| 8 | The Wormhole, The Throat | every world remixed: fold rapids, a gravity knot, time stretch | THE PARADOX |
-| 9 | Planet X, The Bloom | tentacles, membranes, spores, the hyper run | THE SHIFTER |
+| 4 | Jupiter, Storm Deck | lightning chains, storm walls, wraiths, the deep | THE EYE |
+| 5 | Saturn, The Rings | laser grids, a climb through the ring layers, the loom, a space whale | THE PRISM |
+| 6 | Pluto, The Cold Edge | ice shelves, snow comets, black ice, a blizzard | FROST WARDEN |
+| 7 | The Wormhole, The Throat | every world remixed: fold rapids, a gravity knot, time stretch | THE PARADOX |
+| 8 | Planet X, The Bloom | tentacles, membranes, spores, the hyper run | THE SHIFTER |
 
 ## Controls
 | Action | Keyboard | Controller | Touch |
