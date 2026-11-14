@@ -877,6 +877,12 @@ The Asteroid Belt is shelved too, like the Moon. The route is now Earth, the Sun
 
 The drifting arena station on the solar map is plain grey now, with no ??? under it. The Asteroid Belt has no label any more; its little cluster of rocks is grey too and bobs slowly up and down inside the belt.
 
+### 100. The sky sea (r106)
+
+Jupiter is full of life now. Blooms of jellyfish drift through the whole stage: small ones in the lane to dodge or burst, and great drifts of big ones out past the edges. Giant squid cross the storm ten times instead of only in the deep. The deep ends with a squid migration: a whole school of them swimming through together.
+
+Boss signature storms also play out in full now. Their shots can't be cancelled by shifting, bombs, lasers, drones or shields, so you always see the whole pattern. Ordinary boss shots still can be.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

@@ -138,7 +138,7 @@ function hurt(g, p) {
   if (g.mut.bug) { g.stats.bugHits = (g.stats.bugHits || 0) + 1; p.inv = 40; g.fx.push('shield'); g.shake = Math.max(g.shake, 4); return; } // bug test: nothing is lost, the hit is only marked
   g.stats.hits++;
   if (p.shield > 0 && g.loop < 3) { const s0 = p.shield; glitch(g, 14, 0.45); p.shield = g.loop >= 2 ? 0 : Math.max(0, p.shield - 2); p.inv = LOOP.inv[lp(g)] * (s0 >= 6 ? 1.6 : s0 >= 2 ? 1.3 : 1) | 0; /* shields are counted in half layers: a hit takes a whole layer. AFTERGLOW stretches the safety after it */
-    if (s0 >= 4) { for (const b of g.ebul) if (Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z) < 6) b.life = 0; for (const e of g.enemies) if (e.hp > 0 && e.type !== 'boss' && !e.mini && Math.hypot(e.x - p.x, e.y - p.y, e.z - p.z) < 3.5) damage(g, e, 12); g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.5, vr: 22, life: 16, max: 16, col: '#5ee7ff' }); } /* BLOWBACK */ /* loop 3: one hit strips every layer. loop 4: shields do nothing */ g.fx.push('shield'); explode(g, p.x, p.y, p.z, '#5ee7ff', 12, 7); g.shake = 6; return; }
+    if (s0 >= 4) { for (const b of g.ebul) if (!b.sig && Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z) < 6) b.life = 0; for (const e of g.enemies) if (e.hp > 0 && e.type !== 'boss' && !e.mini && Math.hypot(e.x - p.x, e.y - p.y, e.z - p.z) < 3.5) damage(g, e, 12); g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.5, vr: 22, life: 16, max: 16, col: '#5ee7ff' }); } /* BLOWBACK */ /* loop 3: one hit strips every layer. loop 4: shields do nothing */ g.fx.push('shield'); explode(g, p.x, p.y, p.z, '#5ee7ff', 12, 7); g.shake = 6; return; }
   if (p.up[8] >= 4 && !p.sw && !g.level.bonus) { p.sw = 1; p.inv = 180; g.flash = 8; g.shake = 8; g.fx.push('shield', 'god'); info(g, 'second wind'); for (let i = 0; i < 3; i++) g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.4, vr: 12 + i * 6, life: 22, max: 22, col: i % 2 ? '#ffffff' : '#ffe14a' }); return; } // SECOND WIND: once a level
   explode(g, p.x, p.y, p.z, '#ffffff', 46, 15); explode(g, p.x, p.y, p.z, '#ff3df0', 30, 10); g.fx.push('die'); g.shake = 14; g.flash = 10; g.chain = 0; g.stats.deaths++; glitch(g, 36, 1);
   if (g.level.bonus && !g.mut.rush) { p.dead = 1e9; g.state = 'over'; g.endT = 0; return; } // a bonus stage just ends; it never costs a ship (in boss rush it costs one like anywhere else)
@@ -159,7 +159,7 @@ function buy(g, p) { // in co-op the upgrade bar is the team's: one cursor, one 
 }
 function bombHit(g, e, d, bd) { if (e.type === 'boss') { if ((e.vuln || []).includes(g.view)) { e.hp = Math.max(0, e.hp - bd * hyperMul(g.players[0])); e.hit = 9; e.hbT = 75; } } else damage(g, e, d); }
 function blastArea(g, b, test, d, bd) { // everything a blast touches: shots vanish, each enemy and breakable is hit once per blast
-  for (const q of g.ebul) if (q.life > 0 && test(q, 0.3)) { q.life = 0; if (g.parts.length < 600) g.parts.push({ x: q.x, y: q.y, z: q.z, vx: 0, vy: 3, vz: 0, life: 8, max: 8, col: '#ffe14a' }); }
+  for (const q of g.ebul) if (q.life > 0 && !q.sig && test(q, 0.3)) { q.life = 0; if (g.parts.length < 600) g.parts.push({ x: q.x, y: q.y, z: q.z, vx: 0, vy: 3, vz: 0, life: 8, max: 8, col: '#ffe14a' }); }
   for (let i = 0, n = g.enemies.length; i < n; i++) { const e = g.enemies[i]; if (e.hp > 0 && e.bh !== b.id && e.z < SPAWN_Z + 6 && test(e, e.type === 'boss' ? 3 : e.r || 0.6)) { e.bh = b.id; bombHit(g, e, d, bd); } }
   for (const o of g.obs) if (o.hp && o.bh !== b.id && test(o, Math.max(o.hx, o.hz))) { o.bh = b.id; o.hp -= d; o.hit = o.kind === 'blob' ? 7 : 3; }
 }
@@ -199,14 +199,14 @@ function beam(g, x, y, z, w, dmg, col, o = {}) {
       g.beams.push({ x, y, z0: z, z1: z + dz * bt, ex: x + dx * bt, life: o.life || 5, max: o.life || 5, col, w: 0, lw: o.lw || 0 }); return; } // an ordinary beam ends at the first thing in its way
     for (const e of g.enemies) { if (e.hp <= 0 || !live(e, g.view)) continue; const ex = e.x - x, ez = e.z - z, t = ex * dx + ez * dz; if (t < 0 || t > len) continue; if (Math.abs(ex * dz - ez * dx) < (e.hx ?? e.r) + w) { damage(g, e, dmg); if (o.hyper) explode(g, e.x, e.y, e.z, '#ffffff', 8, 9); } }
     for (const b of g.obs) if (b.hp != null && solid(b, g.view)) { const ex = b.x - x, ez = b.z - z, t = ex * dx + ez * dz; if (t > 0 && t < len && Math.abs(ex * dz - ez * dx) < b.hx + w) b.hp -= dmg; }
-    if (o.eat) for (const b of g.ebul) { const ex = b.x - x, ez = b.z - z, t = ex * dx + ez * dz; if (t > 0 && t < len && Math.abs(ex * dz - ez * dx) < w + 0.3) b.life = 0; }
+    if (o.eat) for (const b of g.ebul) { if (b.sig) continue; const ex = b.x - x, ez = b.z - z, t = ex * dx + ez * dz; if (t > 0 && t < len && Math.abs(ex * dz - ez * dx) < w + 0.3) b.life = 0; }
     g.beams.push({ x, y, z0: z, z1: z + dz * len, ex: x + dx * len, life: o.life || 5, max: o.life || 5, col, w: o.hyper ? w : 0, lw: o.lw || 0 }); return; }
   if (!o.pierce) { let blk = null; for (const b of g.obs) { if (!solid(b, g.view)) continue; if (b.z - b.hz > z && (!m[0] || Math.abs(b.x - x) < b.hx + w) && (!m[1] || Math.abs(b.y - y) < b.hy + w) && b.z - b.hz < zEnd) { zEnd = b.z - b.hz; blk = b; } } if (blk && blk.hp != null) { blk.hp -= dmg; blk.hit = 2; } }
   else for (const b of g.obs) if (b.hp != null && solid(b, g.view) && b.z > z && (!m[0] || Math.abs(b.x - x) < b.hx + w) && (!m[1] || Math.abs(b.y - y) < b.hy + w)) b.hp -= dmg;
   if (!o.pierce) { let best = null; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, g.view) || e.z < z || e.z - (e.hz ?? e.r) > zEnd) continue; if ((!m[0] || Math.abs(e.x - x) < (e.hx ?? e.r) + w) && (!m[1] || Math.abs(e.y - y) < (e.hy ?? e.r) + w) && (!best || e.z < best.z)) best = e; }
     if (best) { damage(g, best, dmg); zEnd = Math.min(zEnd, Math.max(z + 0.5, best.z)); } } // stops at the nearest enemy
   else for (const e of g.enemies) { if (e.hp <= 0 || !live(e, g.view) || e.z < z || e.z > zEnd + 1) continue; if ((!m[0] || Math.abs(e.x - x) < (e.hx ?? e.r) + w) && (!m[1] || Math.abs(e.y - y) < (e.hy ?? e.r) + w)) { damage(g, e, dmg); if (o.hyper) explode(g, e.x, e.y, e.z, '#ffffff', 8, 9); } }
-  if (o.eat) for (const b of g.ebul) if (b.z > z && (!m[0] || Math.abs(b.x - x) < w + 0.3) && (!m[1] || Math.abs(b.y - y) < w + 0.3)) b.life = 0;
+  if (o.eat) for (const b of g.ebul) if (!b.sig && b.z > z && (!m[0] || Math.abs(b.x - x) < w + 0.3) && (!m[1] || Math.abs(b.y - y) < w + 0.3)) b.life = 0;
   g.beams.push({ x, y, z0: z, z1: zEnd, life: o.life || 5, max: o.life || 5, col, w: o.hyper ? w : 0, lw: o.lw || 0 });
 }
 function fire(g, p) { // everything is fired relative to where the ship points: f = forward, r = right (straight ahead outside the arena)
@@ -283,7 +283,7 @@ export function step(g, inputs) {
       if (rules.arena) ty = 4.5; d.x += (tx - d.x) * 0.16; d.y += (clamp(ty, 0.4, 9) - d.y) * 0.16; d.z += (tz - d.z) * 0.16;
       if (firing && (g.tick + k * 4) % (od ? 9 : 17) === 0 && g.shots.length < 420) g.shots.push({ x: d.x, y: d.y, z: d.z + 0.3, vx: p.ax * 40, vy: 0, vz: p.az * 40, dmg: 0.6, r: 0.25 * SK, kind: 1, life: 50 });
       if (firing && L >= 2 && (g.tick + k * 5) % 16 === 0) beam(g, d.x, d.y, d.z + 0.3, 0.2, 0.2 * L, '#b06bff', { dx: p.ax, dz: p.az });
-      if (p.dmode === 1) for (const b of g.ebul) if (Math.abs(b.x - d.x) < 0.6 && Math.abs(b.y - d.y) < 0.6 && Math.abs(b.z - d.z) < 0.6) b.life = 0;
+      if (p.dmode === 1) for (const b of g.ebul) if (!b.sig && Math.abs(b.x - d.x) < 0.6 && Math.abs(b.y - d.y) < 0.6 && Math.abs(b.z - d.z) < 0.6) b.life = 0;
     }
     p.prev = inp;
   }
@@ -342,11 +342,11 @@ export function step(g, inputs) {
   // ----- shots -----
   for (const s of g.shots) {
     if (s.kind === 3) { s.t++; s.d += s.vz * dt; const w = waveAt(s, s.d); s.x = w[0]; s.y = w[1]; s.z = w[2]; if (s.t % 4 === 0 && g.parts.length < 500) g.parts.push({ x: s.x, y: s.y, z: s.z, vx: (g.rand() - 0.5) * 2, vy: (g.rand() - 0.5) * 2, vz: 3, life: 10, max: 10, col: WAVECOL[s.rk] }); if (--s.life <= 0 || s.z > 44 || s.z < -4 || Math.abs(s.x) > 13) { s.life = 0; continue; }
-      for (const e of g.enemies) if (e.hp > 0 && live(e, vw) && ov(s, e, m)) { damage(g, e, s.dmg); if (s.shove && e.type !== 'boss' && !e.mini && e.type !== 'walker') e.z += 0.12; } /* UNDERTOW */ for (const o2 of g.obs) if (o2.hp != null && solid(o2, vw) && ov(s, o2, m)) { o2.hp -= s.dmg; o2.hit = 2; } for (const b of g.ebul) if (Math.abs(b.z - s.z) < 0.8 && ov(s, b, m)) b.life = 0; continue; }
+      for (const e of g.enemies) if (e.hp > 0 && live(e, vw) && ov(s, e, m)) { damage(g, e, s.dmg); if (s.shove && e.type !== 'boss' && !e.mini && e.type !== 'walker') e.z += 0.12; } /* UNDERTOW */ for (const o2 of g.obs) if (o2.hp != null && solid(o2, vw) && ov(s, o2, m)) { o2.hp -= s.dmg; o2.hit = 2; } for (const b of g.ebul) if (!b.sig && Math.abs(b.z - s.z) < 0.8 && ov(s, b, m)) b.life = 0; continue; }
     if (s.kind === 4) { s.t++; s.trail.push(s.x, s.y, s.z); if (s.trail.length > 210) s.trail.splice(0, 3); const p = P[s.own || 0];
       if (s.t < 52) { const a = s.t * 0.19 + s.ph, R = 2 + s.t * 0.09; const tx = clamp(p.x + Math.cos(a) * R * 1.3, -7.5, 7.5), ty = clamp(p.y + Math.sin(a * 1.3) * R * 0.7, 0.6, 9), tz = p.z + 2 + s.t * 0.16 + Math.sin(a * 0.7) * 2; s.x += (tx - s.x) * 0.3; s.y += (ty - s.y) * 0.3; s.z += (tz - s.z) * 0.3; }
       else { let best = null, bd = 1e9; for (const e of g.enemies) { if (e.hp <= 0 || !live(e, vw) || e.z > 40 || e.z < 0 || e === s.skip) continue; const d = Math.hypot(e.x - s.x, e.y - s.y, e.z - s.z) - (e.type === 'boss' ? 6 : 0); if (d < bd) { bd = d; best = e; } }
-        if (best) { const d = Math.hypot(best.x - s.x, best.y - s.y, best.z - s.z) || 1, sp = 46 * dt; if (d < sp + (best.hx ?? best.r)) { damage(g, best, s.dmg); explode(g, best.x, best.y, best.z, '#7df9ff', 8, 8); g.fx.push('zap'); if (s.coil) for (const q of g.pods) if (Math.hypot(q.x - best.x, q.y - best.y, q.z - best.z) < 7) q.pull = 40; /* MAGNET COIL */ if (s.black) for (const b of g.ebul) if (Math.hypot(b.x - best.x, b.y - best.y, b.z - best.z) < 3.2) b.life = 0; /* BLACKOUT */ if (s.chain > 0) { s.chain--; s.dmg *= 0.7; s.skip = best; s.x = best.x; s.y = best.y; s.z = best.z; } else s.life = 0; } else { s.x += (best.x - s.x) / d * sp; s.y += (best.y - s.y) / d * sp; s.z += (best.z - s.z) / d * sp; } }
+        if (best) { const d = Math.hypot(best.x - s.x, best.y - s.y, best.z - s.z) || 1, sp = 46 * dt; if (d < sp + (best.hx ?? best.r)) { damage(g, best, s.dmg); explode(g, best.x, best.y, best.z, '#7df9ff', 8, 8); g.fx.push('zap'); if (s.coil) for (const q of g.pods) if (Math.hypot(q.x - best.x, q.y - best.y, q.z - best.z) < 7) q.pull = 40; /* MAGNET COIL */ if (s.black) for (const b of g.ebul) if (!b.sig && Math.hypot(b.x - best.x, b.y - best.y, b.z - best.z) < 3.2) b.life = 0; /* BLACKOUT */ if (s.chain > 0) { s.chain--; s.dmg *= 0.7; s.skip = best; s.x = best.x; s.y = best.y; s.z = best.z; } else s.life = 0; } else { s.x += (best.x - s.x) / d * sp; s.y += (best.y - s.y) / d * sp; s.z += (best.z - s.z) / d * sp; } }
         else { s.z += 30 * dt; if (s.z > 34) s.life = 0; } }
       if (s.t >= 52) for (const o2 of g.obs) if (solid(o2, vw) && ov(s, o2, m)) { s.life = 1; if (o2.hp != null) { o2.hp -= s.dmg; o2.hit = 3; } break; }
       if (--s.life <= 0) s.life = 0; continue; }
@@ -452,7 +452,7 @@ export function doShift(g, to, dir, p) {
     if (!perfect) for (const o of g.obs) { const zp = o.rel ? 2.5 : 2.8 * g.speedMul; if (solid(o, g.view) && inWay(o, mo, zp) && !(solid(o, to) && inWay(o, mn, zp))) { perfect = true; break; } }
     if (!perfect) for (const e of g.enemies) if (e.hp > 0 && e.type !== 'boss' && live(e, g.view) && Math.hypot((e.x - p.x) * mo[0], (e.y - p.y) * mo[1], e.z - p.z) < e.r + 1.3) { perfect = true; break; } }
   g.viewFrom = g.view; g.view = to; g.shiftT = 1; g.shiftDir = dir; g.shiftCd = 10; g.stats.shifts++; g.fx.push('shift');
-  let n = 0; for (const q of g.players) { q.inv = Math.max(q.inv, 32); for (const b of g.ebul) if (Math.hypot(b.x - q.x, b.y - q.y, b.z - q.z) < 3.4) { b.life = 0; n++; explode(g, b.x, b.y, b.z, '#5ee7ff', 3, 4); } g.shocks.push({ x: q.x, y: q.y, z: q.z, r: 0.4, vr: 14, life: 14, max: 14, col: '#5ee7ff' }); }
+  let n = 0; for (const q of g.players) { q.inv = Math.max(q.inv, 32); for (const b of g.ebul) if (!b.sig && Math.hypot(b.x - q.x, b.y - q.y, b.z - q.z) < 3.4) { b.life = 0; n++; explode(g, b.x, b.y, b.z, '#5ee7ff', 3, 4); } g.shocks.push({ x: q.x, y: q.y, z: q.z, r: 0.4, vr: 14, life: 14, max: 14, col: '#5ee7ff' }); }
   if (n && p) { g.chain += n; g.chainT = 190; addScore(g, 50 * n, p.x, p.y + 1, p.z, '#5ee7ff'); if (!perfect) pop(g, 'PHASE DODGE', p.x, p.y + 1.8, p.z, '#5ee7ff'); }
   if (perfect) { g.perfT = 90; g.stats.perfect++; g.chain += 3; g.chainT = 190; addScore(g, 500, p.x, p.y + 1, p.z, '#ffffff'); pop(g, 'PERFECT SHIFT!', p.x, p.y + 2, p.z + 1, '#ffffff', true); g.fx.push('perfect', 'say:perfect shift'); g.flash = Math.max(g.flash, 6); g.perfFx = 24;
     p.over = Math.max(p.over, 180); p.inv = Math.max(p.inv, 50);

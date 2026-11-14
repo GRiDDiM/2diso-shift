@@ -83,7 +83,7 @@ function boss(spec) {
       if (b.stage < spec.stages.length - 1) { b.stage++; b.hp = b.max; b.st = -110; g.obs.length = 0; g.ebul.length = 0; explode(g, b.x, b.y, b.z, S.col, 60, 18, spec.splat); g.shake = 14; g.flash = 8; g.fx.push('boom2'); addPod(g, b.x - 1, b.y, b.z - 2); addPod(g, b.x + 1, b.y, b.z - 3); g.score += 5000; hint(g, 'SHELL DOWN - SHIFT TO ' + VIEWS[spec.stages[b.stage].rec] + ' VIEW', 220); if (spec.glitchy) glitch(g, 45, 0.95); }
       else { b.dying = 1; g.obs.length = 0; g.ebul.length = 0;  } return; }
     if (b.st < 0) return;
-    if (spec.sig && b.st >= 420) { const c = (b.st - 420) % 1020; if (c === 0) { hint(g, spec.sig.name + ' - INCOMING!', 170); g.fx.push('charge'); g.shake = Math.max(g.shake, 5); } if (c >= 40 && c < 280) spec.sig.fire(g, b, c - 40); } // the boss's signature bullet storm
+    if (spec.sig && b.st >= 420) { const c = (b.st - 420) % 1020; if (c === 0) { hint(g, spec.sig.name + ' - INCOMING!', 170); g.fx.push('charge'); g.shake = Math.max(g.shake, 5); } if (c >= 40 && c < 280) { const n0 = g.ebul.length; spec.sig.fire(g, b, c - 40); for (let i = n0; i < g.ebul.length; i++) g.ebul[i].sig = true; } } /* storm shots can't be cancelled by shifts, bombs, lasers or drones: you see the whole pattern */ // the boss's signature bullet storm
     if (spec.glitchy && b.st % 540 === 270) { glitch(g, 26, 0.7); g.fx.push('charge'); } // the Shifter reaches out of the fight and scrambles the screen
     S.attack(g, b, b.st);
     if (spec.adds && b.st > 90 && b.st % (spec.addEvery || 560) === 0) { const n = 3 + Math.min(3, b.stage); for (let i = 0; i < n; i++) addEnemy(g, { type: 'pop', hp: 3, x: (i - (n - 1) / 2) * 2.4, y: 2.6 + (i % 3) * 2, z: b.z - 2, vz: -6, ax: 1.6, ay: 1, ph: i * 0.7, score: 120, ...spec.adds }); }
@@ -337,6 +337,12 @@ function jupiter() {
   // two giant squid, one rising from the deep and one diving from above, sweeping right across the lane: shoot them for a big bonus or get out of the way
   const squid = (z, x, up) => en(z, { type: 'swim', shape: 'squid', x, x0: x, y: up ? -6 : 15.5, vy: up ? 2.3 : -2.3, vz: -2.2, ax: 1.8, ph: x, hp: 60, r: 3.4, col: '#ff6ec7', score: 3000, pod: true });
   at(996, g => hint(g, 'SOMETHING HUGE IS MOVING IN THE DEEP...', 200)); squid(1010, -2.5, true); squid(1085, 3, false);
+  // the sky sea: blooms of jellyfish drifting through the whole storm, in the lane and far out beyond it, and squid crossing over and over
+  const JC = ['#ff9ef2', '#b06bff', '#7df9ff', '#ff6ec7', '#c8a0ff'];
+  const bloom = (z, cx, cy, n, far) => { for (let i = 0; i < n; i++) { const a = i * 2.39996, r = 1 + Math.sqrt(i / n) * (far ? 4 : 2.8); drift(z + (i % 4) * 1.6, far ? cx + Math.cos(a) * r : Math.max(-7.5, Math.min(7.5, cx + Math.cos(a) * r)), Math.max(1.2, Math.min(8.6, cy + Math.sin(a) * r * 0.8)), { col: JC[(i + z) % 5], vz: far ? -3.4 : -2.4, hp: far ? 8 : 3, r: far ? 1.5 + (i % 3) * 0.5 : 0.85 + (i % 3) * 0.25, score: far ? 60 : 120, pod: !far && i === 0 && z % 3 === 0 }); } };
+  for (let z = 48, k = 0; z < 1110; z += 52, k++) { bloom(z, [-4, 3.5, 0, -2.5, 4.5][k % 5], [6, 4, 5.5, 3.5, 6.5][k % 5], k % 3 === 0 ? 9 : 6); for (const sd of [-1, 1]) bloom(z + 26, sd * (11.5 + (k % 3)), 5 + Math.sin(k) * 2, 8, true); } // in-lane blooms to dodge or burst, and great drifts of them out past the edges
+  [[150, -3, true], [228, 4, false], [318, 0, true], [402, -4, false], [470, 3.5, true], [548, -1, false], [626, 4, true], [700, -3.5, false], [782, 1, true], [858, -4, false]].forEach(([z, x, up], i) => at(z, g => { const e = addEnemy(g, { type: 'swim', shape: 'squid', x, x0: x, y: up ? -6 : 15.5, vy: up ? 2.3 : -2.3, vz: -2.2, ax: 1.8, ph: x, hp: 60, r: 3.4, col: i % 2 ? '#ff6ec7' : '#b06bff', score: 3000, pod: i % 3 === 0 }); if (i === 0) hint(g, 'GIANT SQUID! THEY SWIM UP THROUGH THE STORM', 180); }));
+  at(1020, g => hint(g, 'A WHOLE SCHOOL OF THEM - A SQUID MIGRATION!', 200)); for (let i = 0; i < 6; i++) squid(1026 + i * 9, [-5, 4, -1, 5, -4, 1][i], i % 2 === 0); // the migration in the deep
   jelly(990, { x: 0, y: 5 }); jelly(1070, { x: 2, y: 6 }); at(940, g => hint(g, 'THE DEEP - JELLYFISH STING, SHARKS CHARGE', 200)); K.hill(964, 1008, 1.4); K.hill(1060, 1102, 1.7); K.tilt(940, 1130, { sway: 0.1, w: 0.007, py: 22 }); // the sea swells
   K.checkpoints.push(1144);
 
