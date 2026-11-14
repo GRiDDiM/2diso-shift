@@ -798,6 +798,10 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - The solar map now shows only the current run. A NEW GAME (or CO-OP) starts with a clean map: no ticks, grades or found warps from earlier games. When you loop, earlier grades stay, marked with the loop they were earned on (S L2). Your best ranks are still kept for achievements.
 - The map shown between levels stays up a couple of seconds longer, so you have time to look at it.
 
+### 91. Two voices (r97)
+
+RIVET was talking too much. Narration is now split in two. RIVET's chat window and voice handle flavor: view-shift calls and obstacle warnings. Plain information (level names, upgrades, MAXED, god mode, combos, anomalies, arena waves) goes to a male announcer with no window. God and overdrive timers moved to a small countdown under the progress bar. The final boss's blob-wall warning now plays once per fight instead of every wave.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

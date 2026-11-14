@@ -89,6 +89,8 @@ export function explode(g, x, y, z, col, n = 14, pow = 9, splat = false) {
   g.shocks.push({ x, y, z, r: 0.3, vr: pow * 0.9, life: 18, max: 18, col });
 }
 export function pop(g, txt, x, y, z, col = '#fff', big = false) { g.pops.push({ txt, x, y, z, col, life: big ? 80 : 46, max: big ? 80 : 46, big }); }
+// info(): an announcer call-out, spoken in the male voice with no RIVET-9 window (pickups, ranks, saves, bonuses)
+export function info(g, msg) { g.fx.push('info:' + msg); }
 export function hint(g, msg, t = 200) { g.hint = msg; g.hintT = t; g.hintMax = t; g.fx.push('hint'); }
 
 function ov(a, b, m, pad = 0) {
@@ -137,7 +139,7 @@ function hurt(g, p) {
   g.stats.hits++;
   if (p.shield > 0 && g.loop < 3) { const s0 = p.shield; glitch(g, 14, 0.45); p.shield = g.loop >= 2 ? 0 : Math.max(0, p.shield - 2); p.inv = LOOP.inv[lp(g)] * (s0 >= 6 ? 1.6 : s0 >= 2 ? 1.3 : 1) | 0; /* shields are counted in half layers: a hit takes a whole layer. AFTERGLOW stretches the safety after it */
     if (s0 >= 4) { for (const b of g.ebul) if (Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z) < 6) b.life = 0; for (const e of g.enemies) if (e.hp > 0 && e.type !== 'boss' && !e.mini && Math.hypot(e.x - p.x, e.y - p.y, e.z - p.z) < 3.5) damage(g, e, 12); g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.5, vr: 22, life: 16, max: 16, col: '#5ee7ff' }); } /* BLOWBACK */ /* loop 3: one hit strips every layer. loop 4: shields do nothing */ g.fx.push('shield'); explode(g, p.x, p.y, p.z, '#5ee7ff', 12, 7); g.shake = 6; return; }
-  if (p.up[8] >= 4 && !p.sw && !g.level.bonus) { p.sw = 1; p.inv = 180; g.flash = 8; g.shake = 8; g.fx.push('shield', 'god'); hint(g, 'SECOND WIND - THAT ONE WOULD HAVE KILLED YOU', 200); for (let i = 0; i < 3; i++) g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.4, vr: 12 + i * 6, life: 22, max: 22, col: i % 2 ? '#ffffff' : '#ffe14a' }); return; } // SECOND WIND: once a level
+  if (p.up[8] >= 4 && !p.sw && !g.level.bonus) { p.sw = 1; p.inv = 180; g.flash = 8; g.shake = 8; g.fx.push('shield', 'god'); info(g, 'second wind'); for (let i = 0; i < 3; i++) g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.4, vr: 12 + i * 6, life: 22, max: 22, col: i % 2 ? '#ffffff' : '#ffe14a' }); return; } // SECOND WIND: once a level
   explode(g, p.x, p.y, p.z, '#ffffff', 46, 15); explode(g, p.x, p.y, p.z, '#ff3df0', 30, 10); g.fx.push('die'); g.shake = 14; g.flash = 10; g.chain = 0; g.stats.deaths++; glitch(g, 36, 1);
   if (g.level.bonus && !g.mut.rush) { p.dead = 1e9; g.state = 'over'; g.endT = 0; return; } // a bonus stage just ends; it never costs a ship (in boss rush it costs one like anywhere else)
   p.lives--; p.dead = 70; if (g.gear) { g.gear = 0; g.apGear = false; } /* back to SLOW, so the next ship is not thrown straight into traffic */
@@ -152,7 +154,7 @@ function buy(g, p) { // in co-op the upgrade bar is the team's: one cursor, one 
   if (c === U.SHIELD) for (const q of g.players) q.shield++;
   else if (c === U.WILD) { o.up[c]++; if (o.up[c] === 1) pop(g, 'HYPERDRIVE ONLINE', p.x, p.y + 1, p.z + 2, '#ffffff', true); g.fx.push('say:hyperdrive online', 'god'); g.flash = 10; for (let i = 0; i < 4; i++) g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.4, vr: 10 + i * 7, life: 26, max: 26, col: ['#ffffff', '#ffe14a', '#7df9ff', '#ff3df0'][i] }); } // one point, for good: 15% more damage from everything, and it survives losing a ship
   else { o.up[c]++; if (c === U.DRONE) for (const q of g.players) { const t = q.drones.find(d => d.tmp); if (t) t.tmp = false; else if (q.drones.length < 6) q.drones.push({ x: q.x, y: q.y, z: q.z }); } }
-  { const l = c === U.SHIELD ? o.shield : o.up[c], nm = TIER[c]?.[l], pk = PERK[c]?.[l]; if (!(c === U.WILD && l === 1)) pop(g, (nm || BAR[c]) + (nm ? '' : ' ' + l), p.x, p.y + 1, p.z + 2, '#3dffb0', true); g.fx.push('say:' + (nm || BAR[c] + (l >= BARMAX[c] ? ' maxed' : ' level ' + l))); if (c >= 1 && c <= 5 && l >= BARMAX[c]) hint(g, BAR[c] + ' MAXED - ' + (nm ? nm + '. ' : '') + 'IT STAYS WITH YOU EVEN IF YOU GO DOWN', 260); else if (pk) hint(g, BAR[c] + ' ' + l + ' ' + nm + ' - ' + pk, 220); } // the new rank's twist is spelled out by RIVET-9
+  { const l = c === U.SHIELD ? o.shield : o.up[c], nm = TIER[c]?.[l], pk = PERK[c]?.[l]; if (!(c === U.WILD && l === 1)) pop(g, (nm || BAR[c]) + (nm ? '' : ' ' + l), p.x, p.y + 1, p.z + 2, '#3dffb0', true); g.fx.push('say:' + (nm || BAR[c] + (l >= BARMAX[c] ? ' maxed' : ' level ' + l))); if (c >= 1 && c <= 5 && l >= BARMAX[c]) info(g, 'maxed. it stays with you');  } // the new rank's twist is spelled out by RIVET-9
   o.cursor = -1; g.fx.push('upgrade'); addScore(g, 500, p.x, p.y + 1.6, p.z, '#ffe14a'); // spending a pod always pays, so pods still matter once everything is maxed
 }
 function bombHit(g, e, d, bd) { if (e.type === 'boss') { if ((e.vuln || []).includes(g.view)) { e.hp = Math.max(0, e.hp - bd * hyperMul(g.players[0])); e.hit = 9; e.hbT = 75; } } else damage(g, e, d); }
@@ -164,7 +166,7 @@ function blastArea(g, b, test, d, bd) { // everything a blast touches: shots van
 function nuke(g, p, spend = true) { // the bomb grows with its upgrades: a short burst, a sweeping wall, a scatter of diamonds, then the whole screen
   if (spend) { if (p.bombs <= 0) { g.fx.push('deny'); return; } p.bombs--; }
   const bu = g.players[0].up[U.BOMB] || 0, lv = [0, 0, 1, 1, 2, 2, 3][bu], b = { kind: ['ring', 'sweep', 'scatter', 'mega'][lv], id: ++g.blastId, x: p.x, y: p.y, z: p.z, t: 0, life: [16, 40, 60, 112][lv], n: 0, big: bu === 1 };
-  if (bu === 3) g.blasts.push({ ...b, id: ++g.blastId, back: true }); /* BACKDRAFT: a second sweep the other way */ if (bu === 5) { g.vac = 90; hint(g, 'VACUUM - EVERY PICKUP IS COMING TO YOU', 120); } /* VACUUM */
+  if (bu === 3) g.blasts.push({ ...b, id: ++g.blastId, back: true }); /* BACKDRAFT: a second sweep the other way */ if (bu === 5) { g.vac = 90; info(g, 'vacuum', 120); } /* VACUUM */
   g.blasts.push(b); p.inv = Math.max(p.inv, lv === 3 ? 170 : 75);
   if (lv === 3) { g.fx.push('charge'); return; }
   for (let i = 0; i < 3; i++) g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.5, vr: lv ? 20 + i * 8 : 16 + i * 5, life: 22, max: 22, col: i % 2 ? '#ff8a2b' : '#ffe14a' });

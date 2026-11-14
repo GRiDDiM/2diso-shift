@@ -1,6 +1,6 @@
 // 2DISO SHIFT — every level. Four planets, each with a hidden warp to a bonus stage.
 // Each stretch is built so one view is the way through; the banner and the flashing view pip say which.
-import { glitch, addEnemy, addObs, addRing, addPod, bullet, aimed, explode, hint, doShift, pop, near, SPAWN_Z, DT, VIEWS } from './game.js';
+import { glitch, info, addEnemy, addObs, addRing, addPod, bullet, aimed, explode, hint, doShift, pop, near, SPAWN_Z, DT, VIEWS } from './game.js';
 const SIDE = 0, ISO = 1, CHASE = 2, TOP = 3;
 
 const FAR = 62;
@@ -15,8 +15,8 @@ function kit(id) {
   const ground = (z, o) => far(z, (g, d) => addEnemy(g, { rel: false, z: z + d - g.camZ, y: 0.5, y0: 0.5, type: 'turret', ...o }));
   const wing = (z, n, o, gap = 2.2) => { const gr = id + (++gid); if (gid % 3 === 1) ev.push({ z: z - SPAWN_Z - 7, src: z, fn: g => g.warns.push({ x: o.x ?? 0, y: o.y ?? 4.5, t: 80, col: o.col || '#ff4d6d' }) }); /* every third wave flashes a warning where it will come in */ for (let i = 0; i < n; i++) at(z + i * gap, g => addEnemy(g, { type: 'pop', group: gr, gn: n, hp: 2, ph: i * 0.5, ...o })); };
   const untilChase = z => { const c = zones.filter(q => q.view === CHASE && q.z0 > z + 20).sort((a, b) => a.z0 - b.z0)[0]; return c ? c.z0 - 45 : null; }; // a warp closes before the next stretch that is played in chase anyway, so nobody falls into it by accident and skips that stretch
-  const warp2 = (z, x, y) => ev.push({ z, src: z, fn: g => { if (g.flags.arena) return; addRing(g, { x, y, z: 10, r: 2, kind: 'warp', to: 'arena', stay: true, t: 0, life: 1200, until: untilChase(z) }); hint(g, 'ANOMALY DETECTED - SHIFT TO CHASE VIEW AND FLY INTO IT', 320); g.fx.push('ring', 'say:anomaly detected'); } }); // the second warp: it leads to this planet's arena
-  const warp = (z, x, y) => ev.push({ z, src: z, fn: g => { if (g.flags.warp) return; addRing(g, { x, y, z: 10, r: 2, kind: 'warp', stay: true, t: 0, life: 1200, until: untilChase(z) }); hint(g, 'ANOMALY DETECTED - SHIFT TO CHASE VIEW AND FLY INTO IT', 320); g.fx.push('ring', 'say:anomaly detected'); } });
+  const warp2 = (z, x, y) => ev.push({ z, src: z, fn: g => { if (g.flags.arena) return; addRing(g, { x, y, z: 10, r: 2, kind: 'warp', to: 'arena', stay: true, t: 0, life: 1200, until: untilChase(z) }); info(g, 'anomaly detected. chase view to reach it'); g.fx.push('ring'); } }); // the second warp: it leads to this planet's arena
+  const warp = (z, x, y) => ev.push({ z, src: z, fn: g => { if (g.flags.warp) return; addRing(g, { x, y, z: 10, r: 2, kind: 'warp', stay: true, t: 0, life: 1200, until: untilChase(z) }); info(g, 'anomaly detected. chase view to reach it'); g.fx.push('ring'); } });
   // extra waves: every `step` units a flight of the level's own enemy, shaped for the view that stretch is played in, with divers in between
   const fill = (tmpl, from, to, step, clut = 'billboard', gshape = 'tank') => { for (let i = 0, z = from; z < to; z += step, i++) { const v = (zones.find(q => z >= q.z0 && z < q.z1) || {}).view, h = Math.abs(Math.sin(z * 12.9898)) % 1, h2 = Math.abs(Math.sin(z * 78.233)) % 1;
     const o = v === 0 ? { x: 0, y: 2.4 + h * 5, ay: 1.2 + h2 } : v === 3 ? { x: h * 9 - 4.5, ax: 3 + h2 * 2, y: 5 } : { x: h * 6 - 3, y: 3 + h2 * 4, ax: 2.5, ay: 1 };
@@ -80,7 +80,7 @@ function boss(spec) {
     b.ovk = Math.max(0, Math.min(1, (b.ovk || 0) + (b.ovOn ? 0.05 : -0.03))); b.ovOn = false; if (b.st % 400 === 240) addPod(g, (g.rand() - 0.5) * 10, 2 + g.rand() * 5, b.z - 2); if (b.ovk > 0) { b.x += (b.ovx - b.x) * b.ovk; b.y += (b.ovy - b.y) * b.ovk; } // an attack can take over where the boss is (the Eye turning to face you)
     if (b.hp <= 0) {
       if (b.stage < spec.stages.length - 1) { b.stage++; b.hp = b.max; b.st = -110; g.obs.length = 0; g.ebul.length = 0; explode(g, b.x, b.y, b.z, S.col, 60, 18, spec.splat); g.shake = 14; g.flash = 8; g.fx.push('boom2'); addPod(g, b.x - 1, b.y, b.z - 2); addPod(g, b.x + 1, b.y, b.z - 3); g.score += 5000; hint(g, 'SHELL DOWN - SHIFT TO ' + VIEWS[spec.stages[b.stage].rec] + ' VIEW', 220); if (spec.glitchy) glitch(g, 45, 0.95); }
-      else { b.dying = 1; g.obs.length = 0; g.ebul.length = 0; hint(g, spec.name + ' DESTROYED', 200); } return; }
+      else { b.dying = 1; g.obs.length = 0; g.ebul.length = 0;  } return; }
     if (b.st < 0) return;
     if (spec.sig && b.st >= 420) { const c = (b.st - 420) % 1020; if (c === 0) { hint(g, spec.sig.name + ' - INCOMING!', 170); g.fx.push('charge'); g.shake = Math.max(g.shake, 5); } if (c >= 40 && c < 280) spec.sig.fire(g, b, c - 40); } // the boss's signature bullet storm
     if (spec.glitchy && b.st % 540 === 270) { glitch(g, 26, 0.7); g.fx.push('charge'); } // the Shifter reaches out of the fight and scrambles the screen
@@ -424,7 +424,7 @@ function planetx() {
   const fold = (g, b, t) => { const c = t % 400; if (c === 215) { hint(g, 'REALITY SHIFT!', 70); g.fx.push('charge'); } if (c === 270) { let to = (g.view + 1 + (g.rand() * 3 | 0)) % 4; doShift(g, to, 1, null); g.flash = 6; } };
   const B = boss({ name: 'THE SHIFTER', sig: { name: 'FRACTAL FOLD', fire(g, b, c) { const R = ['#ff4d6d', '#ff8a2b', '#ffe14a', '#3dffb0', '#2ee6ff', '#b06bff', '#ff3df0'], flip = (c / 80 | 0) % 2 ? -1 : 1; for (let k = 0; k < 2; k++) { const n = c * 2 + k, a = n * 2.39996 * flip, sp = 1.6 + (n % 5) * 0.45; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * sp, Math.sin(a) * sp, -5.4, R[n % 7]); bullet(g, b.x, b.y, b.z - 2, -Math.cos(a) * sp, Math.sin(a) * sp, -5.4, R[(n + 3) % 7]); } } }, // a golden-angle spiral in every colour, mirrored, folding back on itself
     toast: 'THE SHIFT IS OVER', splat: true, glitchy: true, adds: { shape: 'spore', col: '#b6ff3d', hp: 3, r: 0.6, score: 80 }, addEvery: 480, stages: [
-    { name: 'FIRST FACE', vuln: [SIDE], rec: SIDE, col: FLESH, bob: 2, attack(g, b, t) { if (t % 400 === 30) { addObs(g, { rel: true, kind: 'blob', x: 0, y: 4.8, hx: 9, hy: 5, hz: 0.7, z: b.z - 3, vz: -2.6, hp: Math.round(252 * power(g)), col: FLESH, score: 600, pod: g.rand() < 0.3 }); hint(g, 'BLOB WALL - BURST IT BEFORE IT REACHES YOU', 130); g.fx.push('charge'); } if (t % 100 === 80 && t % 400 > 200) fan(g, b, 3, 6.5, ACID); fold(g, b, t); } },
+    { name: 'FIRST FACE', vuln: [SIDE], rec: SIDE, col: FLESH, bob: 2, attack(g, b, t) { if (t % 400 === 30) { addObs(g, { rel: true, kind: 'blob', x: 0, y: 4.8, hx: 9, hy: 5, hz: 0.7, z: b.z - 3, vz: -2.6, hp: Math.round(252 * power(g)), col: FLESH, score: 600, pod: g.rand() < 0.3 }); if (!g.blobTold) { g.blobTold = 1; hint(g, 'BLOB WALL - BURST IT BEFORE IT REACHES YOU', 130); } g.fx.push('charge'); } if (t % 100 === 80 && t % 400 > 200) fan(g, b, 3, 6.5, ACID); fold(g, b, t); } },
     { name: 'SECOND FACE', vuln: [TOP], rec: TOP, col: BIO, sway: 4, attack(g, b, t) { if (t % 200 === 30) { const safe = g.rand() * 5 | 0; [-6.4, -3.2, 0, 3.2, 6.4].forEach((x, i) => { if (i !== safe && i !== (safe + 1 + (t % 400 < 200 ? 0 : 2)) % 5) addObs(g, { rel: true, kind: 'slam', x, y: 4.75, hx: 1.25, hy: 4.75, hz: 5.5, z: 6, warm: 95, life: 50, col: BIO }); }); g.fx.push('charge'); } if (t % 400 === 120) for (let i = 0; i < 6; i++) addEnemy(g, { type: 'pop', x: -6 + i * 2.4, y: 4.6, z: b.z - 1, vz: -4, ax: 1, hp: 1, r: 0.4, col: ACID, shape: 'spore', score: 40, ph: i }); fold(g, b, t); } },
     { name: 'THIRD FACE', vuln: [CHASE], rec: CHASE, col: ACID, attack(g, b, t) { if (t % 400 === 20) addObs(g, { rel: true, kind: 'blob', x: 0, y: 4.8, hx: 9, hy: 5, hz: 0.7, z: b.z - 3, vz: -2.4, hp: Math.round(336 * power(g)), col: ACID, score: 800 }); if (t % 400 === 150) for (let i = 0; i < 5; i++) addEnemy(g, { type: 'kami', x: -5 + i * 2.5, y: 2.5 + (i % 2) * 4, z: b.z - 2, vz: -6.5, hp: 1, r: 0.45, col: ACID, shape: 'spore', score: 60 }); fold(g, b, t); } },
     { name: 'TRUE FACE', vuln: [ISO], rec: ISO, col: '#ffffff', attack(g, b, t) { if (t % 400 === 20) fireRing(g, b, ACID, 18, 2.3, 4); if (t % 400 === 120) { const p = near(g, b); for (let i = -1; i <= 1; i++) strike(g, p.x + i * 2.8, p.z + (i ? 1.2 : 0), { col: FLESH }); g.fx.push('charge'); } if (t % 12 === 0 && t % 400 > 150 && t % 400 < 205) { const a = t * 0.1; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3.2, Math.sin(a) * 3.2, -6.5, ACID); } fold(g, b, t); } }] });
@@ -565,12 +565,12 @@ function arena(of) {
     if (++A.t < 75) return; A.t = 0;
     if (A.wave >= WAVES.length && !A.mini) { A.mini = true; const M = ARENA_MINI[of]; g.mini = addEnemy(g, { type: 'seek', sp: 0, keep: 1e6, mini: true, name: M.name, ai: M.ai, x: 0, y: 4.5, z: 30, hp: Math.round(M.hp * 1.5 * power(g)), hpMax: Math.round(M.hp * 1.5 * power(g)), r: M.r, col: M.col, shape: M.shape, score: 0, big: true }); hint(g, 'MINIBOSS // ' + M.name, 200); g.fx.push('charge', 'say:miniboss'); g.obs.length = 0; return; }
     if (A.wave >= WAVES.length) { g.state = 'clear'; g.endT = 0; if (!g.mut.rush) { g.score += 15000; g.fx.push('clear', 'say:arena clear', 'toast:ALL WAVES CLEARED|+15000'); } return; }
-    const w = WAVES[A.wave++], hpx = 1 + A.wave * 0.25; hint(g, 'WAVE ' + A.wave + ' / ' + WAVES.length + (A.wave === 3 ? '   WHITE ONES: SHIFT TO ISO' : ''), 150); g.fx.push('charge'); if (A.wave === 1) T.hazard(g);
+    const w = WAVES[A.wave++], hpx = 1 + A.wave * 0.25; if (A.wave === 3) hint(g, 'WHITE ONES ONLY SHOW IN ISO - SHIFT TO ISO', 150); else info(g, A.wave === WAVES.length ? 'final wave' : 'wave ' + A.wave); g.fx.push('charge'); if (A.wave === 1) T.hazard(g);
     const add = (n, spec, extra) => { for (let i = 0; i < n; i++) A.q.push([spec, { ...extra, hp: Math.round((extra.hp || spec.hp) * hpx) }]); };
     add(w[0], T.grunt, { hp: T.grunt.hp * 4, score: 15 }); add(w[1], T.fast, { hp: T.fast.hp * 5, score: 25 }); add(w[3], T.grunt, { col: '#ffffff', phase: 1, hp: T.grunt.hp * 4, score: 30 });
     for (let i = 0; i < w[2]; i++) A.q.push([T.gun, { sp: 2, keep: 7, hp: Math.round(T.gun.hp * 4 * hpx), score: 80, r: T.gun.r || 0.9, pod: i === 0 && A.wave % 2 === 0 }]);
     for (let i = A.q.length - 1; i > 0; i--) { const j = g.rand() * (i + 1) | 0; [A.q[i], A.q[j]] = [A.q[j], A.q[i]]; }
-    if (A.wave === WAVES.length) hint(g, 'FINAL WAVE', 150);
+
   };
   return K.done({ name: T.name, title: T.title, bonus: true, arena: true, tick, rules: { arena: true }, theme: { ...T.theme, arena: T.col } });
 }
