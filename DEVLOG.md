@@ -857,6 +857,14 @@ Playtest notes on the ten-stage build, and what changed.
 
 The game is busy enough already, so the jam build switches the bonus arenas off. The golden warps are gone from the levels, and the arenas are gone from the map, boss rush, the test list and the achievements list. The code is all still there behind one switch (`ARENAS_ON` in `levels.js`), so they can come back later. One lone station still drifts about the solar map with a flickering ??? under it.
 
+### 96. The Moon steps aside (r102)
+
+The Moon comes out of the route. The game now goes Earth, the Sun, Mars, the Asteroid Belt, Jupiter, Saturn, Pluto, the Wormhole, Planet X: nine stages. The story goes straight from Earth to the slingshot round the Sun. On the solar map the Moon still circles Earth, but you can't pick it.
+
+The stage isn't deleted. It is shelved, along with the bonus arenas, and all of them can still be played from the new PRACTICE screen.
+
+PRACTICE replaces the old bug test checklist and looks like part of the game now. It has three panels: STAGES (the route, plus boss rush and the ending), BOSSES (each one on its own) and SHELVED (content that is built but not in this version). A diamond fills in when you clear something, and each panel counts its own. Skin, loadout and reset sit along the bottom.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

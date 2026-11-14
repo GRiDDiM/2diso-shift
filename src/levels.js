@@ -1,4 +1,4 @@
-// 2DISO SHIFT — every level. Ten stages from Earth to Planet X; four of them hide a warp to a bonus arena.
+// 2DISO SHIFT — every level. Nine stages from Earth to Planet X (the Moon is built but shelved); four arenas, switched off for the jam.
 // Each stretch is built so one view is the way through; the banner and the flashing view pip say which.
 import { glitch, info, addEnemy, addObs, addRing, addPod, bullet, aimed, explode, hint, doShift, pop, near, SPAWN_Z, DT, VIEWS } from './game.js';
 const SIDE = 0, ISO = 1, CHASE = 2, TOP = 3;
@@ -199,7 +199,7 @@ function mars() {
   const boulder = (z, x, y, o) => obs(z, { x, y, hx: 1.1, hy: 1.1, hz: 1.1, col: ROCK, kind: 'boulder', hp: 7, score: 120, ...o }); // basalt you can blast apart
   const forge = (z, o) => en(z, { type: 'saucer', col: STONE, hp: 8, r: 0.95, score: 400, hold: 15, dur: 420, ax: 3, ay: 1.5, fire: 120, fan: 2, shape: 'head', pod: true, ...o });
 
-  zone(-99, 95, SIDE, 'SECTOR 4 // MARS - THE FORGE');
+  zone(-99, 95, SIDE, 'SECTOR 3 // MARS - THE FORGE');
   for (let z = 44; z < 92; z += 24) obs(z, { x: ((z * 3) % 11) - 5, y: 1.3, hx: 0.8, hy: 1.3, hz: 0.8, col: STONE, kind: 'statue' });
   for (let z = 30; z < 92; z += 13) cone(z, ((z * 5) % 13) - 6, 1.6 + (z % 3) * 0.5);
   river(58, 0, 0); river(82, 0, 2); river(404, 0, 1);
@@ -289,7 +289,7 @@ function jupiter() {
   const buoy = (z, x, y) => K.ground(z, { x, x0: x, y, y0: y, col: '#ffe14a', hp: 5, r: 0.75, score: 250, fire: 135, fan: 3, bs: 6.5, bcol: ZAP, shape: 'sat', ph: (x + 9) * 0.3, pod: true }); // storm buoys: floating gun platforms
   const wraith = (z, o) => en(z, { type: 'saucer', col: '#ffffff', hp: 6, r: 0.9, score: 500, hold: 13, dur: 400, ax: 4, ay: 2, fire: 100, fan: 3, shape: 'wraith', phase: ISO, haunt: true, pod: true, ...o });
 
-  zone(-99, 95, SIDE, 'SECTOR 6 // JUPITER - STORM DECK');
+  zone(-99, 95, SIDE, 'SECTOR 5 // JUPITER - STORM DECK');
   fog(44, 0, 6.5, { vx: 0.6, wrap: 12 }); fog(70, 0, 2.8, { vx: -0.5, wrap: 12 }); crystal(60, 4.8, { gem: true }); crystal(90, 6.4); buoy(78, 3, 3);
   const gas = (z, x, y, w, h, c) => obs(z, { x, y, hx: w, hy: h, hz: 3.4, par: 0.5, col: c, kind: 'gas', ghost: true }); // big slow gas clouds drifting through: they move slower than the deck, so things slide in and out behind them
   for (let i = 0, z = 40; z < 1130; z += 31, i++) if (z < 760 || z > 905) gas(z, (i % 2 ? 1 : -1) * (2.5 + (i * 1.7) % 3.5), 3 + (i * 2.3) % 4.5, 4.6 + (i % 3) * 0.9, 2.2 + (i % 2) * 0.9, ['#3dffb0', '#9d5bff', '#e23dff', '#5affd0'][i % 4]);
@@ -372,7 +372,7 @@ function planetx() {
   const mine = (z, x, y) => ground(z, { x, x0: x, y, y0: y, col: ACID, hp: 3, r: 0.85, score: 120, burst: 10, shape: 'spore' }); // fat spore pods that burst into a ring of acid
   const memb = (z, low, ph) => obs(z, low ? { x: 0, y: 1.8, hx: 8.6, hy: 1.8, hz: 1, col: FLESH, kind: 'membrane', osc: { ax: 0, ay: 0.7, w: 1.6, ph } } : { x: 0, y: 7.3, hx: 8.6, hy: 2.2, hz: 1, col: FLESH, kind: 'membrane', osc: { ax: 0, ay: 0.7, w: 1.6, ph } });
 
-  zone(-99, 85, SIDE, 'SECTOR 10 // PLANET X - THE BLOOM');
+  zone(-99, 85, SIDE, 'SECTOR 9 // PLANET X - THE BLOOM');
   blob(78, { pod: true }); at(46, g => hint(g, 'BLOB WALL - SHOOT IT UNTIL IT BURSTS', 220)); mine(60, 0, 3); mine(68, 0, 7); mine(40, 0, 2.4); mine(48, 0, 7.4);
   wing(24, 6, { ...spore, y: 6.5, ay: 1.5, ax: 0 }, 1.4); wing(34, 8, { ...spore, y: 5, ay: 2.5, ax: 0 }, 1.4); spitter(52, { x: 0, y: 6 }); wing(64, 8, { ...spore, y: 4, ay: 3 }, 1.4); spitter(72, { x: 0, y: 3 });
   for (let z = 30; z < 82; z += 11) eye(z, 0, (z / 11 | 0) % 2 === 0); // eyes on stalks, floor and roof, watching you come in
@@ -482,7 +482,7 @@ function moon() {
   const guard = (z, o) => en(z, { type: 'saucer', col: BASE, hp: 7, r: 0.9, score: 400, hold: 15, dur: 400, ax: 2, ay: 2.4, fire: 110, atk: ATK.cross(3.4, BASE), shape: 'sat', pod: true, ...o }); // base defence satellites: they fire a cross of four
 
   // 1. the trench: a calm run in. Nothing shoots; thread the rings and get used to the drift
-  zone(-99, 185, CHASE, 'SECTOR 2 // THE MOON - LOW GRAVITY TRENCH RUN'); K.tilt(30, 180, { sway: 0.07, w: 0.006, px: 20, py: 18 }); at(40, g => hint(g, 'LOW GRAVITY - THE SHIP DRIFTS A LITTLE. STEER EARLY', 220));
+  zone(-99, 185, CHASE, 'LUNAR SECTOR // THE MOON - LOW GRAVITY TRENCH RUN'); K.tilt(30, 180, { sway: 0.07, w: 0.006, px: 20, py: 18 }); at(40, g => hint(g, 'LOW GRAVITY - THE SHIP DRIFTS A LITTLE. STEER EARLY', 220));
   walls(30, 182);
   for (let i = 0; i < 16; i++) ring(42 + i * 8.6, { x: Math.sin(i * 0.5) * 3.6, y: 4.6 + Math.sin(i * 0.38) * 1.8, r: 1.6 });
   for (let i = 0; i < 3; i++) { const z = 70 + i * 34; obs(z, { x: 0, y: 8, hx: 8.6, hy: 1.6, hz: 1, col: GREY, kind: 'arch' }); obs(z + 17, { x: (i % 2 ? 3.6 : -3.6), y: 1.3, hx: 1.2, hy: 1.3, hz: 1.2, col: '#7df9ff', kind: 'ice', hp: 4, gem: true, score: 150 }); }
@@ -546,7 +546,7 @@ function sun() {
   const erupt = (z, x, ph) => obs(z, { x, y: 4.75, hx: 1.05, hy: 4.75, hz: 1.05, col: FIRE, kind: 'geyser', pulse: [70, 80, ph] });
   const knot = (z, x, y) => obs(z, { x, y, hx: 1.1, hy: 1.1, hz: 1.1, col: HOT, kind: 'boulder', hp: 7, score: 120, gem: true }); // a knot of cooling plasma you can blast apart
 
-  zone(-99, 190, CHASE, 'SECTOR 3 // THE SUN - PLASMA FOG - FOLLOW THE CLEAR CHANNEL'); at(40, g => hint(g, 'OUTSIDE THE CHANNEL YOU OVERHEAT', 200)); K.hill(60, 104, 1.2);
+  zone(-99, 190, CHASE, 'SECTOR 2 // THE SUN - PLASMA FOG - FOLLOW THE CLEAR CHANNEL'); at(40, g => hint(g, 'OUTSIDE THE CHANNEL YOU OVERHEAT', 200)); K.hill(60, 104, 1.2);
   for (let i = 0; i < 26; i++) { const z = 34 + i * 6, x = Math.sin(i * 0.42) * 4.4, y = 4.8 + Math.sin(i * 0.31 + 1) * 2.1; chan(z, x, y, 2.5, 1.9, false); if (i % 5 === 2) obs(z, { x, y, hx: 0.7, hy: 0.7, hz: 0.7, col: GOLD, kind: 'ice', hp: 3, gem: true, score: 150 }); }
   for (let i = 0; i < 4; i++) flareX(64 + i * 28, i);
   for (let i = 0; i < 5; i++) { const z = 46 + i * 30, k = (z - 34) / 6; form(z, 3, j => ({ ...ember, x: Math.sin(k * 0.42) * 4.4, y: 4.8 + Math.sin(k * 0.31 + 1) * 2.1, ax: 1.2, ay: 1, w: 1.5, ph: j * 2.1, vz: -5, pod: i % 2 === 0 && j === 2 })); }
@@ -603,7 +603,7 @@ function asteroids() {
   const crate = (z, x, y, o) => obs(z, { x, y, hx: 1, hy: 1, hz: 1, col: ORE, kind: 'crate', hp: 6, score: 150, gem: true, ...o });
   const magnet = (z, x, y) => obs(z, { x, y, hx: 1.1, hy: 1.1, hz: 1.1, col: '#ff3df0', kind: 'magnet', hp: 9, score: 200, gem: true });
 
-  zone(-99, 150, CHASE, 'SECTOR 5 // ASTEROID BELT - BREAK EVERYTHING'); rocks(34, 142, 6.6);
+  zone(-99, 150, CHASE, 'SECTOR 4 // ASTEROID BELT - BREAK EVERYTHING'); rocks(34, 142, 6.6);
   form(60, 4, i => ({ ...drone, x: 0, y: 4.8, ax: 3, ay: 2.6, w: 1.2, ph: i * 1.57, vz: -6 })); form(110, 5, i => ({ ...drone, x: 0, y: 4.8, ax: 3.4, ay: 2.6, w: 1, ph: i * 1.25, vz: -6, move: PATH.cork, pod: i === 4 }));
   K.checkpoints.push(153);
 
@@ -680,7 +680,7 @@ function saturn() {
   const buoy = (z, x, y) => ground(z, { x, x0: x, y, y0: y, col: GOLDR, hp: 5, r: 0.75, score: 250, fire: 120, atk: ATK.laser(LAS2, 0.25), shape: 'prism', ph: (x + 9) * 0.3, pod: true }); // prism buoys: fixed laser posts
   for (let z = 20; z < 990; z += 12) if (z < 585 || z > 775) { obs(z, { x: 0, y: 0.2, hx: 9.6, hy: 0.12, hz: 6, col: GOLDR, kind: 'ringband', ghost: true }); obs(z, { x: 0, y: 9.45, hx: 9.6, hy: 0.12, hz: 6, col: '#9fb0ff', kind: 'ringband', ghost: true }); } // we fly between two sheets of ring
 
-  zone(-99, 170, SIDE, 'SECTOR 7 // SATURN - THE RING PLANE'); at(40, g => hint(g, 'PINK LASERS BLINK. BLUE LASERS SWEEP. NEITHER IS FRIENDLY', 240));
+  zone(-99, 170, SIDE, 'SECTOR 6 // SATURN - THE RING PLANE'); at(40, g => hint(g, 'PINK LASERS BLINK. BLUE LASERS SWEEP. NEITHER IS FRIENDLY', 240));
   for (let i = 0, z = 36; z < 162; z += 13, i++) { const m = i % 4; if (m === 0) hl(z, 2.4 + (i % 3) * 2.2, i * 20); else if (m === 1) { chunk(z, 0, 1.6, 1.5); chunk(z + 5, 0, 7.8, 1.4); } else if (m === 2) { sweepH(z, i); prism(z + 6, 0, 4.8); } else { hl(z, 2.2, i * 20); hl(z, 7.2, i * 20 + 65); } }
   form(40, 5, i => ({ ...manta, x: 0, y: 5, ax: 0, ay: 2.6, w: 1.1, ph: i * 0.8, vz: -6, move: PATH.saw })); post(74, { y: 5 }); form(104, 6, i => ({ ...manta, x: 0, y: 8.5, y1: 1.5 + i * 1.1, ax: 0, vz: -6, ph: i, move: PATH.dive })); post(138, { y: 4.5 });
   K.checkpoints.push(173);
@@ -746,7 +746,7 @@ function pluto() {
   const shardling = { col: SNOW, shape: 'shard', hp: 2, r: 0.6, score: 130 }, wisp = { col: ICE, shape: 'orb', hp: 3, r: 0.75, score: 170, fire: 150, atk: ATK.shard('#c8f4ff') }; // wisps split off homing shards
   const wyrm = (z, x, n = 9) => { const gr = 'wy' + z; for (let i = 0; i < n; i++) at(z + i * 0.9, g => addEnemy(g, { type: 'pop', rel: false, z: 30 + i * 0.9, vz: 0, group: gr, gn: n, x, y: 0, y0: 0.2, ay: 6.5, w: 1.2, ph: -i * 0.3, hp: 2, r: 0.6, col: i ? ICE : SNOW, score: 80, shape: 'worm' })); }; // ice wyrms arcing up through the floe
 
-  zone(-99, 170, ISO, 'SECTOR 8 // PLUTO - SHATTER THE ICE SHELF');
+  zone(-99, 170, ISO, 'SECTOR 7 // PLUTO - SHATTER THE ICE SHELF');
   for (let i = 0; i < 10; i++) { const z = 34 + i * 12; for (let k = 0; k < 4; k++) if ((i + k) % 4 !== 1) obs(z, { x: 0, y: 1.2 + k * 2.3, hx: 8.6, hy: 1.05, hz: 0.9, col: k % 2 ? ICE : DEEP, kind: 'ice', hp: 5, gem: (i + k) % 3 === 0, score: 80 }); }
   for (let i = 0; i < 9; i++) icicle(40 + i * 13, (i % 3 - 1) * 5, 2.2 + (i % 2) * 1.4);
   for (let i = 0; i < 6; i++) flake(60 + i * 16, (i % 2 ? 4 : -4), 3 + i % 3 * 2);
@@ -806,7 +806,7 @@ function wormhole() {
   const magnet = (z, x, y) => obs(z, { x, y, hx: 1.1, hy: 1.1, hz: 1.1, col: PK, kind: 'magnet', hp: 9, score: 200, gem: true });
   const phase = (z, v) => obs(z, { x: 0, y: 4.8, hx: 9.6, hy: 4.8, hz: 0.5, col: '#ffffff', kind: 'phase', phase: v, keep: true }); // a wall that only exists in one view: be in any other and you fly straight through it
 
-  zone(-99, 150, CHASE, 'SECTOR 9 // THE WORMHOLE - THE THROAT'); K.tilt(26, 146, { spin: 0.003 }); at(40, g => hint(g, 'IT IS TURNING. EVERYTHING IN HERE IS BORROWED FROM SOMEWHERE WE HAVE BEEN', 260));
+  zone(-99, 150, CHASE, 'SECTOR 8 // THE WORMHOLE - THE THROAT'); K.tilt(26, 146, { spin: 0.003 }); at(40, g => hint(g, 'IT IS TURNING. EVERYTHING IN HERE IS BORROWED FROM SOMEWHERE WE HAVE BEEN', 260));
   for (let i = 0; i < 15; i++) ring(36 + i * 7.4, { x: Math.cos(i * 0.6) * 4, y: 4.8 + Math.sin(i * 0.6) * 2.6, r: 1.4 });
   [[0, 4.8, CY], [3, 6, '#ffb02e'], [-3, 3.6, '#9fe9ff'], [0, 5.4, PK]].forEach(([x, y, c], i) => gate(62 + i * 22, x, y, { col: c, org: 0, w: 2.6, h: 2.2, noRing: true }));
   form(46, 5, i => ({ ...echo, x: 0, y: 4.8, ax: 3.2, ay: 2.8, w: 1.2, ph: i * 1.25, vz: -6, move: PATH.cork })); form(118, 5, i => ({ ...echo, x: 0, y: 4.8, ax: 3, ay: 2.6, w: 1.3, ph: i * 1.25, vz: -7, pod: i === 4 }));
@@ -936,18 +936,20 @@ function arena(of) {
 }
 
 export const LEVELS = {
-  earth: { build: earth, n: 1, name: 'EARTH', sub: 'NEO TERRA', next: 'moon', boss: 'OVERSEER', info: 'CYBER CITY. SKYSCRAPERS, SKYWAYS, FIREWALL GATES.' },
-  moon: { build: moon, n: 2, name: 'THE MOON', sub: 'SEA OF QUIET', next: 'sun', boss: 'THE SENTINEL', info: 'LOW GRAVITY. A DEAD BASE, THE MASS DRIVER, METEORS.', kit: [1, 1, 0, 0, 0, 0, 0, 0] },
-  sun: { build: sun, n: 3, name: 'THE SUN', sub: 'CORONA', next: 'mars', boss: 'HELIOS', info: 'A SLINGSHOT ROUND THE SUN. STAY IN THE CLEAR CHANNEL.', kit: [1, 1, 1, 0, 0, 1, 0, 0] },
-  mars: { build: mars, n: 4, name: 'MARS', sub: 'THE FORGE', next: 'belt', boss: 'THE COLOSSUS', info: 'LAVA GEYSERS, FIRE ARCS, ALIEN STONE HEADS.', kit: [2, 1, 1, 1, 0, 1, 0, 0] },
-  belt: { build: asteroids, n: 5, name: 'ASTEROID BELT', sub: 'THE RUBBLE', next: 'jupiter', boss: 'THE MOTHER ROCK', info: 'ROCK STORMS, A MINING COLONY, MAGNETIC LODESTONES.', kit: [2, 2, 1, 1, 0, 1, 0, 0] },
-  jupiter: { build: jupiter, n: 6, name: 'JUPITER', sub: 'STORM DECK', next: 'saturn', boss: 'THE EYE', info: 'LIGHTNING CHAINS, STORM WALLS, HIDDEN WRAITHS.', kit: [2, 2, 1, 1, 1, 1, 0, 0] },
-  saturn: { build: saturn, n: 7, name: 'SATURN', sub: 'THE RINGS', next: 'pluto', boss: 'THE PRISM', info: 'LASER GRIDS IN THE RINGS. AND SOMETHING ENORMOUS.', kit: [2, 2, 2, 1, 1, 2, 0, 0] },
-  pluto: { build: pluto, n: 8, name: 'PLUTO', sub: 'THE COLD EDGE', next: 'worm', boss: 'FROST WARDEN', info: 'ICE SHELVES, SNOW COMETS, BLACK ICE, A BLIZZARD.', kit: [3, 2, 2, 2, 1, 2, 0, 0] },
-  worm: { build: wormhole, n: 9, name: 'THE WORMHOLE', sub: 'THE THROAT', next: 'x', boss: 'THE PARADOX', info: 'EVERY WORLD FOLDED TOGETHER. THE RULES KEEP CHANGING.', kit: [3, 2, 2, 2, 2, 2, 0, 0] },
-  x: { build: planetx, n: 10, name: 'PLANET X', sub: 'THE BLOOM', next: null, boss: 'THE SHIFTER', info: 'THE SOURCE OF THE SHIFT. EVERYTHING IS ALIVE.', kit: [3, 2, 2, 2, 2, 2, 0, 0] } };
+  earth: { build: earth, n: 1, name: 'EARTH', sub: 'NEO TERRA', next: 'sun', boss: 'OVERSEER', info: 'CYBER CITY. SKYSCRAPERS, SKYWAYS, FIREWALL GATES.' },
+  moon: { build: moon, n: 0, shelved: true, name: 'THE MOON', sub: 'SEA OF QUIET', next: 'sun', boss: 'THE SENTINEL', info: 'LOW GRAVITY. A DEAD BASE, THE MASS DRIVER, METEORS.', kit: [1, 1, 0, 0, 0, 0, 0, 0] },
+  sun: { build: sun, n: 2, name: 'THE SUN', sub: 'CORONA', next: 'mars', boss: 'HELIOS', info: 'A SLINGSHOT ROUND THE SUN. STAY IN THE CLEAR CHANNEL.', kit: [1, 1, 1, 0, 0, 1, 0, 0] },
+  mars: { build: mars, n: 3, name: 'MARS', sub: 'THE FORGE', next: 'belt', boss: 'THE COLOSSUS', info: 'LAVA GEYSERS, FIRE ARCS, ALIEN STONE HEADS.', kit: [2, 1, 1, 1, 0, 1, 0, 0] },
+  belt: { build: asteroids, n: 4, name: 'ASTEROID BELT', sub: 'THE RUBBLE', next: 'jupiter', boss: 'THE MOTHER ROCK', info: 'ROCK STORMS, A MINING COLONY, MAGNETIC LODESTONES.', kit: [2, 2, 1, 1, 0, 1, 0, 0] },
+  jupiter: { build: jupiter, n: 5, name: 'JUPITER', sub: 'STORM DECK', next: 'saturn', boss: 'THE EYE', info: 'LIGHTNING CHAINS, STORM WALLS, HIDDEN WRAITHS.', kit: [2, 2, 1, 1, 1, 1, 0, 0] },
+  saturn: { build: saturn, n: 6, name: 'SATURN', sub: 'THE RINGS', next: 'pluto', boss: 'THE PRISM', info: 'LASER GRIDS IN THE RINGS. AND SOMETHING ENORMOUS.', kit: [2, 2, 2, 1, 1, 2, 0, 0] },
+  pluto: { build: pluto, n: 7, name: 'PLUTO', sub: 'THE COLD EDGE', next: 'worm', boss: 'FROST WARDEN', info: 'ICE SHELVES, SNOW COMETS, BLACK ICE, A BLIZZARD.', kit: [3, 2, 2, 2, 1, 2, 0, 0] },
+  worm: { build: wormhole, n: 8, name: 'THE WORMHOLE', sub: 'THE THROAT', next: 'x', boss: 'THE PARADOX', info: 'EVERY WORLD FOLDED TOGETHER. THE RULES KEEP CHANGING.', kit: [3, 2, 2, 2, 2, 2, 0, 0] },
+  x: { build: planetx, n: 9, name: 'PLANET X', sub: 'THE BLOOM', next: null, boss: 'THE SHIFTER', info: 'THE SOURCE OF THE SHIFT. EVERYTHING IS ALIVE.', kit: [3, 2, 2, 2, 2, 2, 0, 0] } };
 for (const id of ['earth', 'mars', 'jupiter', 'x']) LEVELS['arena-' + id] = { build: () => arena(id), name: ARENAS[id].name, sub: ARENAS[id].title, isBonus: true, isArena: true, of: id, info: 'FIVE WAVES AND A MINIBOSS. GUNS FIRE THE WAY YOU FACE. L / R FLIPS TOP AND ISO.', kit: LEVELS[id].kit ? LEVELS[id].kit.map(v => Math.min(5, v + 1)) : [1, 1, 1, 0, 0, 1, 0, 0] };
 // the bonus arenas and their warps are switched off for the jam build (kept in the code; flip this to bring them back)
 export const ARENAS_ON = false;
-export const ORDER = ['earth', 'moon', 'sun', 'mars', 'belt', 'jupiter', 'saturn', 'pluto', 'worm', 'x'];
+// SHELVED content: built and playable from PRACTICE, but not part of the jam build's route. The Moon is shelved; so are the arenas while ARENAS_ON is false
+export const shelved = id => !!LEVELS[id]?.shelved || (!ARENAS_ON && !!LEVELS[id]?.isArena);
+export const ORDER = ['earth', 'sun', 'mars', 'belt', 'jupiter', 'saturn', 'pluto', 'worm', 'x'];
 export const buildLevel = id => LEVELS[id].build();
