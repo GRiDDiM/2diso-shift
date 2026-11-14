@@ -895,6 +895,15 @@ The big whale of Saturn isn't alone any more. Twelve pods of sky whales, adults 
 - **The Shifter's storms:** it now storms twice as often and cycles four patterns. FRACTAL FOLD is a mirrored golden-angle spiral. ROSE OF FOUR is an eight-petalled rose. KALEIDOSCOPE is six mirrored pairs of arms that curl across each other. TESSERACT is a four-dimensional cube turning, with its edges thrown outward and its corners bursting.
 - **Hyper runs:** the walls in the Wormhole's time snaps and Planet X's hyper run are 12 units apart instead of 8, so there's time to read each flash and move.
 
+### 103. Ready for release (r109)
+
+Getting the game ready for its jam release:
+
+- **Unlocks:** BOSS RUSH and PRACTICE open once you've finished the game on any difficulty. HARD opens once you've finished on NORMAL. The video test stays open, since it doesn't touch gameplay.
+- **Best-run ghost:** starts switched off.
+- **HUD fix:** in a practice boss rush, the PRACTICE line no longer sits on top of the boss rush counter.
+- **ArcadeGridz:** the game is out of beta and marked LIVE, with a GAME OFF 2026 ENTRY badge.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
