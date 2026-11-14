@@ -747,6 +747,15 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - Every setting in the menus is now a split capsule: the setting's name on the left, its value on the right, with a slanted cut between them. Only the right side changes when you flip it: green for ON, dim for OFF and locked, cyan for anything else, with arrows around the value on the one you have selected.
 - The video settings no longer stretch across the screen: DYNAMIC FRAMERATE is now DYNAMIC FPS and drops the "(NOW REDUCED)" note. The video test still shows the level in use.
 
+### 84. RIVET-9 thinks for himself (r90)
+
+- RIVET-9 as a wingman now flies his own line. He hunts whatever is ahead, roams when nothing is, slides off obstacles and bullets he sees coming, and grabs upgrade pods for himself, sometimes yours. Every pod levels up his gun, up to level 6: faster, wider and harder hitting. A hit reboots him and costs him two levels. The HUD shows his gun level.
+- IDLE MODE flies about properly now: moving is cheaper for it, it lines up harder on targets, and when there's nothing to chase it roams instead of parking in the middle.
+- BOLT's higher ranks fire much faster and are easier to see: a thicker, brighter bolt, a bigger spark and a ring around it.
+- The WAVE ribbon is slimmer so it doesn't hide everything behind it.
+- The Eye's lightning strikes and the tentacle slams no longer draw a solid block around themselves. A strike is now a soft glow along the bolt.
+- The stars in the cutscenes keep moving while a line of dialogue finishes.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

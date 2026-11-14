@@ -266,7 +266,7 @@ export function step(g, inputs) {
     if (Wv && firing && --p.waveT <= 0) { p.waveT = (od ? 3 : 5) * (p.up[8] >= 3 ? 0.85 : 1) + 0.5 | 0; const rk = Wv >= 5 ? 2 : Wv >= 3 ? 1 : 0, wu = p.up[U.WAVE]; // one wave: a stream of pulses riding a sine. Each rank winds the frequency tighter, swings it wider and hits harder
       { const W0 = { kind: 3, x: p.x, y: p.y, z: p.z + 1, ox: p.x, oy: p.y, oz: p.z + 1, vx: 0, vy: 0, vz: 22, amp: [1.1, 1.7, 2.3][rk], fq: [0.55, 0.85, 1.2][rk], rk, ph: -g.tick * 0.07, t: 0, d: 0, dmg: [0.2, 0.38, 0.62][rk], r: [0.55, 0.65, 0.78][rk] * SK, life: 110, axis: v === 0 ? 'y' : 'x', dir: rules.arena ? [p.ax, p.az] : null, shove: wu >= 5 }; if (wu === 1) { W0.amp *= 0.7; W0.dmg *= 0.75; } g.shots.push(W0); if (wu >= 3) g.shots.push({ ...W0, ph: W0.ph + Math.PI, dmg: W0.dmg * 0.6 }); } /* RIPPLE is small; ECHO adds a mirrored wave; UNDERTOW shoves */  if ((p.waveN = (p.waveN || 0) + 1) % 4 === 1) g.fx.push('wave'); }
     const Bo = lv(p, U.BOLT);
-    if (Bo && firing && --p.boltT <= 0) { const bu = p.up[U.BOLT]; p.boltT = (Bo >= 5 ? 26 : Bo >= 4 ? 40 : Bo >= 3 ? 52 : 64) * rate(p, od) | 0; const n = 1; for (let k = 0; k < n; k++) g.shots.push({ kind: 4, x: p.x, y: p.y, z: p.z + 1, vx: 0, vy: 0, vz: 0, t: 0, ph: g.rand() * 6.283 + k * 2.1, own: p.i, dmg: 5 + 3 * Bo, chain: bu >= 6 ? 3 : bu >= 4 ? 2 : bu >= 2 ? 1 : 0, coil: bu >= 3, black: bu >= 5, r: 0.5 * SK, life: 150, trail: [] }); /* FORK, CHAIN and STORM arc on to more targets */ g.fx.push('bolt'); }
+    if (Bo && firing && --p.boltT <= 0) { const bu = p.up[U.BOLT]; p.boltT = (Bo >= 5 ? 15 : Bo >= 4 ? 24 : Bo >= 3 ? 36 : Bo >= 2 ? 50 : 64) * rate(p, od) | 0; /* the higher the rank, the faster the bolts come */ const n = 1; for (let k = 0; k < n; k++) g.shots.push({ kind: 4, lv: Bo, x: p.x, y: p.y, z: p.z + 1, vx: 0, vy: 0, vz: 0, t: 0, ph: g.rand() * 6.283 + k * 2.1, own: p.i, dmg: 5 + 3 * Bo, chain: bu >= 6 ? 3 : bu >= 4 ? 2 : bu >= 2 ? 1 : 0, coil: bu >= 3, black: bu >= 5, r: 0.5 * SK, life: 150, trail: [] }); /* FORK, CHAIN and STORM arc on to more targets */ g.fx.push('bolt'); }
     const M = lv(p, U.MISSILE);
     if (M && firing && --p.missT <= 0) { const mu = p.up[U.MISSILE]; p.missT = rate(p, od) * (104 - 10 * M) | 0; const rear = M >= 4 ? 2 : 0; for (let k = 0; k < 2 + rear && g.shots.length < 420; k++) { const back = k >= 2, j = back ? k - 2 : k, nn = back ? rear : 2, a = (j - (nn - 1) / 2) * 0.55, fw = back ? -7 : 6, hug = !rules.arena, dr = j % 2 ? -1 : 1, sideways = v === 3; g.shots.push({ x: p.x, y: p.y, z: p.z, hug, vx: hug ? (sideways ? dr * 13 : 0) : p.az * Math.sin(a) * 9 + p.ax * fw, vy: hug ? (sideways ? 0 : dr * 13) : 0, vz: hug ? (back ? -6 - (j >> 1) * 5 : 5) : -p.ax * Math.sin(a) * 9 + p.az * fw, dmg: 9 + 3 * M, r: 0.4 * SK * (mu === 1 ? 0.75 : 1), kind: 2, life: 150, aoe: 1.4 + 0.4 * M, split: M >= 5, shrap: mu >= 3, tag: mu >= 5 }); } g.fx.push('missile'); }
     // drones
@@ -400,20 +400,40 @@ export function step(g, inputs) {
   if (g.state !== 'play') g.endT++;
   return g;
 }
-// RIVET-9, the assist wingman. He holds formation, rolls when you roll, fires a light gun, and reboots a few seconds after a hit.
+// RIVET-9, the assist wingman. He flies his own line: he hunts whatever is ahead, roams when nothing is, dodges what he can see coming,
+// and grabs upgrade pods for himself (yours too, if he gets there first). Every pod he takes levels up his gun. A hit reboots him
 function wingStep(g, dt, playing) {
-  const w = g.wing, p = g.players[0], v = g.view, m = MASK[v], arena = g.level.rules?.arena; w.t++;
+  const w = g.wing, p = g.players[0], v = g.view, m = MASK[v], arena = g.level.rules?.arena; w.t++; w.lv = w.lv || 0;
   w.view = g.view;
   if (w.dead > 0) { if (--w.dead === 0) { w.x = p.x; w.y = p.y; w.z = Math.max(0.6, p.z - 2); w.inv = 150; g.fx.push('blip'); } return; }
   if (w.inv > 0) w.inv--;
-  let tx = p.x - 1.35, ty = p.y + 0.65, tz = p.z - 1; if (arena) { tx = p.x - p.az * 1.35 - p.ax * 0.95; ty = 4.5; tz = p.z + p.ax * 1.35 - p.az * 0.95; } else if (v === 0) { tx = p.x; ty = p.y + 1.05; tz = p.z - 1.2; }
-  ty += Math.sin(w.t * 0.05) * 0.15; w.x += (clamp(tx, -8, 8) - w.x) * 0.09; w.y += (clamp(ty, 0.7, 9) - w.y) * 0.09; w.z += (Math.max(0.5, tz) - w.z) * 0.09;
+  // pick a goal now and then: a pod in reach, else the enemy to line up on, else a roaming point
+  if (!w.goal || w.t % 40 === 0) { let best = null, bd = 1e9; const zMax = arena ? 34 : 18;
+    for (const q of g.pods) if (q.kind === 'pod' && !q.dead && q.z > w.z - 1 && q.z < zMax) { const d = Math.hypot((q.x - w.x) * (arena || m[0] ? 1 : 0), (q.y - w.y) * (arena ? 0 : m[1]), q.z - w.z); if (d < bd) { bd = d; best = { pod: q }; } }
+    if (!best) for (const e of g.enemies) if (e.hp > 0 && live(e, v) && e.y > 0 && (arena || e.z > w.z + 2) && e.z < 30) { const d = Math.abs(e.x - w.x) + Math.abs(e.y - w.y) + (arena ? Math.abs(e.z - w.z) : 0); if (d < bd) { bd = d; best = { e }; } }
+    w.goal = best || { roam: true }; }
+  const G = w.goal; let tx, ty, tz;
+  if (G.pod && !G.pod.dead) { tx = G.pod.x; ty = G.pod.y; tz = G.pod.z; }
+  else if (G.e && G.e.hp > 0) { tx = G.e.x; ty = G.e.y; tz = arena ? G.e.z - 4 : Math.max(1, Math.min(8, G.e.z - 10)); if (v === 0) tz = Math.max(1, Math.min(9, p.z + 2 + Math.sin(w.t * 0.01) * 3)); }
+  else { const k = w.t; tx = Math.sin(k * 0.011) * 5.5; ty = 4.6 + Math.sin(k * 0.017 + 2) * 3; tz = arena ? 16 + Math.sin(k * 0.009) * 10 : 2.5 + (Math.sin(k * 0.008) + 1) * 3.5; }
+  if (arena) ty = 4.5;
+  // see trouble coming: if something solid or a bullet sits on his line just ahead, slide off it
+  for (const o of g.obs) { if (o.ghost || o.dead || !solid(o, v)) continue; const dz = o.z - o.hz - w.z; if (dz < -0.5 || dz > 7) continue; const inX = Math.abs(o.x - w.x) < o.hx + 0.7, inY = Math.abs(o.y - w.y) < o.hy + 0.6;
+    if ((!m[0] || inX) && (!m[1] || inY)) { if (m[1] && (!m[0] || o.hx > 4)) ty = o.y > 4.8 ? Math.max(0.8, o.y - o.hy - 0.9) : Math.min(9, o.y + o.hy + 0.9); else tx = o.x > 0 ? o.x - o.hx - 1 : o.x + o.hx + 1; } }
+  for (const b of g.ebul) if (b.life > 0 && b.z > w.z - 0.5 && b.z < w.z + 4 && Math.abs(b.x - w.x) * m[0] + Math.abs(b.y - w.y) * m[1] < 1.1) { if (m[1]) ty += b.y > w.y ? -1.6 : 1.6; else tx += b.x > w.x ? -1.6 : 1.6; }
+  const sp = 0.16 + w.lv * 0.01; w.x += clamp((clamp(tx, -8, 8) - w.x) * 0.08, -sp, sp); w.y += clamp((clamp(ty, 0.7, 9) - w.y) * 0.08, -sp, sp); w.z += clamp((clamp(tz, 0.5, arena ? 33 : 12) - w.z) * 0.06, -sp, sp);
   if (!playing || p.dead > 0) return;
-  if (w.t % 13 === 0 && g.shots.length < 420) { g.shots.push({ x: w.x, y: w.y, z: w.z + 0.5, vx: p.ax * 40, vy: 0, vz: p.az * 40, dmg: 0.8, r: 0.28 * SK, kind: 1, life: 55 }); }
+  // pods he flies through are his
+  for (const q of g.pods) if (q.kind === 'pod' && !q.dead && Math.hypot((q.x - w.x) * (m[0] || arena ? 1 : 0), (q.y - w.y) * (arena ? 0 : m[1]), q.z - w.z) < 1.1) { q.dead = true; w.goal = null;
+    if (w.lv < 6) { w.lv++; pop(g, 'R9 GUN ' + w.lv, w.x, w.y + 1, w.z, '#ffb070'); g.fx.push('blip'); } else { g.score += 200; pop(g, 'R9 +200', w.x, w.y + 1, w.z, '#ffb070'); } }
+  // his gun: faster and wider with every level he has picked up
+  const fx = arena ? (p.ax || 0) : 0, fz = arena ? (p.az ?? 1) : 1, rate = 13 - w.lv;
+  if (w.t % rate === 0 && g.shots.length < 420) { const n = w.lv >= 5 ? 3 : w.lv >= 2 ? 2 : 1; for (let k = 0; k < n; k++) { const sp2 = (k - (n - 1) / 2) * 3; g.shots.push({ x: w.x, y: w.y, z: w.z + 0.5, vx: fx * 40 + (v === 0 ? 0 : sp2), vy: v === 0 ? sp2 : 0, vz: fz * 40, dmg: 0.8 + w.lv * 0.25, r: 0.28 * SK, kind: 1, life: 55 }); } }
   if (w.inv > 0) return; const wb = { x: w.x, y: w.y, z: w.z, hx: 0.3 * SK, hy: 0.22 * SK, hz: 0.5 * SK }; let hit = false;
   for (const b of g.ebul) if (b.life > 0 && ov(wb, b, m, -0.08)) { b.life = 0; hit = true; break; }
   if (!hit) for (const e of g.enemies) if (e.hp > 0 && e.type !== 'boss' && live(e, v) && e.y > 0 && ov(wb, e, m, -0.1)) { damage(g, e, 3); hit = true; break; }
-  if (hit) { w.dead = 210; explode(g, w.x, w.y, w.z, '#ffb070', 22, 9); g.fx.push('boom'); pop(g, 'R9 REBOOTING', w.x, w.y + 1, w.z, '#ffb070'); }
+  if (!hit) for (const o of g.obs) if (!o.ghost && !o.dead && solid(o, v) && ov(wb, o, m, -0.1)) { hit = true; break; }
+  if (hit) { w.dead = 210; w.lv = Math.max(0, w.lv - 2); explode(g, w.x, w.y, w.z, '#ffb070', 22, 9); g.fx.push('boom'); pop(g, 'R9 REBOOTING', w.x, w.y + 1, w.z, '#ffb070'); }
 }
 export function doShift(g, to, dir, p) {
   // PERFECT SHIFT: roll out of the way of something that was about to hit you and the fold bites back
@@ -444,10 +464,11 @@ export function autopilot(g, i = 0) {
   let best = null, bc = 1e9; const c = { x: p.x, y: p.y, z: p.z, hx: 0.6, hy: 0.48, hz: 0.72 }, t = { x: 0, y: 0, z: 0, hx: 0, hy: 0, hz: 0 };
   let tgt = null, td = 1e9; for (const e of g.enemies) if (e.hp > 0 && live(e, v) && e.z > p.z + 2 && e.z < 34) { const d = e.z + (e.type === 'boss' ? -50 : 0); if (d < td) { td = d; tgt = e; } }
   let pod = null; for (const q of g.pods) if (q.z > p.z - 1 && q.z < 16) { pod = q; break; }
+  const ph = g.tick + i * 400, wx = Math.sin(ph * 0.009) * 5.5, wy = 4.6 + Math.sin(ph * 0.013 + 1) * 3, wz = 3 + (Math.sin(ph * 0.007 + 2) + 1) * 4.5; // the roaming point
   let shade = null; if (rules.heat) { let bd = 1e9; for (const o of g.obs) if (o.kind === 'shade' && o.z + o.hz > p.z + 1.5) { const d = o.z; if (d < bd) { bd = d; shade = o; } } }
   for (const a of ra) for (const b of rb) {
     c.x = p.x; c.y = p.y; c.z = p.z; c[A] = a; c[Bx] = b;
-    const dist = Math.hypot(c[A] - p[A], c[Bx] - p[Bx]); let cost = dist * 0.5;
+    const dist = Math.hypot(c[A] - p[A], c[Bx] - p[Bx]); let cost = dist * 0.22; // moving is cheap: it flies about instead of camping one spot
     for (const tau of TAU) {
       { const da = a - p[A], db = b - p[Bx], mv = spd * tau; c[A] = p[A] + clamp(da, -mv, mv); c[Bx] = p[Bx] + clamp(db, -mv, mv); }
       const w = 1 / (tau + 0.2);
@@ -460,9 +481,9 @@ export function autopilot(g, i = 0) {
     if (arena) { for (const e of g.enemies) if (e.hp > 0 && live(e, v)) cost += 14 / (Math.hypot(e.x - c.x, e.z - c.z) + 0.6); cost += (Math.abs(c.x) + Math.abs(c.z - 11.5)) * 0.25; }
     else if (shade) cost += (Math.abs(c.x - shade.x) > shade.hx - 0.6 ? 40 * m[0] : 0) + (Math.abs(c.y - shade.y) > shade.hy - 0.5 ? 40 * m[1] : 0) + (Math.abs(c.x - shade.x) * m[0] + Math.abs(c.y - shade.y) * m[1]) * 1.5;
     else if (pod) cost += Math.hypot((c.x - pod.x) * m[0], (c.y - pod.y) * m[1], c.z - pod.z) * 0.25;
-    else if (tgt) cost += (Math.abs((c.x - tgt.x) * m[0]) + Math.abs((c.y - tgt.y) * m[1])) * 0.3 + (A === 'z' || Bx === 'z' ? Math.abs(c.z - 3) * 0.2 : 0);
-    else cost += Math.abs(c.x) * 0.1 * m[0] + Math.abs(c.y - 4.5) * 0.1 * m[1] + Math.abs(c.z - 3) * 0.15;
-    if (p.ap && p.ap.v === v && p.ap.a === a && p.ap.b === b) cost -= 10;
+    else if (tgt) cost += (Math.abs((c.x - tgt.x) * m[0]) + Math.abs((c.y - tgt.y) * m[1])) * 0.45 + (A === 'z' || Bx === 'z' ? Math.abs(c.z - wz) * 0.12 : 0);
+    else cost += (Math.abs(c.x - wx) * m[0] + Math.abs(c.y - wy) * m[1]) * 0.22 + Math.abs(c.z - wz) * 0.12; // nothing to chase: it roams a slowly wandering point
+    if (p.ap && p.ap.v === v && p.ap.a === a && p.ap.b === b) cost -= 5;
     if (cost < bc) { bc = cost; best = { a, b }; }
   }
   if (best) { p.ap = { v, a: best.a, b: best.b }; const da = best.a - p[A], db = best.b - p[Bx]; out.mx = Math.abs(da) > 0.15 ? Math.sign(da) : 0; out.my = -(Math.abs(db) > 0.15 ? Math.sign(db) : 0); }
