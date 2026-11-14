@@ -23,7 +23,7 @@ const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); r
 // settings and anything bought on the host site are kept
 try { if (!LS.get('fresh1', false)) { for (const k of Object.keys(localStorage)) if (k.startsWith('2dshift.') && !['2dshift.opt', '2dshift.owned', '2dshift.bugkit'].includes(k)) localStorage.removeItem(k); LS.set('fresh1', true); } } catch (e) { }
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r113';
+const VER = 'r114';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 // THE DIFFICULTY LADDER: EASY, NORMAL, HARD, then LOOP 1, LOOP 2 and on. Looping the game steps one rung up (NORMAL loops into HARD)

@@ -118,7 +118,7 @@ function kill(g, e) {
   if (e.pod) addPod(g, e.x, e.y, e.z);
   if (g.loop && e.type !== 'rock' && e.type !== 'bomb' && e.type !== 'boss' && e.z > 5) { const n = LOOP.rev[lp(g)]; for (let i = 0; i < n; i++) aimed(g, e, 7, (i - (n - 1) / 2) * 0.22, '#ff4d6d'); }
   if (e.group) { const gr = g.groups[e.group]; if (gr.next >= 0 && e.gi !== gr.next) gr.ord = false; groupNext(gr, e); // the first kill starts the order; after that the marked one is next
-    if (++gr.k >= gr.n) { addPod(g, e.x, e.y, e.z); if (gr.ord && gr.n > 2) { const b = 300 * gr.n; g.score += b; g.stats.order++; pop(g, 'TARGET ORDER +' + b, e.x, e.y + 1.4, e.z, '#ffe14a'); g.fx.push('ring'); } else pop(g, 'WIPEOUT', e.x, e.y + 1, e.z, '#3dffb0'); } }
+    if (++gr.k >= gr.n) { if (g.tick - (g.wipeT ?? -1e9) > 300) { addPod(g, e.x, e.y, e.z); g.wipeT = g.tick; } else { g.score += 1000; pop(g, '+1000', e.x, e.y + 0.6, e.z, '#ffe14a'); } /* a wiped-out wave drops a pod, but only one every five seconds: back-to-back waves pay points instead */ if (gr.ord && gr.n > 2) { const b = 300 * gr.n; g.score += b; g.stats.order++; pop(g, 'TARGET ORDER +' + b, e.x, e.y + 1.4, e.z, '#ffe14a'); g.fx.push('ring'); } else pop(g, 'WIPEOUT', e.x, e.y + 1, e.z, '#3dffb0'); } }
   else if (!e.pod && g.rand() < 0.01) addPod(g, e.x, e.y, e.z, 'god');
   else if (!e.pod && g.rand() < 0.02) addPod(g, e.x, e.y, e.z, 'bomb');
   if (e.type !== 'rock' && e.type !== 'bomb' && (g.rand() < 0.004 || g.stats.kills - (g.lifeAt || 0) >= 160)) { g.lifeAt = g.stats.kills; addPod(g, e.x, e.y + 0.6, e.z, 'life'); } /* 1UP: rare, but one is due every 160 kills */

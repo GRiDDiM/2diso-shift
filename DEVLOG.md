@@ -935,6 +935,10 @@ One last pass on look and feel before the jam build.
 - **Boss weak spots:** solid, glowing cores set in armoured sockets, with a glint and bolts round the rim, instead of wireframe targets. When shielded they become dull bolted plates.
 - **Fewer pods:** the squadrons and predators drop fewer pods.
 
+### 108. Pod drizzle, not a downpour (r114)
+
+A wave you wipe out drops a pod, but now only one every five seconds. When several waves die back to back, as in Earth's late SIDE stretch where you could collect six pods in a few seconds, the extra wipeouts pay 1000 points each instead. This also stops Planet X piling up dozens of spare pods.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
