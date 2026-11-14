@@ -784,6 +784,10 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 
 ![MAGMA BLOOM](shots/magma-bloom.jpg)
 
+### 88. True-shaped ship in the arenas (r94)
+
+- The arenas' top-down view draws left-right about twice as wide as up-down, so the ship (and its shield outlines and exhaust) looked stretched whenever it turned sideways, with a long spike on the nose. It's now drawn in true proportion whichever way it faces, and the aim line sticking out of the nose is a small chevron out in front instead.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

@@ -121,11 +121,12 @@ function box(o, col, a = 1, bands = 0) {
 // hatch the face that comes at you, so a wall reads as a wall
 function hatch(o, col, a, n) { const x0 = Math.max(-9, o.x - o.hx), x1 = Math.min(9, o.x + o.hx), y0 = Math.max(0, o.y - o.hy), y1 = Math.min(9.6, o.y + o.hy), z = o.z - o.hz; if (x1 <= x0 || y1 <= y0) return;
   const st = Math.max(0.9, (x1 - x0) / n); for (let x = x0 + st; x < x1 - 0.1; x += st) seg(x, y0, z, x, y1, z, col, a); const sy = Math.max(0.9, (y1 - y0) / Math.max(2, n / 3)); for (let y = y0 + sy; y < y1 - 0.1; y += sy) seg(x0, y, z, x1, y, z, col, a); }
+let MXS = 1; // squashes a model left-right: the arena's TOP view draws x about twice as wide as z
 function mesh(M, x, y, z, s, yaw, pitch, roll, col, a = 1) {
   const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll), sr = Math.sin(roll);
   for (const pl of M) { let lx = 0, ly = 0, lz = 0; for (let i = 0; i < pl.length; i++) { let [px, py, pz] = pl[i];
     let t = px * cr - py * sr; py = px * sr + py * cr; px = t; t = py * cp - pz * sp; pz = py * sp + pz * cp; py = t; t = px * cy + pz * sy; pz = -px * sy + pz * cy; px = t;
-    px = x + px * s; py = y + py * s; pz = z + pz * s / ZS; if (i) seg(lx, ly, lz, px, py, pz, col, a); lx = px; ly = py; lz = pz; } }
+    px = x + px * s * MXS; py = y + py * s; pz = z + pz * s / ZS; if (i) seg(lx, ly, lz, px, py, pz, col, a); lx = px; ly = py; lz = pz; } }
 }
 function circle(x, y, z, r, col, a = 1, n = 18, plane = 0, rot = 0) {
   let lx, ly, lz; for (let i = 0; i <= n; i++) { const t = rot + i / n * TAU, c = Math.cos(t) * r, s = Math.sin(t) * r; const px = plane === 2 ? x : x + c, py = plane === 1 ? y : y + (plane === 2 ? c : s), pz = plane === 0 ? z : z + s / ZS; if (i) seg(lx, ly, lz, px, py, pz, col, a); lx = px; ly = py; lz = pz; }
@@ -196,16 +197,18 @@ function drawShip(g, p, t) {
   const god = p.god > 0, pc = p.i ? SKN.p2 : SKN.c, c1 = god ? RAINBOW[(t >> 2) % 7] : pc[0], c2 = god ? RAINBOW[((t >> 2) + 2) % 7] : pc[1], c3 = god ? RAINBOW[((t >> 2) + 4) % 7] : pc[2], M = SKN.m;
   const roll = -p.mvx * 0.8 + (g.shiftT > 0 ? g.shiftDir * ease(1 - g.shiftT) * TAU : 0), pitch = -p.mvy * 0.55;
   const yaw = Math.atan2(p.ax || 0, p.az ?? 1), fx = p.ax || 0, fz = p.az ?? 1;
-  { const flap = SKI === 1 ? Math.sin(t * 0.3) * 0.16 : 0; mesh(M[0], p.x, p.y, p.z, SK, yaw, pitch, roll, c1);
-    if (SKI === 3) { const fl = Math.sin(t * 0.55) * 0.35; mesh(PIX_WING(1), p.x, p.y, p.z, SK, yaw, pitch, roll + fl, c2, 0.95); mesh(PIX_WING(-1), p.x, p.y, p.z, SK, yaw, pitch, roll - fl, c2, 0.95); } else mesh(M[1], p.x, p.y + flap * 0.2, p.z, SK, yaw, pitch, roll + flap * 0.25, c2);
-    mesh(M[2], p.x, p.y, p.z, SK, yaw, pitch, roll, c3); }
+  const SS = SK; MXS = g.level.rules?.arena ? 1 - 0.52 * ((vB === 3 ? mix : 0) + (vA === 3 ? 1 - mix : 0)) : 1; // TOP view draws left-right twice as wide as up-down, so a ship turned sideways looked stretched: shrink it to match
+  { const flap = SKI === 1 ? Math.sin(t * 0.3) * 0.16 : 0; mesh(M[0], p.x, p.y, p.z, SS, yaw, pitch, roll, c1);
+    if (SKI === 3) { const fl = Math.sin(t * 0.55) * 0.35; mesh(PIX_WING(1), p.x, p.y, p.z, SS, yaw, pitch, roll + fl, c2, 0.95); mesh(PIX_WING(-1), p.x, p.y, p.z, SS, yaw, pitch, roll - fl, c2, 0.95); } else mesh(M[1], p.x, p.y + flap * 0.2, p.z, SS, yaw, pitch, roll + flap * 0.25, c2);
+    mesh(M[2], p.x, p.y, p.z, SS, yaw, pitch, roll, c3); }
   if (SKI === 3) { for (let k = 0; k < 6; k++) { const q = t + k * 9, h = hash(q * 1.3 + k), h2 = hash(q * 2.1 + k * 5), ox = (h - 0.5) * 0.9, oz = -0.5 - ((t * 0.04 + k / 6) % 1) * 2.2, wx = p.x + fz * ox + fx * oz, wz = p.z - fx * ox + fz * oz, wy = p.y + (h2 - 0.5) * 0.5 - ((t * 0.04 + k / 6) % 1) * 0.4, r = 0.06 + 0.06 * hash(q), c = ['#ff9ef2', '#9dffe0', '#ffd36e', '#c9a6ff', '#ffffff', '#ff9ef2'][k]; seg(wx - r, wy, wz, wx + r, wy, wz, c); seg(wx, wy - r, wz, wx, wy + r, wz, c); } } // glitter
   if (g.players[0].up[8]) { for (let k = 0; k < 5; k++) { const q = (t >> 2) + k * 7, h = hash(q * 1.7 + k), h2 = hash(q * 2.9 + k * 3), h3 = hash(q * 4.1), ox = (h - 0.5) * 1.9, oz = (h2 - 0.5) * 2.4, oy = (h3 - 0.5) * 0.7, wx = p.x + fz * ox + fx * oz, wz = p.z - fx * ox + fz * oz, r = 0.07 + 0.13 * ((t & 3) / 3), c = ['#ffffff', '#ffe14a', '#7df9ff', '#ff3df0', '#ffffff'][k]; seg(wx - r, p.y + oy, wz, wx + r, p.y + oy, wz, c); seg(wx, p.y + oy - r, wz, wx, p.y + oy + r, wz, c); seg(wx, p.y + oy, wz - r / ZS, wx, p.y + oy, wz + r / ZS, c); } } // hyperdrive: the ship glitters
   if (SKI === 1) { for (let k = 0; k < 3; k++) { const h = hash(t * 3 + k * 17 + p.i), h2 = hash(t * 5 + k * 31), ox = (h - 0.5) * 1.5, oz = -0.2 - h2 * 0.9, wx = p.x + fz * ox + fx * oz, wz = p.z - fx * ox + fz * oz; seg(wx, p.y, wz, wx - fx * 0.3, p.y + 0.18 + h2 * 0.3, wz - fz * 0.3, k % 2 ? '#ffe14a' : '#ff6a1f', 0.8); } } // embers lifting off the wings
   if (SKI === 2) { LW = 1.3; for (let k = -2; k <= 2; k++) { const ox = k * 0.22, w1 = Math.sin(t * 0.17 + k * 1.3) * 0.16, w2 = Math.sin(t * 0.11 + k * 2.1) * 0.3, l = 0.7 + Math.abs(k) * 0.28, ax = p.x + fz * ox - fx * 0.55, az = p.z - fx * ox - fz * 0.55, bx = ax + fz * w1 - fx * l * 0.5, bz = az - fx * w1 - fz * l * 0.5, cx = ax + fz * w2 - fx * l, cz = az - fx * w2 - fz * l; seg(ax, p.y, az, bx, p.y - 0.04, bz, k % 2 ? '#3dffb0' : '#7a3cff', 0.75); seg(bx, p.y - 0.04, bz, cx, p.y - 0.1, cz, k % 2 ? '#3dffb0' : '#7a3cff', 0.3); } LW = 1; } // the cloak: wisps trailing off the ragged edge
-  const fl = 0.35 + (g.speedMul - 0.7) * 1.1 + Math.random() * 0.3; for (const s of [-0.17, 0.17]) { const bx = p.x + fz * s - fx * 0.65, bz = p.z - fx * s - fz * 0.65; seg(bx, p.y, bz, bx - fx * fl, p.y, bz - fz * fl, SKN.jet[0]); seg(bx, p.y, bz, bx - fx * fl * 0.6 - fz * s * 0.6, p.y, bz - fz * fl * 0.6 + fx * s * 0.6, SKN.jet[1], 0.7); }
-  if (g.level.rules?.arena) seg(p.x + fx * 1.6, p.y, p.z + fz * 1.6, p.x + fx * (p.manual ? 5 : 3.2), p.y, p.z + fz * (p.manual ? 5 : 3.2), '#ffffff', p.manual ? 0.7 : 0.35);
+  const fl = (0.35 + (g.speedMul - 0.7) * 1.1 + Math.random() * 0.3) * (g.level.rules?.arena && vB === 3 ? 1 - 0.5 * Math.abs(fx) : 1); for (const s of [-0.17, 0.17]) { const bx = p.x + fz * s - fx * 0.65, bz = p.z - fx * s - fz * 0.65; seg(bx, p.y, bz, bx - fx * fl, p.y, bz - fz * fl, SKN.jet[0]); seg(bx, p.y, bz, bx - fx * fl * 0.6 - fz * s * 0.6, p.y, bz - fz * fl * 0.6 + fx * s * 0.6, SKN.jet[1], 0.7); }
+  if (g.level.rules?.arena) { const d = p.manual ? 3.6 : 2.6, cx = p.x + fx * d, cz = p.z + fz * d, w = 0.32; seg(cx - fz * w - fx * w, p.y, cz + fx * w - fz * w, cx, p.y, cz, '#ffffff', p.manual ? 0.8 : 0.4); seg(cx + fz * w - fx * w, p.y, cz - fx * w - fz * w, cx, p.y, cz, '#ffffff', p.manual ? 0.8 : 0.4); } // a small aim chevron out in front, not a spike on the nose
   for (let i = 0; i < Math.min(3, Math.ceil(p.shield / 2)); i++) { const sc = (1.5 + i * 0.62 + Math.sin(t * 0.12 + i) * 0.03) * SK; NG = i > 0; mesh(M[0], p.x, p.y, p.z + 0.05 * i, sc, yaw, pitch, roll, SKN.shield, 0.85 - i * 0.12); mesh(SKI ? M[1] : SHIP_WING, p.x, p.y, p.z + 0.05 * i, sc, yaw, pitch, roll, SKN.shield, 0.42 - i * 0.08); NG = false; } /* one outline per layer, spaced out so they can be counted; only the inner one glows */ // the shield hugs the hull: one outline per layer
+  MXS = 1;
   if (vB === 1 || vB === 2 || mix < 1) { seg(p.x - 0.5, 0, p.z, p.x + 0.5, 0, p.z, '#2ee6ff', 0.4); seg(p.x, 0, p.z - 0.6, p.x, 0, p.z + 0.6, '#2ee6ff', 0.4); if (vB === 1) seg(p.x, 0, p.z, p.x, p.y, p.z, '#2ee6ff', 0.2); }
 }
 
