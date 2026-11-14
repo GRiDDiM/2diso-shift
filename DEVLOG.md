@@ -910,6 +910,16 @@ Getting the game ready for its jam release:
 - **Skins:** each one is still the prize for finishing on its difficulty. Trying a skin in PRACTICE now only applies in practice.
 - **Solar map:** it's for browsing only now. The test jumps are gone. Each stop shows its info plus your all-time best score, best time and rank for that stage. A new game clears the map's markers, but your records stay.
 
+### 105. The big polish pass (r111)
+
+One last pass on look and feel before the jam build.
+
+- **Skies and floors.** It isn't flying through black any more. Every section of every stage has its own sky: a three-colour gradient that blends as you cross into the next section, a glow on the floor, and a sky effect. There are ten effects: nebula clouds, sun rays, aurora, horizon haze, a scanning grid, rain, snow, rising embers, lightning flashes and warp rings. The sky tilts with the stage.
+- **Flat views.** In SIDE and TOP, plain boxes now have an inner frame, a bright top edge and cross-braces, so they read as built things.
+- **Squadrons.** Each stage has a squadron run: three waves, one after another, of that stage's own mid-sized craft. They are solid, slower than other enemies, and each kind flies its own formation. Gunships swap ranks on Earth, firebirds turn like a wheel at the Sun, scarabs bound along on Mars, storm rays play follow-my-leader on Jupiter, ringers turn in two rings on Saturn, ice bats swoop in a V on Pluto, clockworks sweep like clock hands in the Wormhole, and watchers breathe in and out on Planet X.
+- **Predators.** Around the middle of each stage a new SIDE-view section opens and a predator hunts you. The stage holds almost still, and you have thirty seconds to bring it down before it escapes; the faster the kill, the bigger the bonus. Each has two or three bullet storms of its own: the Warden Spider (a web, a lattice), the Phoenix (falling feathers, wings of fire, a ring that bursts), the Iron Scorpion, the Thunder Eel, the Ring Angler, the Ice Mammoth (a growing snowflake), the Chrono Mantis (clock hands, an echo that comes back) and the Hydra Bloom (three spirals, a sunflower bloom, dividing spores).
+- **Spare pods.** A pod that takes the upgrade bar all the way round, or arrives when there is nothing left to buy, is now a SPARE POD. It pays 500 points, and every tenth one is an extra ship. At the end of a stage, every pod you picked up pays 100 more.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

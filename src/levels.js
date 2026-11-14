@@ -32,20 +32,30 @@ function kit(id) {
     obs(z, { x: hx, y: (T + hy + h) / 2, hx: w, hy: (T - hy - h) / 2, ...k }); obs(z, { x: hx, y: (hy - h + Bm) / 2, hx: w, hy: (hy - h - Bm) / 2, ...k });
     obs(z, { x: hx, y: hy, hx: w, hy: h, hz: 0.5, ghost: true, kind: 'safe', osc: k.osc, org: ++gid, gcol: k.col }); if (!o.noRing && !k.osc) ring(z, { x: hx, y: hy, r: 1.5 }); };
   // cut(z0, z1): drop a stretch of a level after it is written. Everything in it goes, everything past it slides back
-  const cuts = [], cut = (a, b) => cuts.push([a, b]);
-  const cmap = (z, keep) => { for (const [a, b] of cuts) if (z >= a && z < b) { if (!keep) return null; z = a; } return z - cuts.reduce((t, [a, b]) => t + (b <= z ? b - a : 0), 0); };
-  const applyCuts = () => { if (!cuts.length) return;
+  const cuts = [], cut = (a, b) => cuts.push([a, b]), gaps = [], gap = (z, len, view, msg, fn) => gaps.push({ z, len, view, msg, fn }); // gap(): open an empty stretch at z, after the level is written. Everything from z on slides forward
+  const cmap = (z, keep) => { for (const [a, b] of cuts) if (z >= a && z < b) { if (!keep) return null; z = a; } const zs = z; return z - cuts.reduce((t, [a, b]) => t + (b <= z ? b - a : 0), 0) + gaps.reduce((t, q) => t + (zs >= q.z ? q.len : 0), 0); };
+  const applyCuts = () => { if (!cuts.length && !gaps.length) return;
     for (let i = ev.length - 1; i >= 0; i--) { const e = ev[i]; if (e.src == null) continue; const nz = cmap(e.src); if (nz == null) { ev.splice(i, 1); continue; } const d = nz - e.src; e.d = d; e.z += d; if (e.lim != null) e.lim += d; if (e.oz != null) e.oz += d; }
-    for (let i = zones.length - 1; i >= 0; i--) { const q = zones[i]; q.z0 = q.z0 < -90 ? q.z0 : cmap(q.z0, true); if (q.z1 < 1e8) q.z1 = cmap(q.z1, true); if (q.z1 <= q.z0) zones.splice(i, 1); }
+    for (let i = zones.length - 1; i >= 0; i--) { const q = zones[i]; q.z0 = q.z0 < -90 ? q.z0 : cmap(q.z0, true); if (q.z1 < 1e8) q.z1 = cmap(q.z1 - 0.01, true) + 0.01; if (q.z1 <= q.z0) zones.splice(i, 1); }
     for (let i = checkpoints.length - 1; i >= 0; i--) { const c = cmap(checkpoints[i]); if (c == null) checkpoints.splice(i, 1); else checkpoints[i] = c; }
-    for (let i = hills.length - 1; i >= 0; i--) { const h = hills[i]; h[0] = cmap(h[0], true); h[1] = cmap(h[1], true); if (h[1] - h[0] < 4) hills.splice(i, 1); }
-    for (let i = tilts.length - 1; i >= 0; i--) { const q = tilts[i]; q.z0 = cmap(q.z0, true); q.z1 = cmap(q.z1, true); if (q.z1 - q.z0 < 4) tilts.splice(i, 1); } };
-  const done = extra => { applyCuts(); if (extra.endZ) extra.endZ = cmap(extra.endZ, true); // nothing solid sits right around a change of view: you get a clear run to make the shift
+    for (let i = hills.length - 1; i >= 0; i--) { const h = hills[i]; h[0] = cmap(h[0], true); h[1] = cmap(h[1] - 0.01, true); if (h[1] - h[0] < 4) hills.splice(i, 1); }
+    for (let i = tilts.length - 1; i >= 0; i--) { const q = tilts[i]; q.z0 = cmap(q.z0, true); q.z1 = cmap(q.z1 - 0.01, true); if (q.z1 - q.z0 < 4) tilts.splice(i, 1); } };
+  const done = extra => { const X = EXTRA[id]; if (X) { X.moods.forEach((m, i) => { if (zones[i]) zones[i].mood = m; }); if (X.s != null) { gap(X.s, 124, null, null, z0 => squadRun(api, id, z0)); gap(X.m, 96, SIDE, 'SOMETHING IS HUNTING US - SHIFT TO SIDE VIEW', (z0, z1) => predRun(api, id, z0, z1)); } }
+    applyCuts(); if (extra.endZ) extra.endZ = cmap(extra.endZ, true);
+    const fin = gaps.map(q => { const ge = cmap(q.z), gs = ge - q.len; return { ...q, gs, ge }; }).sort((a, b) => a.gs - b.gs);
+    for (const q of fin) { // the stage does not tilt through a gap; a gap with a view of its own becomes a section
+      for (const T of [...tilts]) if (T.z0 < q.gs && T.z1 > q.ge) { tilts.push({ ...T, z0: q.ge + 6 }); T.z1 = q.gs - 6; }
+      if (q.view != null) { const c = zones.find(n => n.z0 < q.gs - 1 && n.z1 > q.ge + 1); if (c) { zones.push({ ...c, z0: q.ge, msg: 'BACK TO ' + VIEWN[c.view] + ' VIEW' }); c.z1 = q.gs; } zones.push({ z0: q.gs, z1: q.ge, view: q.view, msg: q.msg, mood: DANGER }); zones.sort((a, b) => a.z0 - b.z0); }
+      q.fn(q.gs, q.ge); }
+    if (fin.length) { const un = c => { for (let i = fin.length - 1; i >= 0; i--) { const q = fin[i]; if (c >= q.ge) c -= q.len; else if (c > q.gs) c = q.gs; } return c; }, wrap = f => g => { const c = g.camZ; g.camZ = un(c); try { return f(g); } finally { g.camZ = c; } }; // stage rules were written for the stage before the gaps opened: they see the old distances
+      const t0 = extra.tick; extra.tick = g => { predTick(g); if (t0) wrap(t0)(g); }; if (extra.rules) for (const k of Object.keys(extra.rules)) if (typeof extra.rules[k] === 'function') extra.rules[k] = wrap(extra.rules[k]); }
+    checkpoints.sort((a, b) => a - b); // nothing solid sits right around a change of view: you get a clear run to make the shift
     for (let i = ev.length - 1; i >= 0; i--) { const e = ev[i]; if (e.oz != null && !e.keep && zones.some((q, k) => k > 0 && e.oz > q.z0 - 30 && e.oz < q.z0 + 8)) ev.splice(i, 1); }
     ev.sort((a, b) => a.z - b.z); return { id, events: ev, zones, checkpoints, hills, tilts, len: extra.endZ || zones.find(q => q.z1 > 1e8)?.z0 || 0, ...extra }; };
-  return { at, obs, ring, en, ground, wing, form, zone, gate, warp, warp2, fill, hill, checkpoints, cut, tilt, done };
+  const api = { at, obs, ring, en, ground, wing, form, zone, gate, warp, warp2, fill, hill, checkpoints, cut, tilt, done }; return api;
 }
 
+const VIEWN = ['SIDE', 'ISO', 'CHASE', 'TOP'];
 // ---------- boss engine: stages that are only open from one view, attacks that fill the screen in the wrong one ----------
 const RED = '#ff4d6d';
 function sheetH(g, gapY, gapH, o = {}) { const k = { rel: true, x: 0, z: 9, hx: 9, hz: 11, warm: 100, life: 46, col: RED, kind: 'sheet', ...o };
@@ -934,6 +944,84 @@ const ARENA_MINI = {
       if (t % (150 * rage | 0) === 40) for (let i = 0; i < 5; i++) addEnemy(g, { type: 'seek', x: e.x + Math.cos(i * 1.26) * 2.4, y: 4.5, z: e.z + Math.sin(i * 1.26) * 2.4, sp: 4.4, wob: 5, hp: 2, r: 0.45, col: '#b6ff3d', shape: 'spore', score: 40, ph: i });
       if (t % (90 * rage | 0) === 10) { const a0 = Math.atan2(p.z - e.z, p.x - e.x); for (let i = -2; i <= 2; i++) bullet(g, e.x, 4.5, e.z, Math.cos(a0 + i * 0.22) * 6.5, 0, Math.sin(a0 + i * 0.22) * 6.5, '#b6ff3d'); g.fx.push('eshot'); } } } };
 // the warp stages: the miniboss flies in at the very end and the stage only clears when it is gone
+// =====================================================================================
+// EXTRAS, added to every stage when it is built: a SQUADRON run (three waves of that stage's own mid-sized craft, in a pattern of
+// their own), a PREDATOR (a big creature that hunts you for thirty seconds in SIDE view, with bullet storms of its own), and a
+// MOOD for every section (sky gradient, floor glow and a sky effect)
+// =====================================================================================
+const ZY = (g, e, a, sp, col, ex, oz = 0, oy = 0) => { const n0 = g.ebul.length; bullet(g, e.x, e.y + oy, e.z - 2 + oz, 0, Math.sin(a) * sp, Math.cos(a) * sp, col); if (g.ebul.length > n0) Object.assign(g.ebul[n0], { sig: true }, ex); }; // a shot in the side-view plane. a = PI points at the player
+const PI = Math.PI, TAU = PI * 2, RBW = ['#ff4d6d', '#ff8a2b', '#ffe14a', '#3dffb0', '#2ee6ff', '#5e7bff', '#b06bff'];
+const SQUAD = {
+  earth: { shape: 'gunship', col: '#2ee6ff', n: 6, say: 'GUNSHIPS', mv: (e, u) => [(e.k % 3 - 1) * 4.2, 4.8 + (e.k < 3 ? 1 : -1) * 2.2 * Math.cos(u * 0.5)] }, // two ranks that keep swapping places
+  sun: { shape: 'firebird', col: '#ffb02e', n: 7, say: 'FIREBIRDS', mv: (e, u) => [Math.cos(u * 0.6 + e.k * TAU / e.n) * 4.6, 4.8 + Math.sin(u * 0.6 + e.k * TAU / e.n) * 3] }, // a wheel of fire turning as it comes
+  mars: { shape: 'scarab', col: '#ff5a1f', n: 6, say: 'IRON SCARABS', mv: (e, u) => [(e.k - 2.5) * 2.4, 1.6 + Math.abs(Math.sin(u * 0.7 + e.k * 0.5)) * 4.5] }, // a rank of them bounding along like a wave down a rope
+  jupiter: { shape: 'stormray', col: '#b06bff', n: 7, say: 'STORM RAYS', mv: (e, u) => [Math.sin(u * 0.55 - e.k * 0.55) * 5.5, 4.8 + Math.sin(u * 1.1 - e.k * 1.1) * 2] }, // follow-my-leader in a long figure of eight
+  saturn: { shape: 'ringer', col: '#e8c98a', n: 8, say: 'RINGERS', mv: (e, u) => { const d = e.k % 2 ? 1 : -1, r = e.k % 2 ? 4.6 : 2.4, a = d * u * 0.6 + (e.k >> 1) * TAU / 4; return [Math.cos(a) * r, 4.8 + Math.sin(a) * r * 0.75]; } }, // two rings turning against each other
+  pluto: { shape: 'icebat', col: '#9fe9ff', n: 7, say: 'ICE BATS', mv: (e, u) => { const c = e.k - 3; return [c * 1.9 + Math.sin(u * 0.4) * 1.5, 6.4 - Math.abs(c) * 0.8 + Math.sin(u * 0.8) * 2 - 1]; } }, // a V that swoops as one
+  worm: { shape: 'cog', col: '#ffe14a', n: 6, say: 'CLOCKWORKS', mv: (e, u) => { const r = 1.6 + (e.k % 3) * 1.5, a = (e.k < 3 ? 1 : -1.6) * u * 0.5 + (e.k < 3 ? 0 : PI); return [Math.cos(a) * r, 4.8 + Math.sin(a) * r * 0.8]; } }, // the hands of a clock, one fast, one slow
+  x: { shape: 'eyeball', col: '#3dffb0', n: 8, say: 'WATCHERS', mv: (e, u) => { const r = 3 + 1.9 * Math.sin(u * 0.7), a = e.k * TAU / e.n + u * 0.15; return [Math.cos(a) * r, 4.8 + Math.sin(a) * r * 0.7]; } }, // a ring that breathes in and out
+  moon: { shape: 'gunship', col: '#c8d0e0', n: 6, say: 'SENTRIES', mv: (e, u) => [(e.k - 2.5) * 2.4, 4.8 + Math.sin(u * 0.6 + e.k) * 2.5] },
+  belt: { shape: 'scarab', col: '#c8a070', n: 6, say: 'ROCK CRABS', mv: (e, u) => [Math.sin(u * 0.5 + e.k) * 5, 2 + e.k * 1.1] } };
+const squadRun = (K, id, z0) => { const Q = SQUAD[id]; K.at(z0 + 6, g => { info(g, Q.say.toLowerCase() + ' squadron. take them down in order'); g.fx.push('charge'); });
+  for (let w = 0; w < 3; w++) K.form(z0 + 16 + w * 34, Q.n, k => ({ shape: Q.shape, med: true, col: Q.col, hp: 5, r: 1.55, vz: -3.1, score: 400, k, n: Q.n, x: 0, y: 4.8, ph: w * 1.3, pod: k === Q.n - 1, move: (g, e, dt) => { e.z += e.vz * dt; const q = Q.mv(e, e.t * 0.02 + e.ph + (w === 1 ? PI : 0)), s = Math.min(1, e.t / 60); e.x = Math.max(-8.4, Math.min(8.4, q[0] * (w === 1 ? -1 : 1))) * s; e.y = Math.max(0.9, Math.min(8.9, 4.8 + (q[1] - 4.8) * s)); } }), 2.2); };
+
+// --- predators: name, look, health, and two or three storms each. Storm functions get (g, e, c): c counts up through the storm
+const PRED = {
+  earth: { name: 'THE WARDEN SPIDER', shape: 'spider', col: '#ff3df0', hp: 120, storms: [
+    ['WEB', (g, e, c) => { if (c % 10 === 0) for (let k = 0; k < 8; k++) ZY(g, e, k * PI / 4 + 0.39, 4.6, '#2ee6ff'); if (c % 34 === 0) { const off = (c / 34 % 2) * PI / 16; for (let i = 0; i < 16; i++) ZY(g, e, i * PI / 8 + off, 2.3, '#ff3df0'); } }], // eight straight spokes, and ring after ring strung between them
+    ['LATTICE', (g, e, c) => { if (c % 4 === 0) for (let k = 0; k < 3; k++) { ZY(g, e, c * 0.045 + k * 2.094, 3.4, '#ffe14a'); ZY(g, e, -c * 0.045 + k * 2.094 + 1, 3.4, '#2ee6ff'); } }] ] }, // two sets of arms turning against each other: a moving cross-hatch
+  sun: { name: 'THE PHOENIX', shape: 'phoenix', col: '#ffb02e', hp: 125, storms: [
+    ['FEATHERFALL', (g, e, c) => { if (c % 18 === 0) for (let i = 0; i < 9; i++) ZY(g, e, PI - 0.2 - i * 0.16, 4.4 + (c / 18 % 3) * 0.9, i % 2 ? '#ffe14a' : '#ff5a1f', { gy: 3.4 }); }], // fans of burning feathers thrown high, arcing over and falling
+    ['WINGS OF FIRE', (g, e, c) => { if (c % 3 === 0) for (const s of [1, -1]) ZY(g, e, PI + s * (1.5 - (c % 90) / 90 * 1.2), 3.6, s > 0 ? '#ffb02e' : '#ff5a1f', { wz: -s * 0.012 }); }], // two streams that sweep in and curl: a pair of beating wings
+    ['REBIRTH', (g, e, c) => { if (c % 60 === 0) for (let i = 0; i < 14; i++) ZY(g, e, i * TAU / 14 + c * 0.01, 2.6, '#ffffff', { split: { t: 44, n: 3, spread: 0.42, gen: 1, zy: true, cols: ['#ffe14a', '#ff8a2b', '#ff5a1f'] } }); }] ] }, // a white ring that bursts into three times as many embers
+  mars: { name: 'THE IRON SCORPION', shape: 'scorpion', col: '#ff5a1f', hp: 130, storms: [
+    ['STINGER', (g, e, c) => { if (c % 7 === 0) ZY(g, e, PI - 0.5 - 0.9 * Math.abs(Math.sin(c * 0.04)), 5.2 + 2 * Math.sin(c * 0.11), c % 14 ? '#ffe14a' : '#ffffff', { gy: 3.8 }, 1.5, 3.4); }], // venom whipped from the tail tip, raining down in a walking line
+    ['PINCERS', (g, e, c) => { if (c % 4 === 0) { const w = 0.15 + 1.1 * Math.abs(Math.cos(c * 0.03)); for (const s of [1, -1]) ZY(g, e, PI + s * w, 3.8, '#ff5a1f', {}, -1.5, s * 1.2); } }], // two streams that open wide and snap shut on you
+    ['SANDSTORM', (g, e, c) => { if (c % 22 === 0) { const r0 = c * 0.02; for (let i = 0; i < 30; i++) { const a = i / 30 * TAU; ZY(g, e, a, 1.5 + 2.2 * Math.abs(Math.sin(2.5 * (a + r0))), i % 2 ? '#c8a070' : '#ffb02e'); } } }] ] }, // five-petalled gusts, each one turned a little from the last
+  jupiter: { name: 'THE THUNDER EEL', shape: 'eel', col: '#7df9ff', hp: 130, storms: [
+    ['CHAIN LIGHTNING', (g, e, c) => { if (c % 6 === 0) for (let k = -1; k <= 1; k++) ZY(g, e, PI + k * 0.62 + 0.3 * Math.sin(c * 0.21 + k * 2), 4.2, k ? '#7df9ff' : '#ffffff'); }], // three ribbons of shot that snake like lightning
+    ['MAELSTROM', (g, e, c) => { if (c % 3 === 0) for (let k = 0; k < 5; k++) ZY(g, e, k * TAU / 5 + c * c * 0.00045, 3, k % 2 ? '#b06bff' : '#7df9ff', { wz: 0.006 }); }] ] }, // a five-armed whirlpool that spins up faster and faster
+  saturn: { name: 'THE RING ANGLER', shape: 'angler', col: '#e8c98a', hp: 130, storms: [
+    ['LURE', (g, e, c) => { if (c % 3 === 0) { const a = Math.sin(c * 0.05) * 1.25; ZY(g, e, PI + a, 3.7, RBW[(c / 3 | 0) % 7], {}, -3, 2); ZY(g, e, PI - a, 3.7, RBW[(c / 3 + 3 | 0) % 7], {}, -3, 2); } }], // two rainbow fans from its lure, crossing and re-crossing
+    ['RINGS', (g, e, c) => { if (c % 26 === 0) { const tl = (c / 26 % 3 - 1) * 0.5, ct = Math.cos(tl), st = Math.sin(tl); for (let i = 0; i < 22; i++) { const a = i / 22 * TAU, vz = Math.cos(a) * 3.6, vy = Math.sin(a) * 1.1, n0 = g.ebul.length; bullet(g, e.x, e.y, e.z - 2, 0, vz * st + vy * ct, vz * ct - vy * st, i % 2 ? '#e8c98a' : '#9fb0ff'); if (g.ebul.length > n0) g.ebul[n0].sig = true; } } }] ] }, // flat rings like Saturn's own, each tilted a different way
+  pluto: { name: 'THE ICE MAMMOTH', shape: 'mammoth', col: '#9fe9ff', hp: 135, storms: [
+    ['SNOWFLAKE', (g, e, c) => { if (c % 80 === 0) for (let k = 0; k < 6; k++) ZY(g, e, k * PI / 3 + c * 0.004, 2.5, '#ffffff', { split: { t: 36, n: 3, spread: 1.047, gen: 2, T: 30, zy: true, cols: ['#9fe9ff', '#ffffff', '#5ea0ff'] } }); }], // six arms that branch, and branch again: a snowflake growing
+    ['TUSKS', (g, e, c) => { if (c % 28 === 0) { const up = (c / 28) % 2 ? 1 : -1; for (let i = 0; i < 11; i++) { const f = i / 10; ZY(g, e, PI + up * (0.15 + f * 1.1), 2.6 + 2.4 * Math.sin(f * PI), i % 2 ? '#ffffff' : '#9fe9ff'); } } }], // curved sweeps of shot, upper then lower, like tusks swinging
+    ['AVALANCHE', (g, e, c) => { if (c % 5 === 0) { const n0 = g.ebul.length; bullet(g, e.x, 9.8, 2 + ((c * 7.3) % 26), 0, -1.2, -2.2, c % 10 ? '#ffffff' : '#5ea0ff'); if (g.ebul.length > n0) Object.assign(g.ebul[n0], { sig: true, gy: 1.6 }); } }] ] }, // snow sliding down out of the sky
+  worm: { name: 'THE CHRONO MANTIS', shape: 'mantis', col: '#ffe14a', hp: 130, storms: [
+    ['CLOCK HANDS', (g, e, c) => { if (c % 6 === 0) { const h = PI + c * 0.035, m = PI - c * 0.011; for (let i = 0; i < 4; i++) { ZY(g, e, h, 2 + i * 0.75, '#ffe14a'); ZY(g, e, m, 1.6 + i * 0.6, '#ff3df0'); ZY(g, e, m + PI, 1.6 + i * 0.6, '#ff3df0'); } } }], // a minute hand and an hour hand of shot, sweeping opposite ways
+    ['ECHO', (g, e, c) => { const k = c % 90; if (k === 0) { const n0 = g.ebul.length; for (let i = 0; i < 18; i++) ZY(g, e, i * TAU / 18 + c * 0.01, 3.8, i % 2 ? '#b06bff' : '#ffffff'); e.echo = g.ebul.slice(n0); } if (k === 44 && e.echo) for (const q of e.echo) if (q.life > 0) { q.vz *= -1.2; q.vy *= -1.2; q.col = '#2ee6ff'; } }], // a ring flies out, stops dead, and comes back through you
+    ['SPIROGRAPH', (g, e, c) => { if (c % 2 === 0) { const th = c * 0.07; ZY(g, e, PI - 2 * th, 3.1, RBW[(c >> 1) % 7], {}, Math.cos(3 * th) * 1.8, Math.sin(3 * th) * 1.8); } }] ] }, // the gun rides a wheel within a wheel
+  x: { name: 'THE HYDRA BLOOM', shape: 'hydra', col: '#3dffb0', hp: 140, storms: [
+    ['THREE HEADS', (g, e, c) => { if (c % 5 === 0) [[2.6, '#ff3df0', 0.06], [0, '#3dffb0', -0.045], [-2.6, '#ffe14a', 0.03]].forEach(([oy, col, w]) => { for (const s of [0, PI]) ZY(g, e, PI + c * w + s, 3.1, col, {}, -2, oy); }); }], // each head spits its own spiral, each turning its own way
+    ['BLOOM', (g, e, c) => { for (let j = 0; j < 2; j++) { const k = c * 2 + j; if (k % 3 === 0) ZY(g, e, k * 2.39996, 1.7 + (k % 8) * 0.32, RBW[k % 7]); } }], // seeds in a sunflower head: the golden angle, shot by shot
+    ['SPORES', (g, e, c) => { if (c % 44 === 0) for (let i = 0; i < 5; i++) ZY(g, e, PI + (i - 2) * 0.5 + Math.sin(c) * 0.2, 2.4, '#ffffff', { split: { t: 40, n: 2, spread: 0.7, gen: 3, T: 32, zy: true, cols: ['#3dffb0', '#b06bff'] } }); }] ] } }; // fat spores that divide, and divide, and divide
+const predRun = (K, id, gs, ge) => { const M = PRED[id]; K.checkpoints.push(gs + 3);
+  K.at(gs + 14 + SPAWN_Z, g => { const hp = Math.round(M.hp * 4 * power(g)); hint(g, 'PREDATOR // ' + M.name + ' - 30 SECONDS TO BRING IT DOWN', 240); g.fx.push('bossin', 'say:predator'); g.shake = Math.max(g.shake, 8);
+    const e = addEnemy(g, { type: 'pop', mini: true, pred: true, name: M.name, shape: M.shape, col: M.col, x: 0, y: 4.8, z: 44, vz: 0, hp, hpMax: hp, r: 3, big: true, score: 0, ph: 0, tl: 1800,
+      move: (g2, e2) => { if (e2.gone) { e2.z += 0.35; if (e2.z > 56) e2.z = -50; return; } e2.z += (24.5 - e2.z) * 0.035; e2.y = 4.8 + Math.sin(e2.t * 0.017) * 1.7; e2.x = 0; if (e2.z > 28) return; if (!g2.pred || g2.pred.e !== e2) { e2.gone = true; return; } if (!g2.pred.on) g2.pred.on = true;
+        const k = power(g2); if (e2.pk && Math.abs(k - e2.pk) > 1e-3) { e2.hp *= k / e2.pk; e2.hpMax = Math.round(e2.hpMax * k / e2.pk); e2.max = e2.hpMax; } e2.pk = k;
+        e2.pt = (e2.pt || 0) + 1; e2.tl = 1800 - e2.pt; const c = e2.pt % 330, si = (e2.pt / 330 | 0) % M.storms.length; if (c === 1) { hint(g2, M.storms[si][0] + '!', 90); g2.fx.push('charge'); } if (c >= 40 && c < 290) M.storms[si][1](g2, e2, c - 40); if (c % 30 === 0 && c >= 40 && c < 290) g2.fx.push('eshot');
+        if (e2.pt >= 1800) { e2.gone = true; g2.pred.out = true; hint(g2, M.name + ' GOT AWAY', 160); g2.fx.push('deny'); } } });
+    g.mini = e; g.pred = { e, end: ge - 14, name: M.name }; }); };
+// called every tick from each stage's wrapped tick: ends the hunt, pays out, and lets the stage run on
+const predTick = g => { const q = g.pred; if (!q) return; const e = q.e; if (e.hp > 0 && !q.out && g.state === 'play') return; if (g.state !== 'play') return;
+  if (e.hp <= 0 && !q.out) { const fast = Math.max(0, e.tl || 0), bonus = 20000 + Math.round(fast / 60) * 500; g.score += bonus; g.shake = 16; g.flash = 12; g.fx.push('boom2', 'say:predator destroyed', 'toast:' + q.name + ' DESTROYED|+' + bonus + ' (' + Math.round(fast / 60) + 's LEFT)'); for (let i = 0; i < 4; i++) { addPod(g, (i - 1.5) * 2, 4.8, 16 + i); explode(g, e.x + (g.rand() - 0.5) * 4, e.y + (g.rand() - 0.5) * 3, e.z, i % 2 ? '#ffffff' : e.col, 30, 13); } g.stats.preds = (g.stats.preds || 0) + 1; }
+  for (const b of g.ebul) b.life = Math.min(b.life, 30); g.mini = null; g.pred = null; if (g.camZ < q.end) g.ffTo = q.end; };
+
+// where each stage's squadron run and predator go (in that stage's own coordinates), and the mood of each of its sections, in order
+const DANGER = ['#160006', '#84101e', '#1c0208', 'bolt'];
+const EXTRA = {
+  earth: { s: 573, m: 800, moods: [['#060420', '#4a1a7a', '#0a0424', 'neb'], ['#02040f', '#10307a', '#04081c', 'grid'], ['#0c0328', '#8a1e72', '#14041e', 'haze'], ['#020c16', '#0c5666', '#03121c', 'grid'], ['#160b02', '#7a440c', '#140902', 'haze'], ['#05021c', '#641e98', '#0b0422', 'rain'], ['#120208', '#66101e', '#0c0206', 'grid'], ['#120208', '#66101e', '#0c0206', 'bolt'], ['#0c0214', '#5a1466', '#0a0210', 'grid'], ['#0b0216', '#761066', '#090212', 'bolt']] },
+  sun: { s: 393, m: 585, moods: [['#1c0700', '#a84000', '#2c0b00', 'ray'], ['#220500', '#bc4a00', '#3a0d00', 'ember'], ['#0d0300', '#602000', '#160600', 'ember'], ['#1c0b00', '#aa6a00', '#2c1300', 'ray'], ['#240400', '#c83000', '#320700', 'ember'], ['#1c0900', '#d87000', '#2a0b00', 'ray']] },
+  mars: { s: 308, m: 730, moods: [['#160502', '#822010', '#1c0703', 'ember'], ['#100402', '#521608', '#120502', 'haze'], ['#1a0602', '#a03010', '#220904', 'haze'], ['#070202', '#300c08', '#0b0302', 'ember'], ['#120704', '#623014', '#140905', 'haze'], ['#1c0400', '#b43400', '#260700', 'ember'], ['#180502', '#901e08', '#1e0703', 'ember']] },
+  jupiter: { s: 528, m: 760, moods: [['#0b0519', '#62308a', '#120a2c', 'bolt'], ['#090420', '#742468', '#100726', 'bolt'], ['#07051c', '#403074', '#0b0922', 'neb'], ['#0b0b24', '#405294', '#0d1232', 'neb'], ['#140722', '#944062', '#1c0b2c', 'rain'], ['#01071c', '#0c4074', '#020b24', 'aur'], ['#0d0522', '#843096', '#14072c', 'bolt']] },
+  saturn: { s: 178, m: 580, moods: [['#0d0b04', '#74622e', '#120d06', 'haze'], ['#07050f', '#403064', '#0b0718', 'neb'], ['#0b0906', '#645240', '#100b08', 'haze'], ['#05070f', '#2e4074', '#070b18', 'rain'], ['#100512', '#741e62', '#14071a', 'grid'], ['#0b0b10', '#747498', '#0d0d16', 'ray']] },
+  pluto: { s: 178, m: 565, moods: [['#020b16', '#0c5286', '#041220', 'aur'], ['#050d1a', '#2e6498', '#071424', 'snow'], ['#010712', '#0c3064', '#020b1a', 'snow'], ['#020d16', '#0c6474', '#04141c', 'aur'], ['#0b121a', '#6486aa', '#101824', 'snow'], ['#050b1a', '#4064bc', '#071226', 'aur']] },
+  worm: { s: 438, m: 630, moods: [['#0b0216', '#641e98', '#10051e', 'warp'], ['#1c0514', '#982064', '#22071c', 'haze'], ['#02140b', '#0c7452', '#041c12', 'neb'], ['#02121c', '#0c6486', '#041820', 'grid'], ['#0b0722', '#5240aa', '#100b2c', 'bolt'], ['#12021c', '#860c98', '#180526', 'warp'], ['#0b0b0b', '#646464', '#121212', 'rain'], ['#010006', '#2e0c52', '#03000c', 'warp'], ['#0d021a', '#982eaa', '#140522', 'warp']] },
+  x: { s: 293, m: 690, moods: [['#021009', '#0c6440', '#051612', 'neb'], ['#0b0216', '#641e74', '#12051e', 'neb'], ['#16020b', '#860c40', '#1e0512', 'haze'], ['#140205', '#740c16', '#1a0509', 'ember'], ['#05120d', '#1e6452', '#071814', 'haze'], ['#0d0b02', '#64520c', '#141205', 'neb'], ['#02091c', '#0c4086', '#051024', 'aur'], ['#0b0216', '#bc1e98', '#12051e', 'rain'], ['#07020f', '#642e98', '#0b0518', 'warp']] },
+  moon: { moods: [['#04060c', '#2e3a5a', '#080a12', 'neb'], ['#04060c', '#3a4466', '#080a12', 'haze'], ['#020a12', '#0c4a66', '#04101a', 'grid'], ['#04060c', '#2e3a5a', '#080a12', 'haze'], ['#0a0604', '#5a3a2a', '#120a06', 'ember'], ['#04060c', '#3a5a8a', '#080a12', 'ray']] },
+  belt: { moods: [['#060508', '#3a3048', '#0a080c', 'neb'], ['#0c0804', '#5a4020', '#120c06', 'haze'], ['#0a0410', '#5a1e6a', '#0e0616', 'neb'], ['#0a0604', '#6a3a1a', '#100a06', 'ember'], ['#080604', '#4a3a2a', '#0c0a06', 'haze'], ['#0c0804', '#7a5020', '#120c06', 'ember']] } };
 const STAGE_MINI = {
   moon: { name: 'LUNAR SENTINEL', shape: 'sat', col: '#2ee6ff', hp: 150, r: 1.8, ai(g, e, t) { if (t % 110 === 60) { for (const s of [-0.25, 0, 0.25]) aimed(g, e, 6, s, '#2ee6ff'); g.fx.push('eshot'); } if (t % 330 === 250) fireRing(g, e, '#ffffff', 10, 1.8, 3); } },
   sun: { name: 'SOLAR FLARE', shape: 'plasma', col: '#ffe14a', hp: 170, r: 2, ai(g, e, t) { if (t % 150 === 60) fireRing(g, e, '#ff8a2b', 14, 2.4, 4); if (t % 150 === 135) fireRing(g, e, '#ffe14a', 10, 1.4, 3); } },

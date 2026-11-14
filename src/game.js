@@ -30,7 +30,7 @@ const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 
 function newPlayer(i, s, coop) {
   return { i, x: coop ? (i ? 1.5 : -1.5) : 0, y: 4.5, z: 3, mvx: 0, mvy: 0, ivx: 0, ivy: 0, inv: 120, dead: 0, lives: s?.lives ?? 3, bombs: s?.bombs ?? 3,
-    up: BARMAX.map((mx, k) => Math.min((s?.up?.[k] || 0) * (s && !s.r6 && k >= 1 && k <= 7 && k !== 6 ? 2 : 1), mx)), shield: Math.min(6, (s?.shield ?? 1) * (s && !s.r6 ? 2 : 1)) + (s ? 0 : 1), cursor: s?.cursor ?? -1, drones: [], dmode: s?.dmode ?? 0,
+    up: BARMAX.map((mx, k) => Math.min((s?.up?.[k] || 0) * (s && !s.r6 && k >= 1 && k <= 7 && k !== 6 ? 2 : 1), mx)), shield: Math.min(6, (s?.shield ?? 1) * (s && !s.r6 ? 2 : 1)) + (s ? 0 : 1), cursor: s?.cursor ?? -1, spare: s?.spare ?? 0, drones: [], dmode: s?.dmode ?? 0,
     hist: [], fireT: 0, laserT: 0, waveT: 20, boltT: 40, missT: 30, god: 0, over: 0, prev: {}, ax: 0, az: 1 };
 }
 
@@ -53,7 +53,7 @@ export function createGame({ seed = 1, level, start = null, players = 1, wing = 
   return g;
 }
 // what "save and quit" (and a level hand-over) stores: where you are and everything you carry
-export function snapshot(g) { const p = g.players[0]; return { r6: 1, level: g.level.id, z: g.checkpoint, score: g.score, lives: Math.max(p.lives, 0), bombs: p.bombs, up: [...p.up], shield: p.shield, cursor: p.cursor, dmode: p.dmode, gear: g.gear, warp: g.flags.warp, arena: g.flags.arena, runT: (g.runT0 || 0) + g.stats.ticks }; }
+export function snapshot(g) { const p = g.players[0]; return { r6: 1, level: g.level.id, z: g.checkpoint, score: g.score, lives: Math.max(p.lives, 0), bombs: p.bombs, up: [...p.up], shield: p.shield, cursor: p.cursor, spare: p.spare || 0, dmode: p.dmode, gear: g.gear, warp: g.flags.warp, arena: g.flags.arena, runT: (g.runT0 || 0) + g.stats.ticks }; }
 
 // ---------- helpers the level scripts use ----------
 // loops: every time round the enemy is tougher, shoots faster and more often, and shoots back when it dies
@@ -292,11 +292,11 @@ export function step(g, inputs) {
 
   // ----- scroll + level script -----
   g.speedMul += (GEARMUL[g.gear] * (g.mut.turbo ? 1.25 : 1) * LOOP.scroll[lp(g)] * (g.overLava ? 0.6 : 1) - g.speedMul) * 0.06;
-  const dz = rules.arena ? 0 : playing ? SCROLL * g.speedMul * dt : SCROLL * 0.4 * dt;
+  let dz = rules.arena ? 0 : playing ? SCROLL * g.speedMul * dt : SCROLL * 0.4 * dt; if (g.pred && g.pred.e.hp > 0 && g.pred.on) dz = Math.min(dz, 1.4 * dt); /* a predator holds the stage almost still while it hunts */ if (g.ffTo) { if (g.camZ < g.ffTo) dz = Math.max(dz, 34 * dt); else g.ffTo = 0; } /* and afterwards the stage rushes on to the next section */
   if (playing) {
     g.camZ += dz;
     if (g.glT > 0 && --g.glT === 0) g.glK = 0;
-    if (g.rs?.length && !g.boss && g.intro <= 0 && g.camZ >= g.rs[0]) { g.rs.shift(); g.rsT = 55; hint(g, 'REALITY SHIFT!', 70); g.fx.push('charge'); }
+    if (g.rs?.length && !g.boss && !g.pred && g.intro <= 0 && g.camZ >= g.rs[0]) { g.rs.shift(); g.rsT = 55; hint(g, 'REALITY SHIFT!', 70); g.fx.push('charge'); }
     if (g.rsT === 22) glitch(g, 34, 0.85);
     if (g.rsT > 0 && --g.rsT === 0) { doShift(g, (g.view + 1 + (g.rsR() * 3 | 0)) % 4, 1, null); g.flash = 6; g.shake = Math.max(g.shake, 6); } // the fold rolls you into some other view: roll back yourself
     if (!g.boss) while (g.evi < lvd.events.length && lvd.events[g.evi].z <= g.camZ) { const e = lvd.events[g.evi++]; if ((e.lim ?? e.z) >= g.z0 - 0.01) e.fn(g); }
@@ -376,15 +376,18 @@ export function step(g, inputs) {
   }
   // ----- enemy bullets -----
   for (let i = 0, n = g.ebul.length; i < n; i++) { const b = g.ebul[i]; // shots can curl (w), fall (gy) and split into a fan (split): the boss patterns are built from these
-    if (b.w) { const c = Math.cos(b.w), s = Math.sin(b.w), vx = b.vx; b.vx = vx * c - b.vy * s; b.vy = vx * s + b.vy * c; } if (b.gy) b.vy -= b.gy * dt;
-    if (b.split && b.life > 0 && --b.split.t <= 0) { const q = b.split, a0 = Math.atan2(b.vy, b.vx), sp = Math.hypot(b.vx, b.vy) || 2; b.split = null; if (g.ebul.length < 300) for (let k = 0; k < q.n; k++) { const a = a0 + (k - (q.n - 1) / 2) * q.spread; g.ebul.push({ ...b, vx: Math.cos(a) * sp * (q.gain || 1), vy: Math.sin(a) * sp * (q.gain || 1), col: q.cols ? q.cols[k % q.cols.length] : b.col, split: q.gen > 1 ? { ...q, gen: q.gen - 1, t: q.T || 40 } : null }); } b.life = 0; }
+    if (b.wz) { const c = Math.cos(b.wz), s = Math.sin(b.wz), vz = b.vz; b.vz = vz * c - b.vy * s; b.vy = vz * s + b.vy * c; } if (b.w) { const c = Math.cos(b.w), s = Math.sin(b.w), vx = b.vx; b.vx = vx * c - b.vy * s; b.vy = vx * s + b.vy * c; } if (b.gy) b.vy -= b.gy * dt;
+    if (b.split && b.life > 0 && --b.split.t <= 0) { const q = b.split, zy = q.zy, a0 = Math.atan2(b.vy, zy ? b.vz : b.vx), sp = Math.hypot(zy ? b.vz : b.vx, b.vy) || 2; b.split = null; if (g.ebul.length < 300) for (let k = 0; k < q.n; k++) { const a = a0 + (k - (q.n - 1) / 2) * q.spread; g.ebul.push({ ...b, [zy ? 'vz' : 'vx']: Math.cos(a) * sp * (q.gain || 1), vy: Math.sin(a) * sp * (q.gain || 1), col: q.cols ? q.cols[k % q.cols.length] : b.col, split: q.gen > 1 ? { ...q, gen: q.gen - 1, t: q.T || 40 } : null }); } b.life = 0; }
   }
   for (const b of g.ebul) { b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; if (--b.life <= 0 || b.z < -3 || b.z > 46 || Math.abs(b.x) > (rules.arena ? 15 : 12) || b.y < -1 || b.y > (b.gy ? 18 : 11)) b.life = 0; }
   // ----- pods + rings -----
   if (g.blasts.length) blastStep(g, m);
   { const mg = P[0] && P[0].up[8] >= 2; for (const q of g.pods) { const p = P[0]; if (!p || p.dead > 0) continue; if (q.pull > 0 || g.vac > 0 || mg && Math.hypot(p.x - q.x, p.y - q.y, p.z - q.z) < 9) { const k = q.pull > 0 || g.vac > 0 ? 0.12 : 0.04; q.x += (p.x - q.x) * k; q.y += (p.y - q.y) * k; q.z += (p.z - q.z) * k + (q.pull > 0 || g.vac > 0 ? dz * 0.75 : 0); if (q.pull > 0) q.pull--; } } if (g.vac > 0) g.vac--; } // MAGNET, MAGNET COIL and the VACUUM bomb pull pickups in
   for (const q of g.pods) { q.t++; q.z -= dz * 0.75; if (q.z < -3) q.dead = true; for (const p of P) { if (p.dead > 0) continue; const dx = (p.x - q.x) * m[0], dy = (p.y - q.y) * m[1], dzz = p.z - q.z, d = Math.hypot(dx, dy, dzz); if (d < 5) { q.x += dx / (d + 0.01) * 9 * dt; q.y += dy / (d + 0.01) * 9 * dt; q.z += dzz / (d + 0.01) * 9 * dt; }
-    if (d < 1.2 && !q.dead) { q.dead = true; if (q.kind === 'pod') { const o = P[0]; let c = o.cursor; for (let k = 0; k < BAR.length; k++) { c = (c + 1) % BAR.length; if ((c === U.SHIELD ? o.shield : o.up[c]) < BARMAX[c] && (c !== U.WILD || hyperOk(o))) break; } o.cursor = c; /* maxed slots are skipped */ g.fx.push('pod'); addScore(g, 50); } else if (q.kind === 'god') startGod(g, p); else if (q.kind === 'bomb') { p.bombs = Math.min(9, p.bombs + 1); pop(g, '+BOMB', p.x, p.y + 1, p.z, '#ff8a2b'); g.fx.push('pod'); } else if (q.kind === 'life') { if (p.lives < 9) { p.lives++; pop(g, '1UP!', p.x, p.y + 1.2, p.z, '#3dffb0', true); } else { g.score += 5000; pop(g, '+5000', p.x, p.y + 1.2, p.z, '#3dffb0', true); } g.fx.push('pod', 'ring', 'say:extra ship'); g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.4, vr: 14, life: 24, max: 24, col: '#b06bff' }); } else if (q.kind === 'gem') { g.chain++; g.chainT = 190; addScore(g, 200, q.x, q.y, q.z, '#7df9ff'); g.fx.push('ring'); } } } }
+    if (d < 1.2 && !q.dead) { q.dead = true; if (q.kind === 'pod') { const o = P[0]; let c = o.cursor, wrap = false, any = false; g.stats.pods = (g.stats.pods || 0) + 1; for (let k = 0; k < BAR.length; k++) { c = (c + 1) % BAR.length; if (c === 0 && o.cursor >= 0) wrap = true; if ((c === U.SHIELD ? o.shield : o.up[c]) < BARMAX[c] && (c !== U.WILD || hyperOk(o))) { any = true; break; } } o.cursor = c; /* maxed slots are skipped */ g.fx.push('pod'); addScore(g, 50);
+        if (wrap || !any) { /* a SPARE pod: the bar went all the way round, or there is nothing left to buy. It pays 500 now, and every tenth one is an extra ship */ o.spare = (o.spare || 0) + 1; g.stats.spare = (g.stats.spare || 0) + 1; g.score += 500;
+          if (o.spare >= 10) { o.spare = 0; if (o.lives < 9) { o.lives++; pop(g, '10 SPARE PODS - 1UP!', p.x, p.y + 1.4, p.z, '#3dffb0', true); } else { g.score += 5000; pop(g, '10 SPARE PODS +5000', p.x, p.y + 1.4, p.z, '#3dffb0', true); } g.fx.push('ring', 'say:extra ship'); g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.4, vr: 14, life: 24, max: 24, col: '#3dffb0' }); }
+          else pop(g, 'SPARE POD +500  ' + o.spare + '/10', p.x, p.y + 1.2, p.z, '#ffe14a'); } } else if (q.kind === 'god') startGod(g, p); else if (q.kind === 'bomb') { p.bombs = Math.min(9, p.bombs + 1); pop(g, '+BOMB', p.x, p.y + 1, p.z, '#ff8a2b'); g.fx.push('pod'); } else if (q.kind === 'life') { if (p.lives < 9) { p.lives++; pop(g, '1UP!', p.x, p.y + 1.2, p.z, '#3dffb0', true); } else { g.score += 5000; pop(g, '+5000', p.x, p.y + 1.2, p.z, '#3dffb0', true); } g.fx.push('pod', 'ring', 'say:extra ship'); g.shocks.push({ x: p.x, y: p.y, z: p.z, r: 0.4, vr: 14, life: 24, max: 24, col: '#b06bff' }); } else if (q.kind === 'gem') { g.chain++; g.chainT = 190; addScore(g, 200, q.x, q.y, q.z, '#7df9ff'); g.fx.push('ring'); } } } }
   for (const r of g.rings) { if (r.stay) { // a warp: fades in, hangs in front of you for a while, fades out. Only CHASE view lines you up with it
       r.t++; if (r.until != null && g.camZ > r.until && r.life - r.t > 90) r.t = r.life - 90; /* fade out before a chase stretch */ if (r.t > r.life) r.dead = true; if (!r.got && vw === 2 && r.t > 45 && playing) for (const p of P) if (p.dead <= 0 && Math.hypot(p.x - r.x, p.y - r.y) < r.r * 1.15) { r.got = true; r.dead = true; if (r.to) { g.flags.arena = true; g.flags.warpTo = r.to; } else g.flags.warp = true; g.flags.warpNow = true; g.score += 5000; pop(g, 'WARP!', p.x, p.y + 1.5, p.z + 3, '#b06bff', true); g.fx.push('warp', 'say:warp found', r.to ? 'toast:ARENA WARP FOUND|' + (lvd.arenaName || 'BONUS ARENA') : 'toast:WARP FOUND|' + (lvd.warpName || '')); g.flash = 16; explode(g, r.x, r.y, p.z, '#b06bff', 60, 16); p.inv = 240; break; } continue; }
     const pz = r.z; r.z -= dz; if (r.z < -4) r.dead = true; if (r.got) continue; for (const p of P) { if (p.dead > 0) continue; if (pz >= p.z && r.z < p.z && live(r, vw) && Math.hypot((p.x - r.x) * m[0], (p.y - r.y) * m[1]) < r.r) { r.got = true;
