@@ -721,6 +721,10 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 
 ![The Writhing Grove](shots/writhing-grove.jpg)
 
+### 79. Softer blobs (r85)
+
+- Every blob wall has about 30% less health: the ones in the Planet X level and the ones the Shifter throws at you.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
