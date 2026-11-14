@@ -140,8 +140,8 @@ function earth() {
   wing(588, 4, { ...dart, x: 0, y: 4.5, ax: 2, ay: 1 });
   K.checkpoints.push(804);
 
-  // a tower going up: half-built girders at every height, crane loads swinging across the lane, crate stacks to shoot through. Only ISO shows it all
-  zone(800, 1010, ISO, 'CONSTRUCTION ZONE - SHIFT TO ISO VIEW');
+  // a tower going up: half-built girders at every height, crane loads swinging across the lane, crate stacks to shoot through
+  zone(800, 1010, CHASE, 'CONSTRUCTION ZONE - SHIFT TO CHASE VIEW');
   const girder = (z, x, y, hx = 4.3) => obs(z, { x, y, hx, hy: 0.42, hz: 0.7, col: '#ffe14a', kind: 'girder' });
   const crate = (z, x, y, o) => obs(z, { x, y, hx: 1, hy: 1, hz: 1, col: '#ff8a2b', kind: 'crate', hp: 7, score: 120, ...o });
   const crane = (z, x, ph) => { obs(z, { x, y: 4.75, hx: 0.45, hy: 4.75, hz: 0.45, col: '#ffe14a', kind: 'crane', jib: x > 0 ? -1 : 1 }); obs(z, { x: x > 0 ? x - 4.6 : x + 4.6, y: 4.4, hx: 1.1, hy: 1, hz: 1.1, col: '#ff8a2b', kind: 'load', osc: { ax: 3.3, ay: 0.5, w: 1.3, ph } }); };
@@ -153,7 +153,7 @@ function earth() {
   wing(850, 5, { ...dart, x: 0, y: 5, ax: 3, ay: 1.2 }); carrier(880, { x: -3, y: 6 }); kami(905, { x: 2, y: 4 }); wing(930, 6, { ...dart, x: -2, y: 4, ax: 4, ay: 1.4 }); saucer(958, { x: 2, y: 6.4 }); carrier(985, { x: 3, y: 4 });
   K.checkpoints.push(1014);
 
-  zone(1010, 1220, CHASE, 'HOVER TRAFFIC - SHIFT TO CHASE VIEW'); K.tilt(1030, 1215, { sway: 0.16, w: 0.011, px: 34, py: 16 }); // the whole street banks as you weave through it
+  zone(1010, 1220, CHASE, 'HOVER TRAFFIC - STAY IN CHASE VIEW'); K.tilt(1030, 1215, { sway: 0.16, w: 0.011, px: 34, py: 16 }); // the whole street banks as you weave through it
   for (let i = 0, z = 1048; z < 1210; z += 10, i++) { const y = [2.4, 5, 7.4][i % 3], d = i % 2 ? 4 : -4; car(z, -8 + (i * 5) % 16, y, d); car(z, 2 - (i * 3) % 10, y, d); car(z + 5, 6 - (i * 7) % 14, [5, 7.4, 2.4][i % 3], -d * 1.4, i % 3 === 0 ? 2.4 : 1.3); car(z + 2.5, -6 + (i * 4) % 13, [7.4, 2.4, 5][i % 3], d * 0.8); car(z + 7.5, 5 - (i * 6) % 12, [2.4, 5, 7.4][(i + 1) % 3], -d); if (i % 4 === 1) obs(z + 5, { x: ((i * 5) % 11) - 5, y: 4.75, hx: 0.7, hy: 4.75, hz: 0.7, col: C.pylon, kind: 'pylon' }); if (i % 6 === 3 && z < 900) slab(z + 5, false, { hz: 0.8 }); }
   K.warp2(342, -3, 6);
   K.hill(56, 86, 1.7); K.hill(636, 700, 1.5); K.hill(880, 940, 1.7); K.hill(1090, 1150, 1.4); K.hill(170, 222, 1.7); K.hill(258, 312, 2.1); K.hill(1238, 1272, 1.3); // overpasses and embankments: the ground rises and the ship rides over
@@ -220,7 +220,7 @@ function mars() {
   K.checkpoints.push(523);
 
   // the caves: rock spikes from the floor and the roof, pillars, and rocks that let go of the ceiling as you pass. Only ISO shows where everything is
-  zone(520, 730, ISO, 'THE CAVES - SHIFT TO ISO VIEW');
+  zone(520, 730, CHASE, 'THE CAVES - SHIFT TO CHASE VIEW');
   const spike = (z, x, up, h = 4.4) => obs(z, { x, y: up ? h / 2 : 9.6 - h / 2, hx: 0.8, hy: h / 2, hz: 0.8, col: ROCK, kind: 'stalag' });
   const rockfall = (z, x, o) => obs(z, { x, y: 8.6, hx: 0.95, hy: 0.95, hz: 0.95, col: ROCK, kind: 'boulder', hp: 6, score: 120, drop: 13, ...o });
   for (let i = 0, z = 552; z < 716; z += 11, i++) { const m = i % 4, sd = i % 8 < 4 ? 1 : -1;
@@ -339,9 +339,8 @@ function jupiter() {
   zone(1140, 1e9, SIDE, 'WARNING // THE EYE OPENS');
   K.cut(220, 270); K.cut(484, 512); // room for the descent
   spawnBoss(K, 1190, { name: 'THE EYE', look: 'eye', hp: 2600, col: ZAP });
-  const B = boss({ name: 'THE EYE', sig: { name: 'IRIS STORM', fire(g, b, c) { if (c % 6 === 0) for (let k = 0; k < 6; k++) { const a1 = c * 0.09 + k * 1.0472, a2 = -c * 0.06 + k * 1.0472 + 0.52; bullet(g, b.x, b.y, b.z - 2, Math.cos(a1) * 2.4, Math.sin(a1) * 2.4, -5.2, '#7df9ff'); bullet(g, b.x, b.y, b.z - 2, Math.cos(a2) * 3.6, Math.sin(a2) * 3.6, -5.8, k % 2 ? '#ffffff' : '#b06bff'); }
-      if (c % 60 === 30) for (let i = -6; i <= 6; i++) bullet(g, b.x + i * 0.9, b.y + 3, b.z - 2, i * 0.15, -1.6, -5, '#ffffff'); } }, // two rings of the iris turning against each other, and an eyelid that sweeps down
-    toast: 'JUPITER CALMED', adds: { shape: 'shark', col: '#7df9ff', hp: 4, r: 0.9, vz: -8, ax: 3, w: 1.3, score: 250 }, addEvery: 520, stages: [
+  const B = boss({ name: 'THE EYE', sig: { name: 'IRIS STORM', fire(g, b, c) { if (c % 38 === 0) { const R = 5.4, rot = c * 0.012, col = (c / 38 | 0) % 2 ? '#b06bff' : '#7df9ff'; for (let sd = 0; sd < 6; sd++) { const a0 = sd * 1.0472 + rot, a1 = a0 + 1.0472; for (let i = 0; i < 4; i++) { const f = (i + 0.5) / 4, px = (Math.cos(a0) * (1 - f) + Math.cos(a1) * f) * R, py = (Math.sin(a0) * (1 - f) + Math.sin(a1) * f) * R * 0.85, d = Math.hypot(px, py) || 1; bullet(g, b.x + px, b.y + py, b.z - 3, -px / d * 1.7, -py / d * 1.7, -5.2, i % 3 ? col : '#ffffff'); } } g.fx.push('eshot'); } } }, // an iris closing: six blades of shot draw a hexagon and pull it shut on the middle, then it opens out behind you
+    stages: [
     // STATIC: lightning walks down the lane toward you, then the Eye stares: a flat beam at whatever height you are flying
     { name: 'STATIC', vuln: [SIDE], rec: SIDE, col: ZAP, bob: 2.2, attack(g, b, t) { const p = near(g, b), c = t % 360;
       if (c === 30) { hint(g, 'LIGHTNING - WATCH THE RINGS', 110); g.fx.push('charge'); } if (c >= 30 && c < 126 && c % 24 === 6) { const k = (c - 30) / 24 | 0; strike(g, p.x, 11.5 - k * 2.3 + (k % 2 ? 0.6 : 0)); }
@@ -452,6 +451,7 @@ const ATK = {
   twin: (sp = 8, col) => (g, e) => { aimed(g, e, sp, -0.1, col); aimed(g, e, sp, 0.1, col); g.fx.push('eshot'); },
   rain: (n = 5, col) => (g, e) => { for (let i = 0; i < n; i++) bullet(g, e.x + (i - (n - 1) / 2) * 1.2, e.y, e.z, 0, -2.5, -4.5, col || e.col); g.fx.push('eshot'); }, // a curtain dropped straight down
   shard: col => (g, e) => { for (let i = -1; i <= 1; i++) addEnemy(g, { type: 'kami', x: e.x + i * 1.2, y: e.y, z: e.z - 0.5, vz: -8, hp: 1, r: 0.4, col: col || '#ffffff', shape: 'shard', score: 40 }); g.fx.push('missile'); } }; // splits off three homing shards
+const shot = (g, x, y, z, vx, vy, vz, col, extra) => { const n0 = g.ebul.length; bullet(g, x, y, z, vx, vy, vz, col); if (g.ebul.length > n0) Object.assign(g.ebul[n0], extra); }; // a boss shot with something extra: a curl, a fall, a split
 // lodestones: glowing rocks that drag the ship towards them while they are close
 const magPull = g => { const p = g.players[0]; for (const o of g.obs) if (o.kind === 'magnet' && !o.dead && Math.abs(o.z - p.z) < 9) { const dx = o.x - p.x, dy = o.y - p.y; g.pull = [Math.sign(dx) * Math.min(1.7, Math.abs(dx) * 0.5), Math.sign(dy) * Math.min(1, Math.abs(dy) * 0.3), 0]; return; } };
 const gearAt = (K, z, gear, msg, say) => K.at(z + SPAWN_Z, g => { if (g.forceGear == null) g.gearWas = g.gear; g.forceGear = gear; if (msg) hint(g, msg, 230); g.fx.push('gear'); if (say) g.fx.push('say:' + say); });
@@ -481,55 +481,54 @@ function moon() {
   const crate = (z, x, y, o) => obs(z, { x, y, hx: 1, hy: 1, hz: 1, col: WARN, kind: 'crate', hp: 6, score: 150, gem: true, man: true, ...o });
   const guard = (z, o) => en(z, { type: 'saucer', col: BASE, hp: 7, r: 0.9, score: 400, hold: 15, dur: 400, ax: 2, ay: 2.4, fire: 110, atk: ATK.cross(3.4, BASE), shape: 'sat', pod: true, ...o }); // base defence satellites: they fire a cross of four
 
-  zone(-99, 185, CHASE, 'SECTOR 2 // THE MOON - LOW GRAVITY TRENCH RUN'); K.tilt(30, 180, { sway: 0.09, w: 0.006, px: 24, py: 24 }); at(40, g => hint(g, 'LOW GRAVITY - THE SHIP DRIFTS. STEER EARLY', 220));
+  // 1. the trench: a calm run in. Nothing shoots; thread the rings and get used to the drift
+  zone(-99, 185, CHASE, 'SECTOR 2 // THE MOON - LOW GRAVITY TRENCH RUN'); K.tilt(30, 180, { sway: 0.07, w: 0.006, px: 20, py: 18 }); at(40, g => hint(g, 'LOW GRAVITY - THE SHIP DRIFTS A LITTLE. STEER EARLY', 220));
   walls(30, 182);
-  for (let i = 0; i < 17; i++) ring(40 + i * 8.4, { x: Math.sin(i * 0.55) * 4, y: 3.5 + Math.sin(i * 0.4) * 2.2, r: 1.5 });
-  for (let i = 0; i < 4; i++) { const z = 62 + i * 30; obs(z, { x: 0, y: 7.6, hx: 8.6, hy: 1.9, hz: 1, col: GREY, kind: 'arch' }); obs(z + 15, { x: (i % 2 ? 3.4 : -3.4), y: 1.4, hx: 1.2, hy: 1.4, hz: 1.2, col: '#7df9ff', kind: 'ice', hp: 4, gem: true, score: 150 }); }
-  form(50, 5, i => ({ ...probe, x: 0, y: 5, ax: 2.6, ay: 2.6, w: 1.2, ph: i * 1.25, vz: -6 })); form(96, 6, i => ({ ...probe, x: 0, y: 4.6, ax: 3, ay: 2, w: 1, ph: i * 1.05, vz: -6, move: PATH.eight })); form(140, 5, i => ({ ...probe, x: 0, y: 5, ax: 2.6, ay: 2.6, w: 1.4, ph: i * 1.25, vz: -6, pod: i === 4 }));
+  for (let i = 0; i < 16; i++) ring(42 + i * 8.6, { x: Math.sin(i * 0.5) * 3.6, y: 4.6 + Math.sin(i * 0.38) * 1.8, r: 1.6 });
+  for (let i = 0; i < 3; i++) { const z = 70 + i * 34; obs(z, { x: 0, y: 8, hx: 8.6, hy: 1.6, hz: 1, col: GREY, kind: 'arch' }); obs(z + 17, { x: (i % 2 ? 3.6 : -3.6), y: 1.3, hx: 1.2, hy: 1.3, hz: 1.2, col: '#7df9ff', kind: 'ice', hp: 4, gem: true, score: 150 }); }
+  form(60, 5, i => ({ ...probe, x: 0, y: 5, ax: 2.6, ay: 2.4, w: 1.1, ph: i * 1.25, vz: -6 })); form(130, 5, i => ({ ...probe, x: 0, y: 4.6, ax: 3, ay: 2, w: 1, ph: i * 1.05, vz: -6, move: PATH.eight, pod: i === 4 }));
   K.checkpoints.push(188);
 
-  zone(185, 400, ISO, 'CRATER FIELD - SHIFT TO ISO VIEW'); K.hill(230, 262, 1.4); K.hill(318, 356, 1.8);
-  for (let i = 0, z = 218; z < 392; z += 11, i++) { const m = i % 4, sd = i % 8 < 4 ? 1 : -1;
-    if (m === 0) { crater(z, -4.5 * sd, 2); crater(z + 4, 3 * sd, 1.4); needle(z + 6, 6.5 * sd); }
-    else if (m === 1) { jet(z, 0, i * 30); jet(z, 5.4 * sd, i * 30 + 60); rover(z + 5, -5 * sd); }
-    else if (m === 2) { needle(z, -2.5 * sd); needle(z, 4.5 * sd); bounce(z + 5, -5 * sd, i % 8 === 2); crater(z + 5, 0, 1.8); }
-    else { crate(z, 4.6 * sd, 1.2); bounce(z, -3 * sd); jet(z + 5, -6 * sd, i * 40); } }
-  form(232, 5, i => ({ ...hopper, x: -5 + i * 2.5, ax: 1.5, ay: 5, ph: i * 0.6 })); form(300, 6, i => ({ ...hopper, x: 5 - i * 2, ax: 2, ay: 6, ph: i * 0.5, fire: 150, atk: ATK.rain(3, '#ff9ef2') })); form(362, 5, i => ({ ...probe, x: (i % 2 ? 6 : -6), y: 3 + i, ay: 1, vz: -6, move: PATH.pincer }));
-  K.checkpoints.push(403);
+  // 2. the crater field: one idea at a time. A row of dust jets with one lane open, then a crater with a wrecked lander beside it, and so on
+  zone(185, 390, ISO, 'CRATER FIELD - SHIFT TO ISO VIEW'); K.hill(236, 268, 1.3); K.hill(322, 356, 1.5); at(196 + SPAWN_Z, g => hint(g, 'DUST JETS BLOW IN ROWS - ONE LANE IS ALWAYS CLEAR', 220));
+  for (let i = 0, z = 222; z < 384; z += 14, i++) {
+    if (i % 2 === 0) { const open = [0, 2, 1, 2, 0, 1][(i / 2) % 6]; [-5.4, 0, 5.4].forEach((x, k) => { if (k !== open) jet(z, x, i * 20 + k * 30); }); }
+    else { const sd = i % 4 === 1 ? 1 : -1; crater(z, 4.5 * sd, 2.2); crater(z + 3, -3 * sd, 1.5); crate(z, -5.6 * sd, 1.2); if (i % 4 === 3) rover(z + 6, 3 * sd); } }
+  form(240, 5, i => ({ ...hopper, x: -5 + i * 2.5, ax: 1.5, ay: 5, ph: i * 0.6 })); form(310, 5, i => ({ ...hopper, x: 5 - i * 2.5, ax: 1.5, ay: 5.5, ph: i * 0.5, pod: i === 4 })); form(356, 4, i => ({ ...probe, x: (i % 2 ? 6 : -6), y: 3.4 + i, ay: 1, vz: -6, move: PATH.pincer }));
+  K.checkpoints.push(393);
 
-  // the old base: decks above and below, freight lifts, laser fences, rovers on the floor and the ceiling. Halfway through, its gravity plant fails
-  zone(400, 600, SIDE, 'TRANQUILITY BASE - SHIFT TO SIDE VIEW'); K.tilt(478, 590, { rot: 3.1416, sway: 0.04, w: 0.012 }); at(478 + SPAWN_Z, g => { hint(g, 'THE GRAVITY PLANT JUST FAILED - UP IS DOWN!', 220); g.shake = Math.max(g.shake, 6); });
-  for (let i = 0, z = 432; z < 592; z += 17, i++) { slab(z, i % 2 === 0); const m = i % 3;
-    if (m === 0) obs(z + 8, { x: 0, y: 4.75, hx: 2.2, hy: 0.55, hz: 1.1, col: '#3dffb0', kind: 'elevator', man: true, osc: { ax: 0, ay: 2.6, w: 1.1, ph: i } });
-    else if (m === 1) { obs(z + 8, { x: 0, y: 4.75, hx: 0.4, hy: 4.75, hz: 0.5, col: '#ff4d6d', kind: 'bolt', pulse: [60, 80, i * 25] }); crate(z + 12, 0, i % 2 ? 7 : 2.6); }
-    else { obs(z + 8, { x: 0, y: i % 2 ? 6.4 : 3, hx: 8.6, hy: 0.42, hz: 0.7, col: WARN, kind: 'girder', man: true }); rover(z + 11, 0, i % 2 ? { y: 8.9, y0: 8.9, ceil: true } : {}); } }
-  guard(446, { y: 5 }); form(470, 5, i => ({ ...probe, x: 0, y: 4.8, ax: 0, ay: 2.8, w: 1, ph: i * 0.9, vz: -6, move: PATH.saw })); guard(520, { y: 4 }); form(552, 6, i => ({ ...probe, x: 0, y: 2.5 + (i % 3) * 2.2, vz: -7, ph: i }));
-  K.checkpoints.push(603);
+  // 3. the base: deck, lift, deck, cargo, over and over like the modules of a station. Halfway through its gravity plant fails and the whole thing hangs upside down
+  zone(390, 590, SIDE, 'TRANQUILITY BASE - SHIFT TO SIDE VIEW'); K.tilt(486, 582, { rot: 3.1416, sway: 0.03, w: 0.012 }); at(486 + SPAWN_Z, g => { hint(g, 'THE GRAVITY PLANT JUST FAILED - UP IS DOWN!', 220); g.shake = Math.max(g.shake, 6); });
+  for (let i = 0, z = 424; z < 584; z += 22, i++) { slab(z, i % 2 === 0); if (i % 3 === 2) { obs(z + 11, { x: 0, y: i % 2 ? 6.2 : 3.2, hx: 8.6, hy: 0.42, hz: 0.7, col: WARN, kind: 'girder', man: true }); crate(z + 16, 0, i % 2 ? 2.4 : 7.2, { pod: i === 2 }); } else obs(z + 11, { x: 0, y: 4.75, hx: 2.2, hy: 0.55, hz: 1.1, col: '#3dffb0', kind: 'elevator', man: true, osc: { ax: 0, ay: 2.4, w: 0.9, ph: i } }); }
+  guard(452, { y: 5, fire: 150 }); form(500, 5, i => ({ ...probe, x: 0, y: 4.8, ax: 0, ay: 2.6, w: 1, ph: i * 0.9, vz: -6, move: PATH.saw })); guard(544, { y: 4.5, fire: 150 });
+  K.checkpoints.push(593);
 
-  // the mass driver: the base's launch rail. It grabs the ship and throws it down the barrel, coil after coil
-  zone(600, 790, CHASE, 'THE MASS DRIVER - SHIFT TO CHASE VIEW');
-  gearAt(K, 612, 3, 'MASS DRIVER FIRING - HOLD ON AND THREAD THE COILS', 'mass driver'); gearFree(K, 784);
-  for (let i = 0; i < 7; i++) { const z = 640 + i * 21, x = Math.sin(i * 0.9) * 3.6, y = 4.8 + Math.cos(i * 0.7) * 1.6; gate(z, x, y, { col: BASE, man: true, org: 0, w: 2.7, h: 2.3 }); if (i % 2) crate(z + 10, -x, y, { pod: i === 3 }); }
-  form(626, 4, i => ({ ...probe, x: 0, y: 4.8, ax: 2.5, ay: 2.5, w: 1.6, ph: i * 1.57, vz: -9 }));
-  K.checkpoints.push(793);
+  // 4. the mass driver: the base's launch rail. It grabs the ship and throws it down the barrel, coil after coil
+  zone(590, 780, CHASE, 'THE MASS DRIVER - SHIFT TO CHASE VIEW');
+  gearAt(K, 604, 2, 'MASS DRIVER FIRING - HOLD ON AND THREAD THE COILS', 'mass driver'); gearFree(K, 772);
+  for (let i = 0; i < 6; i++) { const z = 630 + i * 24, x = Math.sin(i * 0.8) * 2.8, y = 4.8 + Math.cos(i * 0.6) * 1.3; gate(z, x, y, { col: BASE, man: true, org: 0, w: 2.9, h: 2.5 }); if (i % 2) crate(z + 12, -x * 1.4, y, { pod: i === 3 }); }
+  form(616, 4, i => ({ ...probe, x: 0, y: 4.8, ax: 2.5, ay: 2.5, w: 1.6, ph: i * 1.57, vz: -9 }));
+  K.checkpoints.push(783);
 
-  zone(790, 980, ISO, 'SEA OF STORMS - METEOR SHOWER - SHIFT TO ISO VIEW'); K.hill(850, 890, 1.6); K.tilt(815, 970, { sway: 0.07, w: 0.008, px: 18 });
-  at(800 + SPAWN_Z, g => hint(g, 'METEORS! THE RINGS ON THE GROUND SHOW WHERE THEY LAND', 230));
-  for (let i = 0, z = 822; z < 972; z += 12, i++) { const sd = i % 2 ? 1 : -1; crater(z, 5 * sd, 2.2); if (i % 3 === 0) needle(z + 6, -3.5 * sd); if (i % 3 === 1) obs(z + 6, { x: 0, y: 7.8, hx: 8.6, hy: 1.7, hz: 1, col: GREY, kind: 'arch' }); if (i % 3 === 2) bounce(z + 6, 2 * sd, true); if (i % 4 === 3) rover(z + 3, -6 * sd); }
-  form(840, 6, i => ({ ...probe, x: (i % 2 ? 7 : -7), y: 2.5 + i * 0.9, ay: 1, vz: -6, move: PATH.pincer })); form(900, 6, i => ({ ...hopper, x: -6 + i * 2.4, ax: 1, ay: 6, ph: i * 0.5 })); form(946, 5, i => ({ ...probe, x: 0, y: 5, ax: 3.4, ay: 2.4, w: 1.1, ph: i * 1.25, vz: -6, move: PATH.cork, pod: i === 0 }));
-  K.checkpoints.push(983);
-  const tick = g => { if (g.camZ > 800 && g.camZ < 968 && !g.boss && g.tick % 44 === 0) { const p = g.players[0]; addObs(g, { kind: 'strike', x: g.rand() < 0.4 ? p.x : -7 + g.rand() * 14, y: 4.75, z: p.z + 12 + g.rand() * 12, hx: 1.3, hy: 4.75, hz: 1.3, warm: 85, life: 16, col: '#ffb070' }); } };
+  // 5. the Sea of Storms: open ground, low craters, and meteors. A ring on the ground shows where each one will land
+  zone(780, 970, ISO, 'SEA OF STORMS - METEOR SHOWER - SHIFT TO ISO VIEW'); K.hill(846, 884, 1.4);
+  at(790 + SPAWN_Z, g => hint(g, 'METEORS! THE RINGS ON THE GROUND SHOW WHERE THEY LAND', 230));
+  for (let i = 0, z = 816; z < 964; z += 14, i++) { const sd = i % 2 ? 1 : -1; crater(z, 5 * sd, 2.2); crater(z + 7, -1.5 * sd, 1.6); if (i % 3 === 1) crate(z + 4, -6 * sd, 1.2); if (i % 5 === 4) rover(z + 4, 5.5 * sd); }
+  form(836, 5, i => ({ ...hopper, x: -5 + i * 2.5, ax: 1, ay: 5.5, ph: i * 0.5 })); form(900, 5, i => ({ ...probe, x: (i % 2 ? 7 : -7), y: 3 + i * 0.9, ay: 1, vz: -6, move: PATH.pincer })); form(940, 5, i => ({ ...probe, x: 0, y: 5, ax: 3.2, ay: 2.2, w: 1.1, ph: i * 1.25, vz: -6, move: PATH.cork, pod: i === 0 }));
+  K.checkpoints.push(973);
+  const tick = g => { if (g.camZ > 792 && g.camZ < 958 && !g.boss && g.tick % 62 === 0) { const p = g.players[0]; addObs(g, { kind: 'strike', x: g.rand() < 0.25 ? p.x : -7 + g.rand() * 14, y: 4.75, z: p.z + 13 + g.rand() * 11, hx: 1.2, hy: 4.75, hz: 1.2, warm: 95, life: 14, col: '#ffb070' }); } };
 
-  zone(980, 1e9, SIDE, 'WARNING // THE SENTINEL WAKES');
-  spawnBoss(K, 1030, { name: 'THE SENTINEL', look: 'sentinel', hp: 1050, col: BASE });
-  const B = boss({ name: 'THE SENTINEL', toast: 'THE MOON IS QUIET AGAIN', adds: { ...probe, hp: 3 }, addEvery: 620,
-    sig: { name: 'MOONFALL', fire(g, b, c) { if (c % 24 === 0) { const off = (c / 24 % 2) * 1.1; for (let i = 0; i < 8; i++) bullet(g, -8 + i * 2.2 + off, 9.6, b.z - 3 - (i % 3) * 4, 0, -2.6, -4.5, i % 2 ? '#ffffff' : BASE); } if (c % 60 === 30) fireRing(g, b, WARN, 12, 2, 3); } }, // curtains of moon dust raining down, with rings between
+  zone(970, 1e9, SIDE, 'WARNING // THE SENTINEL WAKES');
+  spawnBoss(K, 1020, { name: 'THE SENTINEL', look: 'sentinel', hp: 900, col: BASE });
+  const boomerang = (g, e) => { const u = e.t / 210; e.z = e.z0 - (e.z0 - 3.5) * Math.sin(Math.PI * Math.min(1, u)); e.y = Math.max(0.8, Math.min(9, e.y0 + Math.sin(e.t * 0.05 + e.ph) * 1.3)); if (u >= 1) e.z = -50; }; // a shield plate thrown down the lane: out, and back to its owner
+  const B = boss({ name: 'THE SENTINEL', toast: 'THE MOON IS QUIET AGAIN', adds: { ...probe, hp: 3 }, addEvery: 700,
+    sig: { name: 'CRESCENT MOONS', fire(g, b, c) { if (c % 34 === 0) { const k = c / 34, a0 = k * 1.1, n = 15; for (let i = 0; i < n; i++) { const a = a0 + (i / (n - 1) - 0.5) * 3.9, sp = 2 + 1.3 * Math.cos(a - a0); bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * sp, Math.sin(a) * sp, -5, k % 2 ? '#ffffff' : BASE); } g.fx.push('eshot'); } } }, // crescents: each arc flies faster in the middle than at its horns, and each one faces a new way
     stages: [
-    { name: 'SHIELD ARRAY', vuln: [SIDE], rec: SIDE, col: BASE, bob: 2, attack(g, b, t) { if (t % 320 === 40) sheetH(g, 2 + g.rand() * 5.2, 1.6, { warm: 150, col: BASE }); if (t % 130 === 90) fan(g, b, 3, 6.5, BASE); } },
-    { name: 'TARGETING GRID', vuln: [ISO, CHASE], rec: CHASE, col: WARN, sway: 3, attack(g, b, t) { const p = near(g, b); if (t % 96 === 20) strike(g, p.x, p.z, { col: '#ffb070', warm: 80, hx: 1.2, hz: 1.2 }); if (t % 96 === 68) strike(g, -6 + g.rand() * 12, 4 + g.rand() * 12, { col: '#ffb070', warm: 80 }); if (t % 150 === 110) fan(g, b, 3, 6, WARN); } },
-    { name: 'CORE', vuln: [CHASE], rec: CHASE, col: '#ffffff', attack(g, b, t) { const c = t % 420; if (c >= 120 && c < 292) stare(g, b, c - 120, { col: BASE }); else if (t % 26 === 0) { const a = t * 0.07; for (const k of [0, 3.1416]) bullet(g, b.x, b.y, b.z - 2, Math.cos(a + k) * 3, Math.sin(a + k) * 3, -6, WARN); } } }] });
-  K.fill(probe, 200, 960, 55, 'crate', 'tank');
-  return K.done({ name: 'THE MOON', title: 'SEA OF QUIET', boss: B, tick, rules: { inertia: g => !g.boss && (g.camZ < 182 || (g.camZ > 792 && g.camZ < 976)) }, theme: { sky: 'moon', grid: '#5a6480' } });
+    { name: 'SHIELD PLATES', vuln: [SIDE], rec: SIDE, col: BASE, bob: 2, attack(g, b, t) { if (t % 170 === 40) { for (const dy of [-2.2, 2.2]) addEnemy(g, { type: 'pop', shape: 'echo', col: WARN, hp: 4, r: 0.8, x: b.x, y: Math.max(1.2, Math.min(8.4, b.y + dy)), z: b.z - 2, z0: b.z - 2, vz: 0, ph: dy, move: boomerang, score: 150, pod: t % 510 === 40 && dy > 0 }); g.fx.push('missile'); } if (t % 150 === 110) { aimed(g, b, 5.5, 0, BASE); g.fx.push('eshot'); } } },
+    { name: 'MISSILE BATTERY', vuln: [ISO, CHASE], rec: CHASE, col: WARN, sway: 3, attack(g, b, t) { if (t === 20) hint(g, 'MISSILES - SHOOT THEM DOWN OR SLIP PAST THEM', 200); if (t % 150 === 50) { for (let i = -1; i <= 1; i++) addEnemy(g, { type: 'kami', shape: 'lancer', col: '#ff4d6d', hp: 2, r: 0.5, vz: -6, x: b.x + i * 2.6, y: b.y + 1.4, z: b.z - 1, score: 60 }); g.fx.push('missile'); } } },
+    { name: 'CORE', vuln: [CHASE], rec: CHASE, col: '#ffffff', attack(g, b, t) { if (t % 10 === 0) { const a = t * 0.37; shot(g, b.x, b.y, b.z - 2, Math.sin(a) * 2.6, 2.2 + Math.cos(a * 1.7) * 0.7, -6, t % 20 ? WARN : '#ffffff', { gy: 1.6 }); } if (t % 60 === 0) g.fx.push('eshot'); } }] }); // the mass driver's slugs, lobbed high and falling slowly in the low gravity
+  K.fill(probe, 200, 950, 75, 'crate', 'tank');
+  return K.done({ name: 'THE MOON', title: 'SEA OF QUIET', boss: B, tick, rules: { inertia: g => !g.boss && (g.camZ < 182 || (g.camZ > 784 && g.camZ < 966)) ? 0.1 : 0 }, theme: { sky: 'moon', grid: '#5a6480' } });
 }
 
 // =====================================================================================
@@ -560,7 +559,7 @@ function sun() {
   K.checkpoints.push(388);
 
   // sunspots: darker, cooler ground between eruptions. No fog here, but rivers of plasma cross the lane and the surface keeps bursting
-  zone(385, 585, ISO, 'SUNSPOT FIELD - COOLER GROUND - SHIFT TO ISO VIEW'); K.hill(440, 480, 1.5); K.hill(530, 566, 1.3);
+  zone(385, 585, CHASE, 'SUNSPOT FIELD - COOLER GROUND - SHIFT TO CHASE VIEW'); K.hill(440, 480, 1.5); K.hill(530, 566, 1.3);
   for (let i = 0, z = 418; z < 578; z += 12, i++) { const m = i % 4, sd = i % 8 < 4 ? 1 : -1;
     if (m === 0) { erupt(z, -5 * sd, i * 30); erupt(z, 0, i * 30 + 50); erupt(z, 5 * sd, i * 30 + 100); }
     else if (m === 1) { obs(z, { x: 0, y: 0.2, hx: 9.6, hy: 0.2, hz: 3.6, col: FIRE, kind: 'lava', ghost: true, flow: sd }); knot(z + 6, 3 * sd, 2); }
@@ -569,8 +568,8 @@ function sun() {
   form(430, 6, i => ({ ...ember, x: (i % 2 ? 6 : -6), y: 8, y1: 2.5, ax: 1.5, vz: -6, ph: i * 0.8, move: PATH.dive })); plasma(470, { x: -2, y: 6 }); form(510, 6, i => ({ ...ember, x: 0, y: 5, ax: 4, ay: 2.5, w: 1.2, ph: i * 1.05, vz: -6, move: PATH.eight })); plasma(548, { x: 3, y: 5 });
   K.checkpoints.push(588);
 
-  zone(585, 785, CHASE, 'CORONAL LOOP - SOLAR WIND - SHIFT TO CHASE VIEW'); K.tilt(610, 775, { sway: 0.22, w: 0.008, py: 14 }); at(610 + SPAWN_Z, g => hint(g, 'SOLAR WIND! IT BLOWS IN GUSTS - LEAN INTO IT', 220));
-  [[0, 4.8], [3.4, 6], [-3.4, 3.4], [3, 3.2], [-3, 6.2], [0, 4.6], [4, 5], [-4, 4.4]].forEach(([x, y], i) => { const z = 624 + i * 20; gate(z, x, y, { col: HOT, w: 2.5, h: 2.1 }); if (i % 2) knot(z + 10, -x, y); });
+  zone(585, 785, ISO, 'CORONAL LOOP - SOLAR WIND - SHIFT TO ISO VIEW'); K.tilt(610, 775, { sway: 0.14, w: 0.008, py: 14 }); at(610 + SPAWN_Z, g => hint(g, 'SOLAR WIND! IT BLOWS IN GUSTS - LEAN INTO IT', 220));
+  for (let i = 0, z = 622; z < 778; z += 13, i++) { const sd = i % 2 ? 1 : -1, m = i % 3; if (m === 0) flareX(z, i); else if (m === 1) { knot(z, 4.5 * sd, 3); knot(z, -2 * sd, 6.5); } else { erupt(z, -5.5 * sd, i * 30); erupt(z, 1.5 * sd, i * 30 + 70); } }
   form(600, 5, i => ({ ...ember, x: 0, y: 4.8, ax: 3, ay: 3, w: 1.3, ph: i * 1.25, vz: -7 })); plasma(690, { x: 0, y: 6.5 }); form(740, 6, i => ({ ...ember, x: 0, y: 4.8, ax: 3.5, ay: 3, w: 1, ph: i * 1.05, vz: -7, move: PATH.cork, pod: i === 5 }));
   K.checkpoints.push(788);
 
@@ -584,11 +583,11 @@ function sun() {
   zone(960, 1e9, SIDE, 'WARNING // HELIOS RISES');
   spawnBoss(K, 1010, { name: 'HELIOS', look: 'helios', hp: 1500, col: HOT });
   const B = boss({ name: 'HELIOS', toast: 'THE SUN SETTLES', adds: { ...ember, hp: 3 }, addEvery: 600,
-    sig: { name: 'SUPERNOVA', fire(g, b, c) { if (c % 20 === 0) { const n = 18, gap = (c / 20 * 2) % n; for (let i = 0; i < n; i++) if ((i - gap + n) % n >= 4) { const a = i / n * 6.283; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 2.7, Math.sin(a) * 2.7, -5.5, i % 2 ? GOLD : FIRE); } g.fx.push('eshot'); } } }, // shell after shell of fire, and the one gap walks round the ring
+    sig: { name: 'CORONAL LOOPS', fire(g, b, c) { if (c % 16 === 0) { const a = c * 0.045; for (const sd of [1, -1]) for (let j = 0; j < 3; j++) shot(g, b.x, b.y, b.z - 2, Math.cos(a * sd + j * 2.094) * 3.4, Math.sin(a * sd + j * 2.094) * 3.4, -5, sd > 0 ? GOLD : FIRE, { w: sd * (j === 1 ? 0.018 : 0.011) }); g.fx.push('eshot'); } } }, // magnetic loops: every shot curves round in a great circle and comes back through the middle
     stages: [
-    { name: 'CORONA', vuln: [SIDE], rec: SIDE, col: HOT, bob: 2.2, attack(g, b, t) { if (t % 300 === 40) sheetH(g, 2 + g.rand() * 5.2, 1.5, { warm: 140, col: FIRE }); if (t % 110 === 70) for (let i = -1; i <= 1; i++) bullet(g, b.x, b.y + i * 1.6, b.z - 2, 0, i * 0.8, -6.5, GOLD); } },
-    { name: 'PHOTOSPHERE', vuln: [ISO, CHASE], rec: CHASE, col: FIRE, sway: 3.5, attack(g, b, t) { const p = near(g, b); if (t % 150 === 30) fireRing(g, b, HOT, 16, 2.6, 4); if (t % 90 === 60) { strike(g, p.x, p.z, { col: FIRE, warm: 75 }); strike(g, p.x + (g.rand() - 0.5) * 8, p.z + 3, { col: FIRE, warm: 75 }); } } },
-    { name: 'THE CORE', vuln: [CHASE], rec: CHASE, col: '#ffffff', attack(g, b, t) { const c = t % 400; if (c >= 110 && c < 282) stare(g, b, c - 110, { col: GOLD }); else if (t % 20 === 0) { const a = t * 0.08; for (let k = 0; k < 3; k++) bullet(g, b.x, b.y, b.z - 2, Math.cos(a + k * 2.094) * 2.8, Math.sin(a + k * 2.094) * 2.8, -6, HOT); } } }] });
+    { name: 'PROMINENCE', vuln: [SIDE], rec: SIDE, col: HOT, bob: 1.6, attack(g, b, t) { if (t % 420 === 30) { addObs(g, { rel: true, kind: 'flare', x: 0, y: 4.75, z: 12, hx: 8.6, hy: 0.7, hz: 8, col: HOT, osc: { ax: 0, ay: 2.6, w: 0.9, ph: g.rand() * 6 }, warm: 70, life: 300 }); hint(g, 'A PROMINENCE - IT WHIPS UP AND DOWN THE WHOLE LANE', 170); g.fx.push('charge'); } if (t % 110 === 70) for (let i = -1; i <= 1; i++) bullet(g, b.x, b.y + i * 1.6, b.z - 2, 0, i * 0.8, -6.5, GOLD); } },
+    { name: 'SOLAR WIND', vuln: [ISO, CHASE], rec: CHASE, col: FIRE, sway: 3.5, attack(g, b, t) { const c = t % 300, dir = (t / 300 | 0) % 2 ? -1 : 1; if (c === 0) { hint(g, 'SOLAR WIND FROM THE ' + (dir > 0 ? 'LEFT' : 'RIGHT') + '!', 130); g.fx.push('charge'); } if (c > 30 && c < 190) { g.pull = [dir * 1.5, 0, 0]; if (c % 9 === 0) bullet(g, -dir * 10, 1 + g.rand() * 8, 5 + g.rand() * 15, dir * 4.6, 0, -1.5, c % 18 ? GOLD : HOT); } } }, // it blows the ship sideways, and sparks come streaking across with it
+    { name: 'THE CORE', vuln: [CHASE], rec: CHASE, col: '#ffffff', attack(g, b, t) { if (t % 4 === 0) { const th = t * 0.11, r = 2.2 + 0.6 * Math.sin(t * 0.013); for (const k of [0, 3.1416]) bullet(g, b.x + Math.cos(th + k) * r, b.y + Math.sin(th + k) * r * 0.85, b.z - 2, 0, 0, -6.5, k ? GOLD : FIRE); } } }] }); // a double helix of fire coming straight down the lane
   K.fill(ember, 400, 940, 60, 'boulder', 'tank');
   return K.done({ name: 'THE SUN', title: 'CORONA', boss: B, theme: { sky: 'sun', grid: '#a8480c' },
     rules: { heat: g => g.camZ < 368 && !g.boss, wind: g => g.camZ > 610 && g.camZ < 778 && !g.boss ? [Math.sin(g.tick * 0.015) * 1.3, Math.cos(g.tick * 0.011) * 0.5] : [0, 0] } });
@@ -610,14 +609,17 @@ function asteroids() {
 
   // THE MOTHERLODE: a mining colony dug out of one giant rock. Cave roof and floor close in, drill rigs pump up and down,
   // ore carts run the rails, laser fences guard the seams, and the ore crates are full of gems
-  zone(150, 335, SIDE, 'THE MOTHERLODE - A MINING COLONY INSIDE THE ROCK - SHIFT TO SIDE VIEW'); at(160, g => hint(g, 'A WHOLE COLONY DUG INTO ONE ROCK. MIND THE DRILLS', 220));
-  for (let i = 0, z = 160; z < 330; z += 5, i++) { const fl = 0.7 + Math.abs(Math.sin(i * 0.7)) * 1.3, rf = 0.7 + Math.abs(Math.sin(i * 0.53 + 1)) * 1.4;
+  zone(150, 335, SIDE, 'THE MOTHERLODE - A MINING COLONY INSIDE THE ROCK - SHIFT TO SIDE VIEW'); at(160, g => hint(g, 'THE AIRLOCK FIRST: ONE DOOR OPENS AS THE OTHER SHUTS', 230));
+  for (let i = 0, z = 160; z < 332; z += 5, i++) { const fl = 0.9 + Math.sin(i * 0.35) * 0.35, rf = 0.9 + Math.sin(i * 0.29 + 1) * 0.35; // a bored tunnel: smooth floor and roof, a prop and a lamp every few metres
     obs(z, { x: 0, y: fl / 2, hx: 9, hy: fl / 2, hz: 2.6, col: i % 3 ? ROCK : DARK, kind: 'rockwall' }); obs(z, { x: 0, y: 9.6 - rf / 2, hx: 9, hy: rf / 2, hz: 2.6, col: i % 3 ? ROCK : DARK, kind: 'rockwall' }); }
-  for (let i = 0, z = 180; z < 322; z += 14, i++) { const m = i % 3;
-    if (m === 0) obs(z, { x: 0, y: 4.75, hx: 8.6, hy: 0.6, hz: 1.1, col: ORE, kind: 'elevator', osc: { ax: 0, ay: 2.6, w: 1.2, ph: i } }); // a drill rig pumping up and down
-    else if (m === 1) { obs(z, { x: 0, y: 4.75, hx: 0.4, hy: 4.75, hz: 0.5, col: '#ff4d6d', kind: 'bolt', pulse: [60, 80, i * 25] }); crate(z + 6, 0, 3); } // a laser fence, then an ore crate
-    else { obs(z, { x: 0, y: i % 2 ? 6.6 : 2.8, hx: 8.6, hy: 0.42, hz: 0.7, col: '#ffe14a', kind: 'girder' }); obs(z + 6, { x: -8, y: i % 2 ? 2.6 : 6.8, hx: 1.3, hy: 0.6, hz: 0.7, vx: 3.2, wrap: 11, col: ORE, kind: 'car' }); } } // a gantry, then an ore cart on the rails
-  for (let k = 0; k < 4; k++) form(190 + k * 34, 4, i => ({ ...drone, x: 0, y: 4.8, ax: 0, ay: 2.2, w: 1.2, ph: i * 0.9, vz: -5.5, move: k % 2 ? PATH.saw : undefined, pod: k === 2 && i === 3 }));
+  const door = (z, ph) => { obs(z, { x: 0, y: 2, hx: 8.6, hy: 2.4, hz: 0.8, col: '#ffe14a', kind: 'door', osc: { ax: 0, ay: 1.7, w: 0.95, ph } }); obs(z, { x: 0, y: 7.6, hx: 8.6, hy: 2.4, hz: 0.8, col: '#ffe14a', kind: 'door', osc: { ax: 0, ay: -1.7, w: 0.95, ph } }); }; // a blast door in two leaves
+  const drill = (z, ph) => obs(z, { x: 0, y: 6.9, hx: 1.2, hy: 2.3, hz: 1.2, col: ORE, kind: 'drill', osc: { ax: 0, ay: 2.3, w: 1.1, ph } }); // a drill rig on a ram: it plunges from the roof and draws back
+  const cart = (z, y, vz, n = 3) => { obs(z + 4, { x: 0, y: y - 0.75, hx: 8.6, hy: 0.14, hz: 7, col: '#8a8ab0', kind: 'rail', ghost: true }); for (let k = 0; k < n; k++) obs(z + k * 3.2, { x: 0, y, hx: 1.2, hy: 0.6, hz: 1.2, vz, col: k ? ORE : '#ff4d6d', kind: 'car', hp: 5, score: 100, gem: k === 1 }); }; // a train of ore carts on a rail, coming at you or pulling away
+  door(182, 0); door(192, 3.1416);                                        // the airlock
+  drill(206, 0); crate(212, 0, 2.6); drill(218, 2.1); drill(230, 4.2); crate(236, 0, 2.6, { pod: true }); // the drill hall
+  at(240, g => hint(g, 'THE ORE LINE - CARTS RUN BOTH WAYS', 180)); cart(250, 3, -4.5); cart(262, 6.6, 2.5); cart(274, 3, -5.5, 4); // the ore line: two rails, trains running opposite ways
+  obs(288, { x: 0, y: 4.75, hx: 8.6, hy: 4.75, hz: 1.05, col: ORE, kind: 'lavafall', pulse: [70, 110, 0] }); obs(296, { x: 0, y: 4.75, hx: 8.6, hy: 0.35, hz: 0.5, col: '#ff4d6d', kind: 'bolt', osc: { ax: 0, ay: 2.6, w: 0.9, ph: 1 } }); obs(303, { x: 0, y: 4.75, hx: 8.6, hy: 4.75, hz: 1.05, col: ORE, kind: 'lavafall', pulse: [70, 110, 90] }); // the smelter: two pours of molten ore and a cutting laser between
+  for (let k = 0; k < 3; k++) form(200 + k * 36, 4, i => ({ ...drone, x: 0, y: 4.8, ax: 0, ay: 2, w: 1.2, ph: i * 0.9, vz: -5.5, move: k % 2 ? PATH.saw : undefined, pod: k === 2 && i === 3 }));
   K.checkpoints.push(338);
 
   zone(335, 525, ISO, 'LODESTONE FIELD - MAGNETIC ROCKS - SHIFT TO ISO VIEW'); at(345 + SPAWN_Z, g => hint(g, 'THE GLOWING ROCKS ARE MAGNETS. THEY DRAG THE SHIP - SHOOT THEM OR FIGHT THE PULL', 260));
@@ -649,11 +651,14 @@ function asteroids() {
   spawnBoss(K, 955, { name: 'THE MOTHER ROCK', look: 'rock', hp: 2000, col: ROCK });
   const chuck = (g, b, n, sp) => { for (let i = 0; i < n; i++) addEnemy(g, { type: 'rock', x: b.x + (g.rand() - 0.5) * 4, y: b.y + (g.rand() - 0.5) * 4, z: b.z - 2, vz: -sp, vx: (g.rand() - 0.5) * 3, vy: (g.rand() - 0.5) * 3, hp: 3, r: 0.9, col: ROCK, shape: 'rock', score: 60, size: 2 }); g.fx.push('missile'); };
   const B = boss({ name: 'THE MOTHER ROCK', toast: 'THE BELT IS JUST ROCKS AGAIN', adds: { ...drone, hp: 3 }, addEvery: 640,
-    sig: { name: 'AVALANCHE', fire(g, b, c) { if (c % 8 === 0) { const k = c / 8, dir = (c / 80 | 0) % 2 ? -1 : 1; bullet(g, -9 + (k * 3.7) % 18, 9.6, b.z - 3 - (k % 4) * 3.5, dir * 1.3, -3, -4.5, k % 2 ? ORE : '#ffffff'); } if (c % 80 === 40) chuck(g, b, 2, 5.5); } }, // gravel pouring down slantwise, switching sides, with boulders thrown through it
+    sig: { name: 'FRACTURE', fire(g, b, c) { if (c % 70 === 0) { const a0 = c * 0.013; for (let i = 0; i < 3; i++) shot(g, b.x, b.y, b.z - 2, Math.cos(a0 + i * 2.094) * 2.5, Math.sin(a0 + i * 2.094) * 2.5, -4.6, '#ffffff', { split: { t: 38, n: 2, spread: 0.55, gen: 3, T: 34, cols: [ORE, '#ffe14a'] } }); g.fx.push('eshot'); } } }, // three shards that crack in two, and again, and again: a tree of splinters
     stages: [
-    { name: 'CRUST', vuln: [SIDE], rec: SIDE, col: ROCK, bob: 2, attack(g, b, t) { if (t % 330 === 40) sheetH(g, 2 + g.rand() * 5.2, 1.6, { warm: 150, col: ORE }); if (t % 120 === 80) chuck(g, b, 2, 5.5); } },
-    { name: 'MANTLE', vuln: [ISO, CHASE], rec: CHASE, col: DARK, sway: 3, attack(g, b, t) { if (t % 250 === 30) throwGate(g, b, { vz: -5.5, col: ROCK }); if (t % 125 === 90) { aimed(g, b, 6.5, -0.12, ORE); aimed(g, b, 6.5, 0.12, ORE); g.fx.push('eshot'); } } },
-    { name: 'THE HEART', vuln: [SIDE, ISO], rec: SIDE, col: ORE, bob: 2.4, attack(g, b, t) { if (t % 160 === 30) fireRing(g, b, ORE, 14, 2.4, 4); if (t % 200 === 150) chuck(g, b, 3, 6); if (t % 330 === 250) sheetH(g, 2 + g.rand() * 5.2, 1.5, { warm: 130, col: ORE }); } }] });
+    { name: 'CRUST', vuln: [SIDE], rec: SIDE, col: ROCK, bob: 2, attack(g, b, t) { const orb = g.enemies.filter(e => e.orb && e.hp > 0); // a belt of rubble circles it and soaks up your fire: break it
+        if ((t === 10 || t % 600 === 300) && orb.length < 2) for (let i = 0; i < 5; i++) addEnemy(g, { type: 'pop', orb: true, shape: 'rock', col: DARK, hp: 7, r: 0.95, x: b.x, y: b.y, z: b.z - 4, vz: 0, ph: i * 1.2566, score: 80, pod: i === 2, move: (g2, e) => { const a = e.t * 0.022 + e.ph, bb = g2.boss; if (!bb) { e.z = -50; return; } e.x = bb.x; e.y = Math.max(0.8, Math.min(9, bb.y + Math.sin(a) * 3.3)); e.z = bb.z - 4.5 + Math.cos(a) * 1.6; } });
+        if (t % 150 === 100) chuck(g, b, 2, 5.5); } },
+    { name: 'MANTLE', vuln: [ISO, CHASE], rec: CHASE, col: DARK, sway: 3, attack(g, b, t) { if (t === 20) hint(g, 'BOULDERS! ALONG THE FLOOR, THEN ALONG THE ROOF', 190); if (t % 110 === 40) { const up = (t / 110 | 0) % 2, skip = g.rand() * 5 | 0; [-6.4, -3.2, 0, 3.2, 6.4].forEach((x, k) => { if (k !== skip) addObs(g, { rel: true, kind: 'boulder', x, y: up ? 8.2 : 1.35, z: b.z - 2, hx: 1.3, hy: 1.3, hz: 1.3, vz: -7.5, hp: 6, col: ROCK, score: 60 }); }); g.fx.push('slam'); }
+        if (t % 220 === 150) { const p = near(g, b); addObs(g, { rel: true, kind: 'boulder', x: p.x, y: Math.max(3.4, Math.min(6.2, p.y)), z: b.z - 2, hx: 1.1, hy: 1.1, hz: 1.1, vz: -8.5, hp: 5, col: ORE, score: 80, gem: true }); } } }, // rows of boulders bowled down the lane, and one aimed straight at you
+    { name: 'THE HEART', vuln: [SIDE, ISO], rec: SIDE, col: ORE, bob: 2.4, attack(g, b, t) { if (t % 380 === 20) { addObs(g, { rel: true, kind: 'crystal', x: 0, y: 4.8, z: b.z - 5, hx: 8.6, hy: 4.8, hz: 0.6, hp: Math.round(26 * bossScale(g)), col: ORE, score: 300, gem: true, life: 330 }); hint(g, 'IT HAS GROWN A SHELL OF ORE - BREAK IT', 150); g.fx.push('charge'); } if (t % 130 === 90) { aimed(g, b, 6.5, -0.1, ORE); aimed(g, b, 6.5, 0.1, ORE); g.fx.push('eshot'); } if (t % 260 === 200) chuck(g, b, 2, 6); } }] });
   K.fill(drone, 345, 890, 60, 'crate', 'tank');
   return K.done({ name: 'ASTEROID BELT', title: 'THE RUBBLE', boss: B, tick, theme: { sky: 'space', grid: '#3a3a5a', nofloor: true, cave: [150, 335], caveCol: '#c8a070' } });
 }
@@ -708,21 +713,22 @@ function saturn() {
   K.checkpoints.push(783);
 
   // the loom: the rings are being woven out of light. It pulls the ship through fast, and the one dark lane walks from side to side
-  zone(780, 960, ISO, 'THE LASER LOOM - SHIFT TO ISO VIEW'); gearAt(K, 800, 2, 'THE LOOM PULLS US THROUGH AT SPEED - FOLLOW THE DARK LANE'); gearFree(K, 950);
+  zone(780, 960, CHASE, 'THE LASER LOOM - SHIFT TO CHASE VIEW'); gearAt(K, 800, 2, 'THE LOOM PULLS US THROUGH AT SPEED - FOLLOW THE DARK LANE'); gearFree(K, 950);
   for (let i = 0, z = 814; z < 948; z += 7, i++) { const lane = [-6.4, -3.2, 0, 3.2, 6.4], open = Math.round(2 + 2 * Math.sin(i * 0.45)), free = open + (i % 2 ? 1 : -1);
     lane.forEach((x, k) => { if (k !== open && k !== free) vl(z, x, 0, { pulse: undefined, col: k % 2 ? LAS : LAS2 }); }); if (i % 4 === 3) hl(z + 3.5, i % 8 === 3 ? 2 : 7.4, i * 20); if (i % 6 === 2) prism(z + 3.5, lane[open], 4.8, { pod: i === 8 }); }
   K.checkpoints.push(963);
 
   zone(960, 1e9, SIDE, 'WARNING // THE PRISM - IT SPLITS THE LIGHT');
-  spawnBoss(K, 1010, { name: 'THE PRISM', look: 'prism', hp: 2300, col: LAS2 });
+  spawnBoss(K, 1010, { name: 'THE PRISM', look: 'prism', hp: 1900, col: LAS2 });
   const lance = (g, b, ys, col) => { const hz = (b.z - 2.5) / 2; for (const y of ys) addObs(g, { rel: true, kind: 'beam', x: 0, y, z: hz + 0.5, hx: 9, hy: 0.42, hz, warm: 95, life: 34, col }); g.fx.push('charge'); };
   const RB = ['#ff4d6d', '#ff8a2b', '#ffe14a', '#3dffb0', '#2ee6ff', '#5e7bff', '#b06bff'];
-  const B = boss({ name: 'THE PRISM', toast: 'THE RINGS GO DARK', adds: { ...manta, hp: 3 }, addEvery: 620,
-    sig: { name: 'SPECTRUM', fire(g, b, c) { if (c % 5 === 0) { const k = c / 5, a = Math.sin(k * 0.13) * 2.4 + 1.5708, col = RB[k % 7]; for (const s of [1, -1]) bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3.4 * s, Math.sin(a) * 3.4 * s, -5.5, col); } if (c % 48 === 24) for (let i = 0; i < 7; i++) bullet(g, b.x, b.y, b.z - 2, (i - 3) * 0.9, c % 96 === 24 ? 2 : -2, -5, RB[i]); } }, // white light split into seven colours: two fans sweeping like a pendulum, and rainbow bars between
+  const B = boss({ name: 'THE PRISM', toast: 'THE RINGS GO DARK', adds: { ...lancer, hp: 3 }, addEvery: 700,
+    sig: { name: 'SPIROGRAPH', fire(g, b, c) { if (c % 2 === 0) { const th = c * 0.08, dir = -2 * th; bullet(g, b.x + Math.cos(3 * th) * 2.2, b.y + Math.sin(3 * th) * 2.2, b.z - 2, Math.cos(dir) * 3, Math.sin(dir) * 3, -5.5, RB[(c >> 1) % 7]); } } }, // the gun rides a little wheel round the prism while it turns the other way: the shots draw a spirograph in seven colours
     stages: [
-    { name: 'RED SHIFT', vuln: [SIDE], rec: SIDE, col: LAS, bob: 2, attack(g, b, t) { const p = near(g, b); if (t % 190 === 40) lance(g, b, [p.y, Math.max(0.8, p.y - 2.6), Math.min(8.8, p.y + 2.6)], LAS); if (t % 190 === 135) lance(g, b, [1.2, 4.8, 8.4], LAS2); } },
-    { name: 'CROSSHAIR', vuln: [ISO, CHASE], rec: CHASE, col: LAS2, sway: 3, attack(g, b, t) { if (t % 300 === 40) sheetV(g, -5 + g.rand() * 10, 2, { warm: 140, col: LAS }); if (t % 300 === 110) sheetH(g, 2.2 + g.rand() * 5, 1.7, { warm: 140, col: LAS2 }); if (t % 150 === 100) fan(g, b, 3, 6.5, LAS); } },
-    { name: 'WHITE LIGHT', vuln: [ISO], rec: ISO, col: '#ffffff', attack(g, b, t) { const c = t % 400; if (c >= 110 && c < 282) stare(g, b, c - 110, { col: '#ffffff' }); else if (t % 12 === 0) { const a = t * 0.05; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3, Math.sin(a) * 3, -6, RB[(t / 12 | 0) % 7]); } } }] });
+    { name: 'SCANLINES', vuln: [SIDE], rec: SIDE, col: LAS, bob: 1.2, attack(g, b, t) { const dir = (t / 840 | 0) % 2 ? -1 : 1; if (t === 10) hint(g, 'SCANLINES - STEP FORWARD AND BACK THROUGH THE GAPS AS THEY CLIMB', 190); if (t % 105 === 20) { const k = t / 105 | 0; for (const z of k % 2 ? [8.2, 20] : [2.5, 14]) addObs(g, { rel: true, kind: 'bar', x: 0, y: dir > 0 ? -0.3 : 9.9, z, hx: 9, hy: 0.3, hz: 3, vy: dir * 1.5, col: k % 2 ? LAS : LAS2, life: 430 }); } } }, // rows of light bars that never stop climbing (or falling), each row with its gaps in a different place
+    { name: 'DISPERSION', vuln: [ISO, CHASE], rec: CHASE, col: LAS2, sway: 3, attack(g, b, t) { if (t === 10) hint(g, 'WHITE BOLTS SPLIT INTO SEVEN - DO NOT STAND IN THE FAN', 190); if (t % 80 === 40) { const p = near(g, b), T = Math.max(0.5, (b.z - 2 - p.z) / 7); shot(g, b.x, b.y, b.z - 2, (p.x - b.x) / T, (p.y - b.y) / T, -7, '#ffffff', { split: { t: 62, n: 7, spread: 0.2, gen: 1, cols: RB, gain: 1.6 } }); g.fx.push('eshot'); } } },
+    { name: 'CONVERGENCE', vuln: [ISO], rec: ISO, col: '#ffffff', sway: 1, attack(g, b, t) { if (t % 400 === 30) { hint(g, 'THE LIGHT IS CLOSING IN - GET TO THE MIDDLE', 160); for (const sd of [-1, 1]) for (const z of [3, 7, 11, 15, 19]) addObs(g, { rel: true, kind: 'bolt', x: sd * 8.6, y: 4.75, z, hx: 0.38, hy: 4.75, hz: 0.6, vx: -sd * 1.15, col: sd > 0 ? LAS : LAS2, life: 320 }); g.fx.push('charge'); }
+        if (t % 400 > 120 && t % 400 < 330 && t % 26 === 0) { const p = near(g, b), T = Math.max(0.5, (b.z - 2 - p.z) / 6.5); bullet(g, b.x, b.y, b.z - 2, (p.x - b.x) / T, (p.y - b.y) / T, -6.5, RB[(t / 26 | 0) % 7]); } } }] }); // two fences of light close on the middle of the lane, then it fires down the gap
   K.fill(manta, 180, 780, 62, 'ice', 'tank');
   return K.done({ name: 'SATURN', title: 'THE RINGS', boss: B, theme: { sky: 'saturn', grid: '#6a5a3a', nofloor: true } });
 }
@@ -777,15 +783,17 @@ function pluto() {
 
   zone(950, 1e9, SIDE, 'WARNING // THE FROST WARDEN');
   spawnBoss(K, 1000, { name: 'FROST WARDEN', look: 'frost', hp: 3200, col: ICE });
-  const B = boss({ name: 'FROST WARDEN', toast: 'THE EDGE IS OPEN', adds: { ...shardling, hp: 3 }, addEvery: 600,
-    sig: { name: 'WHITEOUT', fire(g, b, c) { const dir = (c / 80 | 0) % 2 ? -1 : 1; if (c % 5 === 0) for (let k = 0; k < 6; k++) { const a = dir * c * 0.03 + k * 1.0472; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 2.9, Math.sin(a) * 2.9, -5.5, k % 2 ? SNOW : ICE); } } }, // a six-armed snowflake of shot, turning one way and then the other
+  const frost = (g, n) => { g.frostT = n; hint(g, 'FREEZING BREATH - THE SHIP WILL SLIDE', 150); g.fx.push('charge'); g.flash = 4; };
+  const B = boss({ name: 'FROST WARDEN', toast: 'THE EDGE IS OPEN', adds: { ...shardling, hp: 3 }, addEvery: 640,
+    sig: { name: 'FROST LATTICE', fire(g, b, c) { if (c % 12 === 0) { const k = (c / 12) % 20, thin = g.view === SIDE; if (k < 16 && !(thin && k % 2)) for (let j = 0; j <= k; j++) if ((j & (k - j)) === 0) bullet(g, b.x + (j - k / 2) * 1.05, 9.3 - k * 0.56, b.z - 2, 0, 0, -5, (j + k) % 2 ? SNOW : ICE); if (k === 0) g.fx.push('eshot'); } } }, // a sheet of frost in the shape that ice makes: a triangle of triangles, with holes to slip through
     stages: [
-    { name: 'RIME', vuln: [SIDE], rec: SIDE, col: ICE, bob: 2, attack(g, b, t) { if (t % 330 === 40) sheetH(g, 2 + g.rand() * 5.2, 1.5, { warm: 145, col: DEEP }); if (t % 90 === 30) for (let i = 0; i < 5; i++) bullet(g, 0, 9.6, 5 + i * 3.6 + (t / 90 % 2) * 1.8, 0, -3.2, -1.2, SNOW); } }, // icicles raining the length of the lane
-    { name: 'GLACIER', vuln: [ISO, CHASE], rec: CHASE, col: DEEP, sway: 3.2, attack(g, b, t) { const p = near(g, b); if (t % 170 === 60) for (let i = 0; i < 4; i++) addEnemy(g, { type: 'kami', x: b.x + (i - 1.5) * 2.2, y: b.y + (i % 2 ? 1.4 : -1.4), z: b.z - 1, vz: -6, hp: 1, r: 0.45, col: SNOW, shape: 'shard', score: 60 }); if (t % 80 === 40) strike(g, p.x, p.z, { col: ICE, warm: 78 }); if (t % 320 === 200) throwGate(g, b, { vz: -5.5, col: ICE }); } },
-    { name: 'ABSOLUTE ZERO', vuln: [CHASE], rec: CHASE, col: SNOW, attack(g, b, t) { const c = t % 400; if (c >= 110 && c < 282) stare(g, b, c - 110, { col: ICE }); else if (t % 60 === 20) for (let k = 0; k < 6; k++) { const a = k * 1.0472 + t * 0.004; for (const sp of [2.2, 3.2]) bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * sp, Math.sin(a) * sp, -6, sp > 3 ? SNOW : ICE); } } }] });
+    { name: 'RIME', vuln: [SIDE], rec: SIDE, col: ICE, bob: 2, attack(g, b, t) { if (t % 90 === 30) for (let i = 0; i < 5; i++) bullet(g, 0, 9.6, 5 + i * 3.6 + (t / 90 % 2) * 1.8, 0, -3.2, -1.2, SNOW); if (t % 420 === 200) frost(g, 190); } }, // icicles raining the length of the lane, and a breath that takes your grip away
+    { name: 'SHATTER', vuln: [ISO, CHASE], rec: CHASE, col: DEEP, sway: 3.2, attack(g, b, t) { if (t % 520 === 30 && !g.enemies.some(e => e.decoy && e.hp > 0)) { hint(g, 'IT SPLIT! THE COPIES SHOOT TOO', 150); for (const sd of [-1, 1]) addEnemy(g, { type: 'saucer', decoy: true, shape: 'shard', col: ICE, hp: 12, r: 1.5, hold: 21, dur: 900, x: sd * 5, y: 5, z: b.z, ax: 1.4, ay: 2, ph: sd, fire: 105, atk: ATK.twin(6.5, ICE), score: 400, pod: sd > 0 }); g.fx.push('bossin'); }
+        if (t % 210 === 120) { for (let i = 0; i < 6; i++) addEnemy(g, { type: 'kami', shape: 'flake', col: '#c8f4ff', hp: 1, r: 0.5, vz: -7, x: b.x + Math.cos(i * 1.0472) * 3, y: b.y + Math.sin(i * 1.0472) * 2.6, z: b.z - 1, score: 60 }); g.fx.push('missile'); } } },
+    { name: 'ABSOLUTE ZERO', vuln: [CHASE], rec: CHASE, col: SNOW, attack(g, b, t) { if (t % 5 === 0) { const a = g.rand() * 6.283; bullet(g, Math.cos(a) * 9.5, 4.8 + Math.sin(a) * 5.4, 7 + g.rand() * 15, -Math.cos(a) * 1.7, -Math.sin(a) * 1, -2.6, t % 10 ? SNOW : ICE); } if (t % 400 === 150) frost(g, 170); } }] }); // hail closing in from every edge of the screen
   K.fill(shardling, 180, 930, 60, 'ice', 'tank');
   return K.done({ name: 'PLUTO', title: 'THE COLD EDGE', boss: B, theme: { sky: 'ice', grid: '#2a5a9a' },
-    rules: { inertia: g => !g.boss && g.camZ > 374 && g.camZ < 560, wind: g => g.camZ > 785 && g.camZ < 942 && !g.boss ? [Math.sin(g.tick * 0.02) * 1.5, 0] : [0, 0] } });
+    tick: g => { if (g.frostT > 0) g.frostT--; }, rules: { inertia: g => g.frostT > 0 ? 0.06 : !g.boss && g.camZ > 374 && g.camZ < 560 ? 0.07 : 0, wind: g => g.camZ > 785 && g.camZ < 942 && !g.boss ? [Math.sin(g.tick * 0.02) * 1.5, 0] : [0, 0] } });
 }
 
 // =====================================================================================
@@ -814,7 +822,7 @@ function wormhole() {
     form(z0 + 16, 4, k => ({ ...echo, x: v === SIDE ? 0 : (k - 1.5) * 2.4, y: 3 + k * 1.2, vz: -7, ax: v === SIDE ? 0 : 1, ay: 1, ph: k })); K.checkpoints.push(z0 + 73); });
 
   // the knot: the throat turns a quarter at a time, and it is full of things that pull, sweep and burst
-  zone(430, 630, ISO, 'THE GRAVITY KNOT - SHIFT TO ISO VIEW'); K.tilt(446, 502, { rot: 1.5708 }); K.tilt(502, 562, { rot: 3.1416 }); K.tilt(562, 622, { rot: -1.5708 });
+  zone(430, 630, CHASE, 'THE GRAVITY KNOT - SHIFT TO CHASE VIEW'); K.tilt(446, 502, { rot: 1.5708 }); K.tilt(502, 562, { rot: 3.1416 }); K.tilt(562, 622, { rot: -1.5708 });
   for (const z of [446, 502, 562]) at(z + SPAWN_Z, g => { hint(g, 'THE THROAT TURNS A QUARTER - KEEP YOUR HEAD', 150); g.shake = Math.max(g.shake, 5); g.fx.push('charge'); });
   for (let i = 0, z = 462; z < 624; z += 12, i++) { const m = i % 6, sd = i % 2 ? 1 : -1;
     if (m === 0) obs(z, { x: 0, y: 4.75, hx: 1.1, hy: 4.75, hz: 1.4, col: '#ffb02e', kind: 'flare', osc: { ax: 6, ay: 0, w: 0.7, ph: i } });
@@ -847,12 +855,14 @@ function wormhole() {
 
   zone(1010, 1e9, SIDE, 'WARNING // THE PARADOX - IT HAS ALREADY HAPPENED');
   spawnBoss(K, 1060, { name: 'THE PARADOX', look: 'paradox', hp: 3600, col: W, score: 30000 });
-  const B = boss({ name: 'THE PARADOX', glitchy: true, toast: 'THE WAY TO PLANET X IS OPEN', adds: { ...echo, hp: 3 }, addEvery: 600,
+  const B = boss({ name: 'THE PARADOX', glitchy: true, toast: 'THE WAY TO PLANET X IS OPEN', adds: { ...echo, hp: 3 }, addEvery: 640,
     sig: { name: 'TIME LOOP', fire(g, b, c) { const k = c % 80; if (k === 0) { const n0 = g.ebul.length, n = 16, off = c * 0.01; for (let i = 0; i < n; i++) { const a = i / n * 6.283 + off; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 3.6, Math.sin(a) * 3.6, -3.4, i % 2 ? W : '#ffffff'); } b.tl = g.ebul.slice(n0); g.fx.push('eshot'); } if (k === 46 && b.tl) { for (const q of b.tl) if (q.life > 0) { q.vx *= -1.25; q.vy *= -1.25; q.col = PK; } g.fx.push('zap'); } } }, // a ring flies out, stops, and comes back in the way it went
     stages: [
-    { name: 'YESTERDAY', vuln: [SIDE], rec: SIDE, col: CY, bob: 2, attack(g, b, t) { if (t % 310 === 40) sheetH(g, 2 + g.rand() * 5.2, 1.6, { warm: 145, col: CY }); if (t % 120 === 80) fan(g, b, 3, 6.5, CY); if (t % 310 === 200) for (let i = 0; i < 5; i++) bullet(g, 0, 9.6, 5 + i * 3.6, 0, -3.2, -1.2, '#ffffff'); } },
-    { name: 'TOMORROW', vuln: [ISO, CHASE], rec: CHASE, col: GR, sway: 3.2, attack(g, b, t) { const p = near(g, b); if (t % 76 === 30) strike(g, p.x, p.z, { col: GR, warm: 78 }); if (t % 280 === 150) throwGate(g, b, { vz: -5.5, col: GR }); if (t % 160 === 100) fireRing(g, b, YL, 14, 2.4, 4); } },
-    { name: 'NOW', vuln: [CHASE], rec: CHASE, col: PK, attack(g, b, t) { const c = t % 400; if (c >= 110 && c < 282) stare(g, b, c - 110, { col: PK }); else if (t % 16 === 0) { const a = t * 0.07; for (const s of [1, -1]) bullet(g, b.x, b.y, b.z - 2, Math.cos(a * s) * 3, Math.sin(a * s) * 3, -6, s > 0 ? W : CY); } } }] });
+    { name: 'YESTERDAY', vuln: [SIDE], rec: SIDE, col: CY, bob: 2, attack(g, b, t) { const p = near(g, b), H = b.hist || (b.hist = []); H.push(p.y); if (H.length > 130) H.shift(); if (t === 10) hint(g, 'IT SHOOTS AT WHERE YOU WERE TWO SECONDS AGO - NEVER GO BACK', 230); if (t > 130 && t % 7 === 0 && t % 300 < 230) bullet(g, b.x, H[0], b.z - 2, 0, 0, -9, t % 14 ? CY : '#ffffff'); } },
+    { name: 'TOMORROW', vuln: [ISO, CHASE], rec: CHASE, col: GR, sway: 3.2, attack(g, b, t) { const p = near(g, b); if (t === 10) hint(g, 'THE MARKS SHOW WHERE IT IS ABOUT TO BURST', 200); if (t % 110 === 20) { b.marks = [[p.x, p.y], [-6 + g.rand() * 12, 1.5 + g.rand() * 6.5], [-6 + g.rand() * 12, 1.5 + g.rand() * 6.5]]; for (const [x, y] of b.marks) g.warns.push({ x, y, z: 11, t: 72, col: GR }); g.fx.push('charge'); }
+        if (t % 110 === 92 && b.marks) { for (const [x, y] of b.marks) for (let i = 0; i < 8; i++) bullet(g, x, y, 12, Math.cos(i * 0.785) * 2.1, Math.sin(i * 0.785) * 2.1, -3.6, i % 2 ? GR : YL); b.marks = null; g.fx.push('boom'); } } },
+    { name: 'NOW', vuln: [CHASE], rec: CHASE, col: PK, attack(g, b, t) { const c = t % 300; if (t % 5 === 0 && (c < 170 || c > 235)) { const a = t * 0.09; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * 2.3, Math.sin(a) * 2.3, -4, t % 10 ? W : PK); }
+        if (c === 170) { hint(g, 'TIME STOPS...', 60); g.fx.push('charge'); for (const q of g.ebul) if (q.life > 0 && !q.sv) { q.sv = [q.vx, q.vy, q.vz]; q.vx = q.vy = q.vz = 0; q.life += 70; } } if (c === 236) { hint(g, '...AND STARTS AGAIN!', 60); g.fx.push('zap'); for (const q of g.ebul) if (q.sv) { q.vx = q.sv[0] * 1.5; q.vy = q.sv[1] * 1.5; q.vz = q.sv[2] * 1.5; q.sv = null; } } } }] }); // every shot on the screen hangs still, then all of them go at once
   K.fill(echo, 440, 620, 60, 'crate', 'tank');
   return K.done({ name: 'THE WORMHOLE', title: 'THE THROAT', boss: B, tick, theme: { sky: 'worm', grid: '#5a2a9a', nofloor: true, trippy: true },
     rules: { wind: g => g.camZ > 850 && g.camZ < 1002 && !g.boss ? [Math.cos(g.tick * 0.02) * 1.3, Math.sin(g.tick * 0.02) * 0.9] : [0, 0] } });

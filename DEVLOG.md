@@ -832,6 +832,27 @@ Other changes in this build:
 - Six new music tracks, one per new stage, and a new title track: half-time glitch-trap with a sliding 808, rolling hats and a lead that stutters.
 - New story scenes between every pair of stages.
 
+### 94. No two bosses alike (r100)
+
+Playtest notes on the ten-stage build, and what changed.
+
+**Bosses.** Several of the new bosses had borrowed the first boss's walls and other bosses' attacks. That broke the game's own rule, so all six were rebuilt. No attack is shared now:
+
+- **The Sentinel** throws its shield plates down the lane like boomerangs, launches missiles you can shoot down, then lobs slugs that fall slowly in the low gravity.
+- **Helios** whips a prominence up and down the whole lane, blows the ship sideways with solar wind while sparks streak across, then sends a double helix of fire straight at you.
+- **The Mother Rock** hides behind a belt of rubble that soaks up your fire, bowls rows of boulders along the floor and the roof, then grows a shell of ore you have to break.
+- **The Prism** sends rows of light bars climbing the screen with gaps to step through, fires white bolts that split into seven colours, then closes two fences of light on the middle of the lane.
+- **The Frost Warden** rains icicles and breathes frost that makes the ship slide, splits into copies that shoot too, then calls hail in from every edge of the screen.
+- **The Paradox** shoots at where you were two seconds ago, marks where its shots are about to burst, then stops every shot on the screen and starts them all again at once.
+
+**Bullet storms.** Each boss's signature storm is now its own shape. Shots can curl, fall and split, which made new patterns possible: crescents (Sentinel), magnetic loops that circle back through the middle (Helios), a tree of splinters that cracks in two again and again (Mother Rock), a spirograph in seven colours (Prism), a triangle-of-triangles sheet of frost (Frost Warden), a ring that flies out and comes back (Paradox). The Eye's storm is now an iris of six blades closing on the middle.
+
+**The Moon** was too hard and untidy. It is laid out one idea at a time now: a calm trench, rows of dust jets with one lane always clear, a base built from repeating modules, a slower mass driver with wider coils, and a meteor shower over open ground. The drift is lighter, fewer things shoot, and the boss has less health.
+
+**The mining colony** in the Asteroid Belt is a real place now: an airlock where one door opens as the other shuts, a drill hall with rams plunging from the roof, an ore line with trains of carts running both ways, and a smelter with pours of molten ore and a cutting laser.
+
+**Views.** Earth's construction zone is CHASE again. Mars's caves, the Sun's sunspot field, Saturn's laser loom and the Wormhole's gravity knot also moved from ISO to CHASE.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

@@ -247,7 +247,7 @@ export function step(g, inputs) {
     if (edge('gear') && g.forceGear == null) { g.gear = (g.gear + 1) % GEARS.length; const up = g.gear > 0; pop(g, (up ? 'SHIFTING UP - ' : 'SHIFTING DOWN - ') + GEARS[g.gear], p.x, p.y + 1.2, p.z + 2, up ? '#ffe14a' : '#5ee7ff', true); g.fx.push('gear', up ? 'say:shifting up' : 'say:shifting down'); }
     const sp = (8.5 + g.gear * 1.2) * DT, v = g.view, ox = p.x, oy = p.y; let mx = clamp(inp.mx || 0, -1, 1), my = clamp(inp.my || 0, -1, 1);
     if (g.rot && !inp.world) { const c = Math.cos(g.rot), s = Math.sin(g.rot); [mx, my] = [mx * c + my * s, -mx * s + my * c]; } // when the stage is turned, the stick still moves the ship the way it looks on screen
-    let ax = mx, ay = my; if (inert) { p.ivx += (mx - p.ivx) * 0.045; p.ivy += (my - p.ivy) * 0.045; ax = p.ivx; ay = p.ivy; }
+    let ax = mx, ay = my; if (inert) { const ik = typeof inert === 'number' ? inert : 0.045; p.ivx += (mx - p.ivx) * ik; p.ivy += (my - p.ivy) * ik; ax = p.ivx; ay = p.ivy; }
     if (rules.arena) { // free flight over a fixed arena; the guns fire the way the ship is facing, and it faces the way it moves
       p.x = clamp(p.x + ax * sp, -AR.x, AR.x); p.z = clamp(p.z - ay * sp, AR.z0, AR.z1); p.y = 4.5;
       let tx = p.ax, tz = p.az; p.manual = false; if (inp.aim && Math.hypot(inp.aim[0], inp.aim[1]) > 0.3) { const d = Math.hypot(inp.aim[0], inp.aim[1]); tx = inp.aim[0] / d; tz = inp.aim[1] / d; p.manual = true; } else if (Math.hypot(mx, my) > 0.25) { const d = Math.hypot(mx, my); tx = mx / d; tz = -my / d; }
@@ -375,6 +375,10 @@ export function step(g, inputs) {
     if (o.z + o.hz < -5) o.dead = true;
   }
   // ----- enemy bullets -----
+  for (let i = 0, n = g.ebul.length; i < n; i++) { const b = g.ebul[i]; // shots can curl (w), fall (gy) and split into a fan (split): the boss patterns are built from these
+    if (b.w) { const c = Math.cos(b.w), s = Math.sin(b.w), vx = b.vx; b.vx = vx * c - b.vy * s; b.vy = vx * s + b.vy * c; } if (b.gy) b.vy -= b.gy * dt;
+    if (b.split && b.life > 0 && --b.split.t <= 0) { const q = b.split, a0 = Math.atan2(b.vy, b.vx), sp = Math.hypot(b.vx, b.vy) || 2; b.split = null; if (g.ebul.length < 300) for (let k = 0; k < q.n; k++) { const a = a0 + (k - (q.n - 1) / 2) * q.spread; g.ebul.push({ ...b, vx: Math.cos(a) * sp * (q.gain || 1), vy: Math.sin(a) * sp * (q.gain || 1), col: q.cols ? q.cols[k % q.cols.length] : b.col, split: q.gen > 1 ? { ...q, gen: q.gen - 1, t: q.T || 40 } : null }); } b.life = 0; }
+  }
   for (const b of g.ebul) { b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; if (--b.life <= 0 || b.z < -3 || b.z > 46 || Math.abs(b.x) > (rules.arena ? 15 : 12) || b.y < -1 || b.y > 11) b.life = 0; }
   // ----- pods + rings -----
   if (g.blasts.length) blastStep(g, m);
