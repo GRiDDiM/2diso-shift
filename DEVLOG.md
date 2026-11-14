@@ -788,6 +788,11 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 
 - The arenas' top-down view draws left-right about twice as wide as up-down, so the ship (and its shield outlines and exhaust) looked stretched whenever it turned sideways, with a long spike on the nose. It's now drawn in true proportion whichever way it faces, and the aim line sticking out of the nose is a small chevron out in front instead.
 
+### 89. Difficulty, rebalanced (r95)
+
+- Enemies firing back on death was too much for NORMAL, so everything moves down a step. NORMAL is now the game's base rules. HARD is the old second-loop rules: tougher enemies, faster bullets, and enemies that fire back when they die.
+- EASY is new and gentler than NORMAL: enemies have about 30% less health and shoot less often, bosses and minibosses have 20% less health, and every bullet is slower.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

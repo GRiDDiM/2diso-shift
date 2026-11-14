@@ -62,6 +62,7 @@ export function addEnemy(g, e) {
   const o = Object.assign({ type: 'pop', x: 0, y: 4.5, z: SPAWN_Z, vx: 0, vy: 0, vz: -8, hp: 2, r: 0.6, t: 0, col: '#ff3df0', score: 100, x0: e.x ?? 0, y0: e.y ?? 4.5, ax: 0, ay: 0, w: 2, ph: 0, fire: 0, rel: true }, e);
   if (o.type !== 'boss' && o.type !== 'bomb' && !o.mini) { const p = g.players[0], k = p ? p.up[0] * 0.1 + (p.up[1] + p.up[2] + p.up[3] + p.up[4] + p.up[5]) / 2 : 0; o.hp = Math.round(o.hp * Math.min(5.2, 1.6 + 0.24 * k)); } // sturdier, and sturdier still as your guns grow (about 4x by mid-game, 5x at full power), so you see them take the hits
   if (g.loop) { const l = lp(g), h = LOOP.hp[l] + Math.max(0, g.loop - 3); o.hp = Math.round(o.hp * h); if (o.hpMax) o.hpMax = Math.round(o.hpMax * h); if (o.fire) o.fire = Math.max(18, Math.round(o.fire * LOOP.fire[l])); else if (o.type !== 'boss' && o.type !== 'bomb' && o.type !== 'rock' && !o.mini) o.fire = LOOP.all[l]; /* everything shoots */ if (o.fire && LOOP.fan[l]) o.fan = (o.fan || (o.type === 'saucer' ? 3 : 1)) + LOOP.fan[l]; }
+  if (g.mut.easy && o.type !== 'bomb') { o.hp = Math.max(1, Math.round(o.hp * (o.type === 'boss' || o.mini ? 0.8 : 0.7))); if (o.hpMax) o.hpMax = Math.max(1, Math.round(o.hpMax * 0.8)); if (o.fire) o.fire = Math.round(o.fire * 1.4); } // EASY: softer enemies that shoot less often
   if (o.type !== 'boss' && !o.mini) o.r *= SK;
   o.max = o.hp; if (o.group) { const gr = g.groups[o.group] ||= { n: 0, k: 0, next: -1, ord: true, dead: [] }; o.gi = gr.n++; }
   g.enemies.push(o); return o;
@@ -75,7 +76,7 @@ export function addPod(g, x, y, z, kind = 'pod') {
   if (kind === 'pod' && !g.players.some(o => o.lives >= 0 && canUp(o))) { // everything maxed: an upgrade pod would be useless, so most of them never drop; now and then a bomb takes its place
     if (g.players.some(o => o.bombs < 9) && g.rand() < 0.25) kind = 'bomb'; else { g.score += 100; return; } }
   g.pods.push({ x: clamp(x, -7, 7), y: clamp(y, 1, 8.5), z, kind, t: 0 }); }
-export function bullet(g, x, y, z, vx, vy, vz, col = '#ff8a2b') { if (g.loop) { const s = LOOP.bs[lp(g)]; vx *= s; vy *= s; vz *= s; } if (g.ebul.length < (g.loop ? 360 : 260)) g.ebul.push({ x, y, z, vx, vy, vz, r: 0.28 * SK, col, life: 420 }); }
+export function bullet(g, x, y, z, vx, vy, vz, col = '#ff8a2b') { if (g.mut.easy) { vx *= 0.82; vy *= 0.82; vz *= 0.82; } /* EASY: slower bullets */ if (g.loop) { const s = LOOP.bs[lp(g)]; vx *= s; vy *= s; vz *= s; } if (g.ebul.length < (g.loop ? 360 : 260)) g.ebul.push({ x, y, z, vx, vy, vz, r: 0.28 * SK, col, life: 420 }); }
 export const near = (g, e) => { let b = g.players[0], bd = 1e9; for (const p of g.players) if (p.dead <= 0) { const d = Math.hypot(p.x - e.x, p.z - e.z); if (d < bd) { bd = d; b = p; } } return b; };
 export function aimed(g, e, speed = 9, spread = 0, col) {
   const p = near(g, e), m = MASK[g.view]; let dx = (p.x - e.x) * m[0], dy = (p.y - e.y) * m[1], dz = p.z - e.z;
