@@ -83,7 +83,7 @@ function boss(spec) {
       if (b.stage < spec.stages.length - 1) { b.stage++; b.hp = b.max; b.st = -110; g.obs.length = 0; g.ebul.length = 0; explode(g, b.x, b.y, b.z, S.col, 60, 18, spec.splat); g.shake = 14; g.flash = 8; g.fx.push('boom2'); addPod(g, b.x - 1, b.y, b.z - 2); addPod(g, b.x + 1, b.y, b.z - 3); g.score += 5000; hint(g, 'SHELL DOWN - SHIFT TO ' + VIEWS[spec.stages[b.stage].rec] + ' VIEW', 220); if (spec.glitchy) glitch(g, 45, 0.95); }
       else { b.dying = 1; g.obs.length = 0; g.ebul.length = 0;  } return; }
     if (b.st < 0) return;
-    if (spec.sig && b.st >= 420) { const c = (b.st - 420) % 1020; if (c === 0) { hint(g, spec.sig.name + ' - INCOMING!', 170); g.fx.push('charge'); g.shake = Math.max(g.shake, 5); } if (c >= 40 && c < 280) { const n0 = g.ebul.length; spec.sig.fire(g, b, c - 40); for (let i = n0; i < g.ebul.length; i++) g.ebul[i].sig = true; } } /* storm shots can't be cancelled by shifts, bombs, lasers or drones: you see the whole pattern */ // the boss's signature bullet storm
+    if (spec.sig && b.st >= 420) { const every = spec.sig.every || 1020, c = (b.st - 420) % every; b.sigN = (b.st - 420) / every | 0; if (c === 0 && spec.sig.names) spec.sig.name = spec.sig.names[b.sigN % spec.sig.names.length]; if (c === 0) { hint(g, spec.sig.name + ' - INCOMING!', 170); g.fx.push('charge'); g.shake = Math.max(g.shake, 5); } if (c >= 40 && c < 280) { const n0 = g.ebul.length; spec.sig.fire(g, b, c - 40); for (let i = n0; i < g.ebul.length; i++) g.ebul[i].sig = true; } } /* storm shots can't be cancelled by shifts, bombs, lasers or drones: you see the whole pattern */ // the boss's signature bullet storm
     if (spec.glitchy && b.st % 540 === 270) { glitch(g, 26, 0.7); g.fx.push('charge'); } // the Shifter reaches out of the fight and scrambles the screen
     S.attack(g, b, b.st);
     if (spec.adds && b.st > 90 && b.st % (spec.addEvery || 560) === 0) { const n = 3 + Math.min(3, b.stage); for (let i = 0; i < n; i++) addEnemy(g, { type: 'pop', hp: 3, x: (i - (n - 1) / 2) * 2.4, y: 2.6 + (i % 3) * 2, z: b.z - 2, vz: -6, ax: 1.6, ay: 1, ph: i * 0.7, score: 120, ...spec.adds }); }
@@ -422,17 +422,31 @@ function planetx() {
   zone(900, 1130, SIDE, 'HYPER RUN - FULL SPEED - WATCH FOR THE FLASHES');
   at(900 + SPAWN_Z, g => { g.gearWas = g.gear; g.forceGear = 4; hint(g, 'HYPER RUN - THE FLASHES SHOW WHERE THE WALLS WILL BE', 220); g.fx.push('say:hyper run', 'gear'); });
   at(1128 + SPAWN_Z, g => { g.forceGear = null; g.gear = Math.min(2, g.gearWas ?? 1); g.fx.push('gear'); });
-  { const W = { col: FLESH, kind: 'slab', warm: 128 }; for (let i = 0, z = 944; z < 1112; z += 8, i++) { const k = (i * 7 + (i >> 2)) % 6, gy = [2.2, 4.8, 7.2, 3.4, 6.2, 4.8][k], gh = i > 12 ? 1.25 : 1.5;
+  { const W = { col: FLESH, kind: 'slab', warm: 128 }; for (let i = 0, z = 944; z < 1112; z += 12, i++) { const k = (i * 7 + (i >> 2)) % 6, gy = [2.2, 4.8, 7.2, 3.4, 6.2, 4.8][k], gh = i > 8 ? 1.35 : 1.55; // walls 12 apart: room to read the flash and move
       if (k === 5 && i % 2) { obs(z, { ...W, x: 0, y: 1.6, hx: 8.6, hy: 1.6, hz: 0.6 }); obs(z, { ...W, x: 0, y: 8.4, hx: 8.6, hy: 1.4, hz: 0.6 }); obs(z + 4, { ...W, col: ACID, x: 0, y: 4.8, hx: 8.6, hy: 0.7, hz: 0.5 }); continue; } // pinch top and bottom, then a bar through the middle
       if (gy - gh > 0.4) obs(z, { ...W, x: 0, y: (gy - gh) / 2, hx: 8.6, hy: (gy - gh) / 2, hz: 0.6 }); if (gy + gh < 9.4) obs(z, { ...W, x: 0, y: (gy + gh + 9.6) / 2, hx: 8.6, hy: (9.6 - gy - gh) / 2, hz: 0.6 }); }
     for (let z = 960; z < 1100; z += 34) mine(z, 0, 2 + ((z / 34) % 3) * 2.6); }
   K.hill(940, 990, 1.2); K.checkpoints.push(1134);
+  // THE DRAGON of the Bloom: it circles far out, then swoops in across the lane breathing fire, and climbs away again. It comes back all through the level
+  const dragon = (z, side, msg) => at(z, g => { if (msg) hint(g, msg, 170); g.fx.push('bossin'); g.shake = Math.max(g.shake, 5);
+    addEnemy(g, { type: 'pop', shape: 'dragon', x: side * 22, y: 9, z: 34, vz: 0, hp: 140, r: 2.4, big: true, col: '#3dffb0', score: 8000, pod: true, side, trail: [],
+      move: (g2, e, dt) => { const u = e.t / 420, sd = e.side, p = g2.players[0]; // a figure: in from the side, down across the lane in front of you, and up and out the other side
+        e.x = sd * 22 * Math.cos(Math.PI * Math.min(1, u)); e.y = 5 + 4 * Math.cos(Math.PI * 2 * Math.min(1, u)) * 0.9; e.z = 13 + 20 * Math.abs(Math.cos(Math.PI * Math.min(1, u)));
+        e.hd = [-sd * Math.sin(Math.PI * u), -Math.sin(Math.PI * 2 * u) * 0.8, -Math.sin(Math.PI * u) * 0.4]; if (e.t % 2 === 0) { e.trail.unshift([e.x, e.y, e.z]); if (e.trail.length > 60) e.trail.pop(); }
+        if (u > 0.3 && u < 0.7 && e.t % 9 === 0) { const T = Math.max(0.6, (e.z - 1.5 - p.z) / 6); bullet(g2, e.x, e.y, e.z - 1, (p.x - e.x) / T + (g2.rand() - 0.5) * 2, (p.y - e.y) / T + (g2.rand() - 0.5) * 1.5, -6, e.t % 18 ? '#ffb02e' : '#ff5a1f'); g2.fx.push('eshot'); } // fire breath, raked across where you are
+        if (u >= 1) e.z = -50; } }); });
+  dragon(150, -1, 'A DRAGON! IT LIVES IN THE BLOOM!'); dragon(330, 1, 'THE DRAGON IS BACK!'); dragon(560, -1); dragon(760, 1, 'HERE IT COMES AGAIN!'); dragon(1000, -1, 'THE DRAGON - ONE LAST PASS!');
 
   zone(1130, 1e9, SIDE, 'WARNING // THE SHIFTER - SOURCE OF THE FOLD');
   spawnBoss(K, 1180, { name: 'THE SHIFTER', look: 'bloom', hp: 4200, col: FLESH, score: 50000 });
   // every stage wants a different view, and between attacks it folds reality and throws you into another one
   const fold = (g, b, t) => { const c = t % 400; if (c === 215) { hint(g, 'REALITY SHIFT!', 70); g.fx.push('charge'); } if (c === 270) { let to = (g.view + 1 + (g.rand() * 3 | 0)) % 4; doShift(g, to, 1, null); g.flash = 6; } };
-  const B = boss({ name: 'THE SHIFTER', sig: { name: 'FRACTAL FOLD', fire(g, b, c) { const R = ['#ff4d6d', '#ff8a2b', '#ffe14a', '#3dffb0', '#2ee6ff', '#b06bff', '#ff3df0'], flip = (c / 80 | 0) % 2 ? -1 : 1; for (let k = 0; k < 2; k++) { const n = c * 2 + k, a = n * 2.39996 * flip, sp = 1.6 + (n % 5) * 0.45; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * sp, Math.sin(a) * sp, -5.4, R[n % 7]); bullet(g, b.x, b.y, b.z - 2, -Math.cos(a) * sp, Math.sin(a) * sp, -5.4, R[(n + 3) % 7]); } } }, // a golden-angle spiral in every colour, mirrored, folding back on itself
+  const B = boss({ name: 'THE SHIFTER', sig: { every: 560, names: ['FRACTAL FOLD', 'ROSE OF FOUR', 'KALEIDOSCOPE', 'TESSERACT'], name: 'FRACTAL FOLD', fire(g, b, c) { const R = ['#ff4d6d', '#ff8a2b', '#ffe14a', '#3dffb0', '#2ee6ff', '#b06bff', '#ff3df0'], kind = (b.sigN || 0) % 4;
+    if (kind === 0) {  const R = ['#ff4d6d', '#ff8a2b', '#ffe14a', '#3dffb0', '#2ee6ff', '#b06bff', '#ff3df0'], flip = (c / 80 | 0) % 2 ? -1 : 1; for (let k = 0; k < 2; k++) { const n = c * 2 + k, a = n * 2.39996 * flip, sp = 1.6 + (n % 5) * 0.45; bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * sp, Math.sin(a) * sp, -5.4, R[n % 7]); bullet(g, b.x, b.y, b.z - 2, -Math.cos(a) * sp, Math.sin(a) * sp, -5.4, R[(n + 3) % 7]); }  } // a golden-angle spiral in every colour, mirrored, folding back on itself
+    else if (kind === 1) { if (c % 14 === 0) { const n = 40, rot = c * 0.02; for (let i = 0; i < n; i++) { const a = i / n * 6.2832, sp = 1.2 + 2.6 * Math.abs(Math.cos(4 * (a + rot))); bullet(g, b.x, b.y, b.z - 2, Math.cos(a) * sp, Math.sin(a) * sp, -5, R[(c / 14 + i / 5 | 0) % 7]); } g.fx.push('eshot'); } } // a rose of eight petals drawn in shot, turning a little every bloom
+    else if (kind === 2) { if (c % 6 === 0) { const a0 = Math.sin(c * 0.035) * 0.5; for (let k = 0; k < 6; k++) for (const m of [1, -1]) { const a = k * 1.0472 + m * a0; shot(g, b.x, b.y, b.z - 2, Math.cos(a) * 3, Math.sin(a) * 3, -5.4, R[(k + (m > 0 ? 0 : 3)) % 7], { w: m * 0.012 }); } } } // a kaleidoscope: six mirrored pairs of arms that swing apart and curl back across each other
+    else if (c % 40 === 0) { const t4 = c * 0.05, P = []; for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sw of [-1, 1]) { const x0 = sx, y0 = sy * Math.cos(t4) - sw * Math.sin(t4), w0 = sy * Math.sin(t4) + sw * Math.cos(t4), k = 2.2 / (2.6 - w0); P.push([x0 * k * Math.cos(t4 * 0.7) - y0 * k * Math.sin(t4 * 0.7), x0 * k * Math.sin(t4 * 0.7) + y0 * k * Math.cos(t4 * 0.7)]); }
+      for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) if ([1, 2, 4].includes(i ^ j)) for (let f = 0; f <= 1; f += 0.25) { const x = P[i][0] + (P[j][0] - P[i][0]) * f, y = P[i][1] + (P[j][1] - P[i][1]) * f; shot(g, b.x + x, b.y + y, b.z - 2, x * 1.25, y * 1.25, -4.6, R[(i + j) % 7], f === 0 ? { split: { t: 55, n: 3, spread: 0.5, gen: 1 } } : {}); } g.fx.push('eshot'); } } }, // a tesseract: a four-dimensional cube turning, flattened onto the screen, its edges thrown outward and its corners bursting
     toast: 'THE SHIFT IS OVER', splat: true, glitchy: true, adds: { shape: 'spore', col: '#b6ff3d', hp: 3, r: 0.6, score: 80 }, addEvery: 480, stages: [
     { name: 'FIRST FACE', vuln: [SIDE], rec: SIDE, col: FLESH, bob: 2, attack(g, b, t) { if (t % 400 === 30) { addObs(g, { rel: true, kind: 'blob', x: 0, y: 4.8, hx: 9, hy: 5, hz: 0.7, z: b.z - 3, vz: -2.6, hp: Math.round(252 * power(g)), col: FLESH, score: 600, pod: g.rand() < 0.3 }); if (!g.blobTold) { g.blobTold = 1; hint(g, 'BLOB WALL - BURST IT BEFORE IT REACHES YOU', 130); } g.fx.push('charge'); } if (t % 100 === 80 && t % 400 > 200) fan(g, b, 3, 6.5, ACID); fold(g, b, t); } },
     { name: 'SECOND FACE', vuln: [TOP], rec: TOP, col: BIO, sway: 4, attack(g, b, t) { if (t % 200 === 30) { const safe = g.rand() * 5 | 0; [-6.4, -3.2, 0, 3.2, 6.4].forEach((x, i) => { if (i !== safe && i !== (safe + 1 + (t % 400 < 200 ? 0 : 2)) % 5) addObs(g, { rel: true, kind: 'slam', x, y: 4.75, hx: 1.25, hy: 4.75, hz: 5.5, z: 6, warm: 95, life: 50, col: BIO }); }); g.fx.push('charge'); } if (t % 400 === 120) for (let i = 0; i < 6; i++) addEnemy(g, { type: 'pop', x: -6 + i * 2.4, y: 4.6, z: b.z - 1, vz: -4, ax: 1, hp: 1, r: 0.4, col: ACID, shape: 'spore', score: 40, ph: i }); fold(g, b, t); } },
@@ -788,6 +802,12 @@ function pluto() {
   for (let i = 0; i < 4; i++) wyrm(612 + i * 38, (i % 2 ? 3 : -3)); for (let i = 0; i < 8; i++) flake(600 + i * 19, (i - 3.5) * 1.8, 7.5, { vz: -8 });
   for (let i = 0; i < 6; i++) en(610 + i * 24, { type: 'kami', x: (i % 3 - 1) * 4, y: 3 + (i % 3) * 2, vz: -7, hp: 2, r: 0.55, col: SNOW, score: 150, shape: 'shard', pod: i % 3 === 1 });
   form(680, 6, i => ({ ...shardling, x: (i % 2 ? 7 : -7), y: 2.5 + i, ay: 1, vz: -6, move: PATH.pincer }));
+  // STAMPEDE: herds of giant space reindeer gallop across the floe. A warning first, then they come in a wave from one side
+  const stampede = (z, dir, n, msg) => { at(z - 3, g => { hint(g, msg, 170); g.fx.push('charge'); g.shake = Math.max(g.shake, 4); });
+    for (let i = 0; i < n; i++) at(z + (i % 4) * 0.6, g => { const ry = 1.2 + ((i * 2.618) % 1) * 7, rz = 7 + ((i * 1.618) % 1) * 15, sp = 7 + (i % 3) * 1.2;
+      addEnemy(g, { type: 'pop', shape: 'reindeer', x: -15 * dir - (i % 3) * 3 * dir, y: ry, z: rz, vz: 0, hp: 4, r: 1.15, col: i % 4 ? '#c8f4ff' : '#ffffff', score: 250, ph: i * 1.7, dir, pod: i === n - 1,
+        move: (g2, e, dt) => { e.x += sp * dir * dt; e.y = Math.max(0.9, Math.min(8.8, ry + Math.abs(Math.sin(e.t * 0.18 + e.ph)) * 0.9)); e.z = rz - e.t * 0.012; if (Math.abs(e.x) > 17) e.z = -50; } }); }); };
+  stampede(598, 1, 10, 'STAMPEDE! SPACE REINDEER COMING FROM THE LEFT!'); stampede(648, -1, 12, 'HERE THEY COME AGAIN - FROM THE RIGHT!'); stampede(700, 1, 14, 'A WHOLE HERD!'); stampede(744, -1, 16, 'THE BIG ONE - BRACE YOURSELF!');
   K.checkpoints.push(768);
 
   zone(765, 950, CHASE, 'THE BLIZZARD - SHIFT TO CHASE VIEW'); K.tilt(785, 940, { rot: 0.5, sway: 0.25, w: 0.008 }); at(785 + SPAWN_Z, g => hint(g, 'BLIZZARD! THE WIND SHOVES US ABOUT - HOLD A LINE THROUGH THE ICE GATES', 240));
@@ -853,7 +873,7 @@ function wormhole() {
   zone(630, 830, SIDE, 'TIME STRETCH - SHIFT TO SIDE VIEW');
   gearAt(K, 640, 0, 'TIME SLOWS TO A CRAWL - THREAD IT'); gearAt(K, 692, 4, 'AND SNAPS FORWARD! THE FLASHES SHOW WHERE THE WALLS WILL BE', 'time snap'); gearAt(K, 762, 0, 'CRAWLING AGAIN'); gearAt(K, 792, 4, 'SNAP!'); gearFree(K, 826);
   const tight = (a, b) => { for (let i = 0, z = a; z < b; z += 6, i++) { const m = i % 3; if (m === 0) obs(z, { x: 0, y: i % 2 ? 2.6 : 7, hx: 8.6, hy: 0.4, hz: 0.5, col: '#7df9ff', kind: 'bolt', pulse: [50, 50, i * 17] }); else if (m === 1) obs(z, { x: 0, y: 4.8, hx: 8.6, hy: 0.85, hz: 0.7, col: '#9fe9ff', kind: 'crystal', hp: 5, score: 120, gem: true }); else { obs(z, { x: 0, y: 1.5, hx: 8.6, hy: 1.5, hz: 0.8, col: W, kind: 'slab' }); obs(z, { x: 0, y: 8.2, hx: 8.6, hy: 1.4, hz: 0.8, col: W, kind: 'slab' }); } } };
-  const snap = (a, b) => { const F = { col: W, kind: 'slab', warm: 128 }; for (let i = 0, z = a; z < b; z += 8, i++) { const gy = [2.2, 4.8, 7.2, 3.4, 6.2, 4.8][(i * 7 + (i >> 2)) % 6], gh = 1.55; if (gy - gh > 0.4) obs(z, { ...F, x: 0, y: (gy - gh) / 2, hx: 8.6, hy: (gy - gh) / 2, hz: 0.6 }); if (gy + gh < 9.4) obs(z, { ...F, x: 0, y: (gy + gh + 9.6) / 2, hx: 8.6, hy: (9.6 - gy - gh) / 2, hz: 0.6 }); } };
+  const snap = (a, b) => { const F = { col: W, kind: 'slab', warm: 128 }; for (let i = 0, z = a; z < b; z += 12, i++) { const gy = [2.2, 4.8, 7.2, 3.4, 6.2, 4.8][(i * 7 + (i >> 2)) % 6], gh = 1.55; if (gy - gh > 0.4) obs(z, { ...F, x: 0, y: (gy - gh) / 2, hx: 8.6, hy: (gy - gh) / 2, hz: 0.6 }); if (gy + gh < 9.4) obs(z, { ...F, x: 0, y: (gy + gh + 9.6) / 2, hx: 8.6, hy: (9.6 - gy - gh) / 2, hz: 0.6 }); } };
   tight(662, 694); snap(714, 764); tight(772, 792); snap(810, 826);
   K.checkpoints.push(833);
 
@@ -865,6 +885,13 @@ function wormhole() {
     else if (m === 2) obs(z, { x: 0, y: 4.75, hx: 0.38, hy: 4.75, hz: 0.5, col: PK, kind: 'bolt', osc: { ax: 5, ay: 0, w: 0.9, ph: i } });
     else { tent(z, (i % 8 === 3 ? 4 : -4), i, i % 4); obs(z + 5, { x: (i % 8 === 3 ? -3 : 3), y: 4.8, hx: 1, hy: 1, hz: 1, col: YL, kind: 'crate', hp: 5, score: 150, gem: true, pod: i === 7 }); } }
   form(860, 5, i => ({ ...echo, x: 0, y: 4.8, ax: 3.4, ay: 3, w: 1.3, ph: i * 1.25, vz: -7 })); rift(930, { x: 0, y: 6.4 }); at(992, g => addPod(g, 0, 5, SPAWN_Z, 'god'));
+  // THE WATCHER: a giant robot face that drifts out of the throat and stalks the ship, eyes locked on, until the horizon lets go of it
+  at(842, g => { hint(g, 'SOMETHING IS WATCHING US...', 160); g.fx.push('bossin'); g.shake = Math.max(g.shake, 6);
+    addEnemy(g, { type: 'pop', shape: 'robot', x: 0, y: 4.8, z: 44, vz: 0, hp: 320, r: 5, big: true, col: '#c8d0e0', score: 15000, pod: true, mouth: 0,
+      move: (g2, e, dt) => { const p = g2.players[0], life = e.t; e.z += ((life > 1500 ? 52 : 29) - e.z) * 0.02; e.x += (p.x * 0.8 - e.x) * 0.012; e.y += (Math.max(2.6, Math.min(7, p.y)) - e.y) * 0.015; e.lx = p.x; e.ly = p.y; e.mouth = Math.max(0, e.mouth - dt * 2);
+        if (life > 120 && life < 1500) { const c = life % 210; if (c === 0) { e.mouth = 1; hint(g2, 'EYE LASERS!', 70); for (const sd of [-1, 1]) addObs(g2, { rel: true, kind: 'beam', x: p.x + sd * 1.3, y: p.y, z: (e.z - 2) / 2 + 0.5, hx: 0.32, hy: 0.32, hz: (e.z - 2) / 2, warm: 70, life: 22, col: '#ff3df0' }); g2.fx.push('charge'); }
+          if (c === 110) { e.mouth = 1; for (let i = 0; i < 12; i++) bullet(g2, e.x, e.y - 1.6, e.z - 2, Math.cos(i * 0.5236) * 2.6, Math.sin(i * 0.5236) * 2.6, -5.5, i % 2 ? '#ffe14a' : '#ffffff'); g2.fx.push('eshot'); } }
+        if (life === 1500) hint(g2, 'IT IS LETTING GO OF US...', 120); if (life > 1700) e.z = -50; } }); });
   K.checkpoints.push(1013);
   const tick = g => magPull(g);
 

@@ -887,6 +887,14 @@ Boss signature storms also play out in full now. Their shots can't be cancelled 
 
 The big whale of Saturn isn't alone any more. Twelve pods of sky whales, adults and calves, cruise the far side of the rings through the whole stage. Some swim across, and some rise up through the ring plane. They stay well back from the lane, so they're scenery you can shoot at rather than something that can hit you.
 
+### 102. Stampedes, a watcher, a dragon (r108)
+
+- **Pluto:** herds of giant space reindeer stampede across the drifting floe four times, each herd bigger than the last. A warning comes first, then they gallop across in a wave from one side.
+- **The Wormhole:** at the event horizon a giant robot face drifts out of the throat and stalks the ship for about thirty seconds. Its eyes follow you; it fires twin eye lasers at where you are and spits rings of shot from its jaw, then lets go.
+- **Planet X:** a dragon lives in the Bloom. It swoops across the lane five times through the level, raking fire at you, then climbs away.
+- **The Shifter's storms:** it now storms twice as often and cycles four patterns. FRACTAL FOLD is a mirrored golden-angle spiral. ROSE OF FOUR is an eight-petalled rose. KALEIDOSCOPE is six mirrored pairs of arms that curl across each other. TESSERACT is a four-dimensional cube turning, with its edges thrown outward and its corners bursting.
+- **Hyper runs:** the walls in the Wormhole's time snaps and Planet X's hyper run are 12 units apart instead of 8, so there's time to read each flash and move.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
