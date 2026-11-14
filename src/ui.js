@@ -23,7 +23,7 @@ const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); r
 // settings and anything bought on the host site are kept
 try { if (!LS.get('fresh1', false)) { for (const k of Object.keys(localStorage)) if (k.startsWith('2dshift.') && !['2dshift.opt', '2dshift.owned', '2dshift.bugkit'].includes(k)) localStorage.removeItem(k); LS.set('fresh1', true); } } catch (e) { }
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r114';
+const VER = 'r115';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 // THE DIFFICULTY LADDER: EASY, NORMAL, HARD, then LOOP 1, LOOP 2 and on. Looping the game steps one rung up (NORMAL loops into HARD)
@@ -254,7 +254,8 @@ export function mountShift(root, host = {}) {
     const m = top(), was = { ...upF }; for (const k in upF) upF[k] = i[k] ? 0 : Math.min(99, upF[k] + 1);
     const e = k => i[k] && !prevM[k] && (was[k] == null || was[k] >= 5); if (!m) return;
     if (tap) { for (const h of hits) if (tap.x >= h.x && tap.x <= h.x + h.w && tap.y >= h.y && tap.y <= h.y + h.h) { if (h.fn) h.fn(tap); else { m.i = h.i; const it = m.items[h.i]; audio.sfx('ok'); if (it.act) it.act(); else it.adj?.(1); } break; } tap = null; prevM = i; return; }
-    if (m.travel && !m.travel.done && performance.now() - m.travel.t0 > 5500) { m.travel.done = true; m.items[0].act(); return; }
+    if (m.travel && !m.travel.done && opt.idle && performance.now() - m.travel.t0 > 5500) { m.travel.done = true; m.items[0].act(); return; } /* only idle mode moves on by itself; a player presses CONTINUE */
+    if (m.travel && m.locked && performance.now() - m.travel.t0 > 3000) m.locked = false; /* once the ship has flown its hop, the map can be browsed */
     if (m.kind === 'title') { const n = m.items.length, mv = j => { if (j >= 0 && j < n && j !== m.i) { m.i = j; audio.sfx('move'); } }; if (e('left')) mv(m.i - 1); if (e('right')) mv(m.i + 1); const cols = Math.ceil(n / 2); if (e('up')) mv(m.i - cols); if (e('down')) mv(Math.min(n - 1, m.i + cols)); if (e('ok')) { audio.sfx('ok'); m.items[m.i].act(); } prevM = i; return; } // the title menu is a grid of two rows
     if (m.kind === 'devlog') { devlogInput(m, e); if (e('back')) popMenu(); prevM = i; return; }
     if (m.kind === 'map' && !m.locked) { const n = NODES.length; if (e('left')) { m.sel = (m.sel + n - 1) % n; audio.sfx('move'); } if (e('right')) { m.sel = (m.sel + 1) % n; audio.sfx('move'); } }

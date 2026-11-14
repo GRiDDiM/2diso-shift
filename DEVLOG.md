@@ -939,6 +939,10 @@ One last pass on look and feel before the jam build.
 
 A wave you wipe out drops a pod, but now only one every five seconds. When several waves die back to back, as in Earth's late SIDE stretch where you could collect six pods in a few seconds, the extra wipeouts pay 1000 points each instead. This also stops Planet X piling up dozens of spare pods.
 
+### 109. Take your time (r115)
+
+The solar map between stages no longer moves on by itself. Your ship flies its hop, then the map waits: browse the other stops with left and right, and press CONTINUE when you're ready. Idle mode still carries on by itself.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
