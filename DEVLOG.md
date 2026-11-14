@@ -973,6 +973,12 @@ Also: the CONTINUE button on the PLAY menu is now a split capsule, with the stag
 - **Pluto:** I couldn't make Pluto blank out here. As a guard, a line that reaches far off the screen is now cut at the edge, so one point projected near infinity can't make a graphics card drop a whole batch of lines.
 - **Locked items:** STAGE SELECT stays locked until you finish the game once. Locked menu items are drawn as split capsules with a grey LOCKED half.
 
+### 114. Ready for itch (r119)
+
+- **Bosses scale lower:** a boss's health still follows your firepower, keeping the same share left when it changes. But a ship stripped down by deaths now faces about a third of the full-power health. It used to face about 40%. At full power the bosses are exactly as tough as before, so the last boss is still the hardest fight in the game.
+- **One build for everywhere:** the Sparkz store is only mentioned on ArcadeGridz. The itch.io and GitHub version is the same code without the store lines.
+- **Trailer end card:** now reads MADE FOR GITHUB GAME OFF 2026.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
