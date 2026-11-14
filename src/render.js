@@ -733,7 +733,8 @@ function drawRivet(ctx, g, t) {
   ctx.restore(); }
 export function drawHUD(ctx, g, o = {}) {
   const p = g.players[0], t = g.tick, vw = g.view, m = MASK[vw]; ctx.globalCompositeOperation = 'source-over';
-  const C = !!o.compact; // COMPACT HUD: smaller score and view row, only the essentials on the right, the bar and meter tucked away
+  const C = !!o.compact; // COMPACT HUD: the score and nothing else
+  if (C) { text(ctx, String(g.score).padStart(8, '0'), 14, 10, 11, '#ffffff', { glow: false }); return; }
   if (C) text(ctx, String(g.score).padStart(8, '0'), 14, 10, 11, '#ffffff', { glow: false }); else { text(ctx, 'SCORE', 18, 12, 8, '#7d8bd6', { glow: false }); text(ctx, String(g.score).padStart(8, '0'), 18, 25, 16, '#ffffff'); } if (o.hi && !C) text(ctx, 'HI ' + String(o.hi).padStart(8, '0'), 150, 12, 8, '#7d8bd6', { glow: false });
   const mult = 1 + Math.min(9, g.chain / 5 | 0); if (g.chain > 1) { const cy = C ? 26 : 48; text(ctx, 'CHAIN ' + g.chain + '  X' + mult, C ? 14 : 18, cy, C ? 7 : 9, '#ffe14a', { glow: !C }); ctx.fillStyle = '#ffe14a'; ctx.globalAlpha = 0.8; ctx.fillRect(C ? 14 : 18, cy + (C ? 10 : 14), (C ? 80 : 110) * g.chainT / 190, 2); ctx.globalAlpha = 1; }
   const pw = C ? 56 : 78, px0 = W / 2 - pw * 2, ph = C ? 14 : 20;

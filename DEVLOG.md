@@ -756,6 +756,12 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - The Eye's lightning strikes and the tentacle slams no longer draw a solid block around themselves. A strike is now a soft glow along the bolt.
 - The stars in the cutscenes keep moving while a line of dialogue finishes.
 
+### 85. Minimal means minimal (r91)
+
+- COMPACT HUD now shows the score and nothing else: no view row, ships, bombs, bars, meters or RIVET-9 window.
+- RESET TO DEFAULTS also puts the ship back to the PILOT skin.
+- IDLE MODE keeps going on its own: a few seconds after the results screen it continues to the next cutscene and level, even from a level picked in the menu.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
