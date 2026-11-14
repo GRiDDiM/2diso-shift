@@ -228,7 +228,7 @@ export function step(g, inputs) {
   // launch: hyperspace in, rolling through every view, then hand over in SIDE
   if (g.intro > 0) {
     g.intro--; const k = INTRO - g.intro; if (rules.arena) { g.speedMul = 1; for (const p of P) { p.inv = Math.max(p.inv, 100); p.prev = inputs[p.i] || {}; } if (g.intro === 0) g.fx.push('go'); return g; }
-    if (k === 33 || k === 66 || k === 99) { g.viewFrom = g.view; g.view = g.view - 1; g.shiftT = 1; g.shiftDir = -1; g.fx.push('shift'); }
+    if (k === 33 || k === 66 || k === 99) { g.viewFrom = g.view; g.view = Math.max(0, g.view - 1); g.shiftT = 1; g.shiftDir = -1; g.fx.push('shift'); }
     g.camZ += INTRO_RUN / INTRO; g.speedMul = 1 + 2 * g.intro / INTRO; for (const p of P) { p.inv = Math.max(p.inv, 100); p.prev = inputs[p.i] || {}; }
     for (const q of g.parts) q.life--; if (g.intro === 0) { g.speedMul = GEARMUL[g.gear]; g.fx.push('go'); } if (g.wing) wingStep(g, DT, false); return g;
   }

@@ -802,6 +802,10 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 
 RIVET was talking too much. Narration is now split in two. RIVET's chat window and voice handle flavor: view-shift calls and obstacle warnings. Plain information (level names, upgrades, MAXED, god mode, combos, anomalies, arena waves) goes to a male announcer with no window. God and overdrive timers moved to a small countdown under the progress bar. The final boss's blob-wall warning now plays once per fight instead of every wave.
 
+### 92. A better grove (r98)
+
+Some tentacles in the Writhing Grove flipped upside down as they pumped. Each one now settles which end is its root the first time it is drawn, and it keeps that. The grove also has four kinds of tentacle now: the triple strand, a thick barbed one with a hooked tip, a twisted frond that curls into a spiral, and a forked one with three grasping fingers.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

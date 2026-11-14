@@ -381,7 +381,7 @@ function planetx() {
   // THE WRITHING GROVE: a forest of tentacles you fly through in ISO. Some grow from the floor and some hang from the roof, pumping up and down,
   // so the way through is a gap in height as well as in the lane. Big ones lash right across, eyes on stalks shoot from both ends
   zone(85, 285, ISO, 'THE WRITHING GROVE - SHIFT TO ISO VIEW'); K.tilt(110, 280, { sway: 0.18, w: 0.009, px: 40, py: 18 }); // the grove breathes: the whole floor heaves and turns
-  { const grow = (z, x, h, roof, ph, col = BIO) => obs(z, { x, y: roof ? 9.6 - h / 2 : h / 2, hx: 0.7, hy: h / 2, hz: 0.7, col, kind: 'tentacle', osc: { ax: 0.5, ay: 1.1, w: 1.5, ph } });
+  { const grow = (z, x, h, roof, ph, col = BIO) => obs(z, { x, y: roof ? 9.6 - h / 2 : h / 2, hx: 0.7, hy: h / 2, hz: 0.7, col, kind: 'tentacle', hang: roof, osc: { ax: 0.5, ay: 1.1, w: 1.5, ph } });
     const LANES = [-6.4, -2.2, 2.2, 6.4];
     for (let i = 0, z = 116; z < 276; z += 10, i++) { const roof = i % 2 === 1, open = (i * 3 + (i >> 1)) % 4; // one lane each row stays clear; the rest are tentacles from the floor or the roof
       LANES.forEach((x, k) => { if (k !== open) grow(z + (k % 2) * 2, x, 4.4 + ((i + k) % 3) * 0.8, roof, i + k * 1.7); });
