@@ -772,6 +772,18 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - Fixed a leftover firewall gate between the firewall and construction sections on Earth: its walls had been cleared but its glowing hole and ring were not.
 - Menus are more colourful: deep purple-to-navy glass panels with a glow, an inner line, neon corner brackets, faint scanlines and a four-colour bar under the title. Buttons have gradient bodies, a coloured marker each, and the selected one is a warm yellow-to-orange. The options box is wider, so its tabs have room.
 
+### 87. Signature storms and difficulty (r93)
+
+- Every boss now has a signature bullet storm, announced by RIVET-9 and thrown in every 17 seconds or so on top of its normal attacks:
+  - OVERSEER: DATA STORM. Four spinning arms of cyan and magenta that flip direction, with square packets of yellow.
+  - THE COLOSSUS: MAGMA BLOOM. Rings that open like a turning flower, petal by petal, in alternating fire and gold.
+  - THE EYE: IRIS STORM. Two rings of the iris turning against each other, and a white eyelid that sweeps down the screen.
+  - THE SHIFTER: FRACTAL FOLD. A mirrored golden-angle spiral in every colour, folding back on itself.
+- NEW GAME and CO-OP now ask for a difficulty. EASY plays by the old first-loop rules, NORMAL by the old second loop (tougher enemies, faster bullets, enemies firing back as they die), HARD by the third (one hit strips your whole shield). Later loops climb from there. Saves remember the difficulty.
+- Checked every level for gate holes left without walls: none left.
+
+![MAGMA BLOOM](shots/magma-bloom.jpg)
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
