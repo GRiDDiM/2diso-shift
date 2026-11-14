@@ -483,7 +483,7 @@ The second half of BDC's note from r29: smoother, more organic shapes on the oth
 ### 47. A story between the planets (r55)
 
 The cutscenes now tell a story, five lines each, and it carries through to the ending:
-- **Earth to Mars.** RIVET-9 used to work for OVERSEER (he was its spellchecker). Before it crashed it sent one word to Mars: WAKE. The stone heads there are not statues. They are antennas the Fold listens through.
+- **Earth to Mars.** RIVET-9 used to work for OVERSEER (he was its spellchecker). Before it crashed it sent one word to Mars: SHIFT. The stone heads there are not statues. They are antennas the Fold listens through.
 - **Mars to Jupiter.** THE COLOSSUS talked on the way down: the Fold cannot see depth and only ever sees one side at a time. That is why it hates a pilot who sees all four. So it grew an eye inside Jupiter.
 - **Jupiter to Planet X.** RIVET-9 pulls coordinates out of the Eye's last look. Planet X is not a planet. It is a dream that something far past Pluto is having, and the only hope is to break the dream so the dreamer stays asleep.
 - The ending's last line now points back at the dreamer. Each line also stays on screen longer, so the whole thing can be read and heard.
@@ -960,6 +960,18 @@ The game now has a trailer, and the trailer is the game. Nothing in it is record
 The route is now Earth, Mars, the Sun, Jupiter. After Mars the signal is already at Jupiter and the Belt is in the way, so the slingshot round the Sun is how you jump it. The story scenes are rewritten to match, and the solar map draws the slingshot as a wide swing back to the Sun and out over the Belt.
 
 Also: the CONTINUE button on the PLAY menu is now a split capsule, with the stage and difficulty in its own half.
+
+### 113. The last batch (r118)
+
+- **Type:** titles now use Zen Dots, a rounded, futuristic display face, drawn in chrome over the stage colour with a dark rim and a neon halo. That covers SECTOR CLEAR, GAME OVER, the stage name when a level starts, and the trailer's titles. Everything people say (RIVET-9's comms, the story scenes, the ending, the trailer captions) uses Chakra Petch, which is easier to read. Both are SIL Open Font License fonts, cut down to plain ASCII, about 17 KB together. The neon stroke font's ! and ? now have a gap above the dot.
+- **The word is SHIFT:** the one word OVERSEER sent out across the solar system is SHIFT, in the story and in the trailer.
+- **Dying costs one rank of everything:** drones, every gun, bomb and hyper each drop one rank. You never lose the lot, but max rank is never safe for good.
+- **Fewer 1UPs:** a spare pod (nothing left to buy) pays 1000 and tops up your shield by one. An extra ship now takes 25 spare pods instead of 10. The random 1UP drop is about a third as common, and a guaranteed one comes every 450 kills instead of every 160.
+- **Predators last:** about a third tougher, and they can't be brought down in under 16 seconds, so every one shows off its bullet hells. A weak loadout gets an easier predator, so it can still be caught inside 30 seconds.
+- **Squadrons in 2D:** the squadron stretch is a SIDE view section now, and each pattern is laid out across the screen. The craft are twice as tough and can't be killed in under 3 seconds each, so the patterns get to play out.
+- **Lag:** a big storm draws each bullet with fewer lines. Crowds of small enemies (Jupiter's jellyfish blooms) skip their solid shading. Voice lines that land on the same frame are folded into one and spoken after the frame; some Windows voices stall the page on every cancel and speak.
+- **Pluto:** I couldn't make Pluto blank out here. As a guard, a line that reaches far off the screen is now cut at the edge, so one point projected near infinity can't make a graphics card drop a whole batch of lines.
+- **Locked items:** STAGE SELECT stays locked until you finish the game once. Locked menu items are drawn as split capsules with a grey LOCKED half.
 
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.

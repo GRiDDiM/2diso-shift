@@ -1,6 +1,6 @@
 // 2DISO SHIFT — neon vector renderer. Everything is glowing lines; four projections of the same 3D world.
 import { VIEWS, BAR, BARMAX, DRONE_MODES, GEARS, MASK, U, solid, WAVECOL, waveAt, groundAt, SK, hyperOk } from './game.js';
-import { text, textWidth, setTextGlow } from './font.js';
+import { text, textWidth, setTextGlow, ptext, pWidth } from './font.js';
 export const W = 960, H = 540;
 const TAU = Math.PI * 2;
 const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -10,7 +10,7 @@ const VCOL = ['#2ee6ff', '#3dffb0', '#ffe14a', '#ff3df0'];
 
 // ---------- projection ----------
 let cam = { x: 0, y: 2, z: -7 }, vA = 0, vB = 0, mix = 1, rollA = 0, wob = 0, GR = 0, TC = 1, TS = 0, GK = 1, GPX = 0, GPY = 0; // GR..: the stage turned and drifting (level tilts)
-const TURN = () => { if (GR) { const dx = X - 480, dy = Y - 270; X = 480 + (dx * TC - dy * TS) * GK; Y = 270 + (dx * TS + dy * TC) * GK; S *= GK; } X += GPX; Y += GPY; };
+const TURN = () => { if (GR) { const dx = X - 480, dy = Y - 270; X = 480 + (dx * TC - dy * TS) * GK; Y = 270 + (dx * TS + dy * TC) * GK; S *= GK; } X += GPX; Y += GPY; if (!(X > -1e5 && X < 1e5 && Y > -1e5 && Y < 1e5)) OK = false; }; // a point at infinity (or NaN) is simply not drawn
 let X = 0, Y = 0, S = 1, OK = true;
 function p1(v, x, y, z) {
   if (v === 0) { X = 60 + z * 34; Y = 470 - y * 42; S = 1; return true; }
@@ -38,9 +38,13 @@ let ZS = 1; // how much the distance ahead is squeezed on screen: below 1 you se
 let LW = 1, NG = false, HQ = true, ZK = 1; // LW: tube thickness for what is drawn next. NG: no glow (sparks, smoke). HQ: draw the wide outer halo. ZK: camera zoom (pulls back for bosses)
 let NT = false; // lines drawn with NT set keep their true colour even on the trippy planet (hit flashes, health bars)
 let AM = 1, CLR = false; // AM: alpha multiplier for whatever is drawn next (clarity ghosts your own attacks). CLR: clarity mode on
+const LIM = 1500; // how far past the screen edge a line may reach before it is cut
 function seg(x1, y1, z1, x2, y2, z2, col, a = 1) { if (AM !== 1) a *= AM;
-  P(x1, y1, z1); if (!OK) return; const ax = X, ay = Y; P(x2, y2, z2); if (!OK) return;
+  P(x1, y1, z1); if (!OK) return; let ax = X, ay = Y; P(x2, y2, z2); if (!OK) return;
   if ((ax < -200 && X < -200) || (ax > W + 200 && X > W + 200) || (ay < -200 && Y < -200) || (ay > H + 200 && Y > H + 200)) return;
+  if (ax < -LIM || ax > W + LIM || ay < -LIM || ay > H + LIM || X < -LIM || X > W + LIM || Y < -LIM || Y > H + LIM) { /* an end far off screen (something right in front of the camera): cut the line at a box round the screen. Some GPUs drop a whole batch of lines when one point is millions of pixels away, and that batch can be nearly everything */
+    let t0 = 0, t1 = 1; const dx = X - ax, dy = Y - ay; for (const [p, q] of [[-dx, ax + LIM], [dx, W + LIM - ax], [-dy, ay + LIM], [dy, H + LIM - ay]]) { if (p === 0) { if (q < 0) return; continue; } const r = q / p; if (p < 0) { if (r > t1) return; if (r > t0) t0 = r; } else { if (r < t0) return; if (r < t1) t1 = r; } }
+    const bx = ax + dx * t1, by = ay + dy * t1; ax += dx * t0; ay += dy * t0; X = bx; Y = by; }
   const k = (a >= 1 ? col : col + '|' + (a * 10 | 0)) + (LW !== 1 ? '~' + LW : '') + (NG ? '!' : '') + (NT ? '^' : ''); let b = buckets.get(k); if (!b) { b = { col, a: a >= 1 ? 1 : Math.max(0.05, (a * 10 | 0) / 10), w: LW, ng: NG, nt: NT, d: [] }; buckets.set(k, b); } b.d.push(ax, ay, X, Y);
 }
 const rotCache = new Map();
@@ -652,7 +656,7 @@ export function drawWorld(ctx, g, o = {}) { RCTX = ctx;
       if (pl === 1) { seg(e.x - rr * 1.6, e.y, e.z, e.x - d, e.y, e.z, c); seg(e.x + d, e.y, e.z, e.x + rr * 1.6, e.y, e.z, c); seg(e.x, e.y, e.z - rr * 1.6, e.x, e.y, e.z - d, c); seg(e.x, e.y, e.z + d, e.x, e.y, e.z + rr * 1.6, c); } else { seg(e.x, e.y - rr * 1.6, e.z, e.x, e.y - d, e.z, c); seg(e.x, e.y + d, e.z, e.x, e.y + rr * 1.6, e.z, c); if (pl === 2) { seg(e.x, e.y, e.z - rr * 1.6, e.x, e.y, e.z - d, c); seg(e.x, e.y, e.z + d, e.x, e.y, e.z + rr * 1.6, c); } else { seg(e.x - rr * 1.6, e.y, e.z, e.x - d, e.y, e.z, c); seg(e.x + d, e.y, e.z, e.x + rr * 1.6, e.y, e.z, c); } } }
     if (e.pred) { drawPred(e, t, col, a); continue; } if (e.med) { drawMed(e, t, col, a); continue; }
     if (e.mini) { const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0; LW = 2; circle(e.x, e.y, e.z, e.r * 1.5 + Math.sin(t * 0.15) * 0.15, e.col, 0.8, 14, pl, t * 0.03); LW = 1; circle(e.x, e.y, e.z, e.r * 1.9, '#ffffff', 0.35, 14, pl, -t * 0.02); if (g.level.rules?.arena) circle(e.x, 0.03, e.z, e.r * 1.3, e.col, 0.4, 12, 1); }
-    if (FILL && a > 0.5 && e.shape !== 'walker' && e.shape !== 'flake' && e.shape !== 'tank' && e.shape !== 'eye') disc(e.x, e.y, e.z, e.r * (e.shape === 'shark' ? 0.75 : 0.95), col, 0.42, 0.05, 10); // a solid, shaded body under the wireframe
+    if (FILL && a > 0.5 && !(g.enemies.length > 36 && !e.big && e.r < 1.4) && e.shape !== 'walker' && e.shape !== 'flake' && e.shape !== 'tank' && e.shape !== 'eye') disc(e.x, e.y, e.z, e.r * (e.shape === 'shark' ? 0.75 : 0.95), col, 0.42, 0.05, 10); // a solid, shaded body under the wireframe
     if (e.shape === 'spark') { const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0, r = e.r * 0.85; LW = 2.2; circle(e.x, e.y, e.z, r, col, a, 10, pl, t * 0.08 + e.ph); LW = 1.2; circle(e.x, e.y, e.z, r * 0.45, '#ffffff', a, 6, pl, -t * 0.2); LW = 1;
       for (let k = 0; k < 3; k++) { const an = t * 0.09 + k * 2.09 + e.ph, ex = Math.cos(an) * r * 1.9, ey = Math.sin(an) * r * 1.9; zig(e.x, e.y, e.z, e.x + (pl === 2 ? 0 : ex), e.y + (pl === 1 ? 0 : ey), e.z + (pl === 2 ? ex : pl === 1 ? ey : 0), col, a * 0.8, 3, 0.35, k + (t >> 2)); } }
     else if (e.shape === 'flake') { const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0, r = e.r * 1.1, rot = t * 0.04 + e.ph, P3 = (u, v) => [e.x + (pl === 2 ? 0 : u), e.y + (pl === 1 ? 0 : v), e.z + (pl === 2 ? u : pl === 1 ? v : 0)]; // a snowflake comet: six branched arms, spinning, with a long icy tail
@@ -724,7 +728,7 @@ export function drawWorld(ctx, g, o = {}) { RCTX = ctx;
     else if (b.kind === 'dia') { const a = Math.min(1, (1 - f) * 1.8), r = b.r || 0.3; LW = 2.4; mesh(OCT, b.x, b.y, b.z, r * 1.3, 0, 0, 0, sk(b.col), a); LW = 1.2; mesh(OCT, b.x, b.y, b.z, r * 0.8, 0, 0, 0, '#ffffff', a * 0.8); mesh(OCT, b.x, b.y, b.z, r * 0.4, 0, 0, 0, sk(b.col), a); LW = 1; }
     else if (b.kind === 'mega' && b.t < 36) { const c = b.t / 36; for (let k = 0; k < 5; k++) { const r = ((1 - c) * 16 + k * 3.2 - (b.t * 0.35) % 3.2); if (r > 0.3) circle(b.x, b.y, b.z, r, k % 2 ? sk('#ff3df0') : sk('#ffffff'), Math.min(1, c * 1.5 + 0.2), 22, pl, b.t * 0.05); } LW = 2.5; circle(b.x, b.y, b.z, 0.9 + c * 0.8 + Math.sin(b.t) * 0.15, '#ffffff', 1, 14, pl); LW = 1; } }
   AM = 1;
-  { const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0; for (const b of g.ebul) { if (CLR) { LAY = NL - 1; buckets = layers[NL - 1]; const rr = (0.5 * SK); if (FILL) { const sv = OCC; OCC = false; disc(b.x, b.y, b.z, rr * 1.6, '#000000', 0.85, 0.85, 8); OCC = sv; } } else depth(b.x, b.z); const r = (0.36 + 0.07 * Math.sin(t * 0.4 + b.x * 3)) * SK * Math.max(1, (b.r || 0) / (0.28 * SK)), k = 0.03; /* big shots (magma bombs) draw bigger */ LW = 2; circle(b.x, b.y, b.z, r, b.col, 1, 6, pl, t * 0.15); LW = 1.6; seg(b.x - r * 0.6, b.y, b.z, b.x + r * 0.6, b.y, b.z, '#ffffff'); seg(b.x, b.y - r * 0.6, b.z, b.x, b.y + r * 0.6, b.z, '#ffffff'); seg(b.x, b.y, b.z - r * 0.6, b.x, b.y, b.z + r * 0.6, '#ffffff'); LW = 1; circle(b.x, b.y, b.z, r * 1.7, b.col, 0.35, 6, pl, -t * 0.1); seg(b.x, b.y, b.z, b.x - b.vx * k * 2, b.y - b.vy * k * 2, b.z - b.vz * k * 2, b.col, 0.5); } }
+  { const pl = vB === 3 ? 1 : vB === 0 ? 2 : 0, nb = g.ebul.length, lite = nb > 110, bare = nb > 190; /* a full storm draws each shot with fewer lines, so a bullet hell never drags the frame rate down */ for (const b of g.ebul) { if (CLR) { LAY = NL - 1; buckets = layers[NL - 1]; const rr = (0.5 * SK); if (FILL) { const sv = OCC; OCC = false; disc(b.x, b.y, b.z, rr * 1.6, '#000000', 0.85, 0.85, 8); OCC = sv; } } else depth(b.x, b.z); const r = (0.36 + 0.07 * Math.sin(t * 0.4 + b.x * 3)) * SK * Math.max(1, (b.r || 0) / (0.28 * SK)), k = 0.03; /* big shots (magma bombs) draw bigger */ LW = 2; circle(b.x, b.y, b.z, r, b.col, 1, 6, pl, t * 0.15); LW = 1.6; if (bare) seg(b.x - r * 0.5, b.y - r * 0.5, b.z, b.x + r * 0.5, b.y + r * 0.5, b.z, '#ffffff'); else { seg(b.x - r * 0.6, b.y, b.z, b.x + r * 0.6, b.y, b.z, '#ffffff'); seg(b.x, b.y - r * 0.6, b.z, b.x, b.y + r * 0.6, b.z, '#ffffff'); if (!lite) seg(b.x, b.y, b.z - r * 0.6, b.x, b.y, b.z + r * 0.6, '#ffffff'); } LW = 1; if (!lite) { circle(b.x, b.y, b.z, r * 1.7, b.col, 0.35, 6, pl, -t * 0.1); seg(b.x, b.y, b.z, b.x - b.vx * k * 2, b.y - b.vy * k * 2, b.z - b.vz * k * 2, b.col, 0.5); } } }
   for (const s of g.shocks) { depth(s.x, s.z); circle(s.x, s.y, s.z, s.r, s.col, s.life / s.max, 16, vB === 3 ? 1 : vB === 0 ? 2 : 0); }
   { const trip = th.trippy ? ((t * 0.8) % 360 / 30 | 0) * 30 : 0; const gl = o.glow !== false && !(o.q >= 2); glowBegin(gl); for (let L = 0; L < NL; L++) { if (FILL) drawQuads(ctx, L); flush(ctx, gl, trip, L); } glowEnd(ctx); depth0(); }
   for (const q of (CLR ? g.pops.slice(-5) : g.pops)) { P(q.x, q.y, q.z); if (!OK) continue; text(ctx, q.txt, X, Y, q.big ? 15 : q.sm ? 6.5 : 9, q.col, { bold: true, align: 'center', alpha: Math.min(1, q.life / 20) * (q.sm ? 0.85 : 1), glow: q.big }); }
@@ -903,6 +907,7 @@ const MOODS = [ // what he says first, and which two faces he flips between whil
 export const rivetLine = h => isBanner(h) ? h : mood(h).pre + ' ' + h; // what RIVET-9 says out loud
 const mood = m => { for (const [re, pre, f] of MOODS) if (re.test(m)) return { pre, f }; return { pre: 'HEY!', f: ['happy', 'grin'] }; };
 let RQ = [], RLAST = null, RLT = 0, RG = null;
+function wrapPx(ctx, str, max, size) { const out = []; let ln = ''; for (const w of str.split(/\s+/)) { if (ln && pWidth(ctx, ln + ' ' + w, size) > max) { out.push(ln); ln = w; } else ln = (ln + ' ' + w).trim(); } if (ln) out.push(ln); return out; }
 function wrapText(str, max) { const out = []; let ln = ''; for (const w of str.split(/\s+/)) { if ((ln + ' ' + w).trim().length > max && ln) { out.push(ln); ln = w; } else ln = (ln + ' ' + w).trim(); } if (ln) out.push(ln); return out; }
 export function rivetFace(ctx, cx, cy, s, ex, talk, t, k) { // s = half size of the head. Drawn in screen space with plain canvas strokes
   const u = s / 10, cyan = '#2ee6ff', ink = (c, w = 1.6) => { ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = w * u * 0.55; ctx.shadowBlur = 0; }; // no canvas shadow blur: it is very slow, and every RIVET-9 message brought a hitch with it
@@ -932,7 +937,7 @@ export function rivetFace(ctx, cx, cy, s, ex, talk, t, k) { // s = half size of 
   else if (ex === 'smug') { ctx.moveTo(-2 * u, my + 0.5 * u); ctx.quadraticCurveTo(1 * u, my + 1.4 * u, 3 * u, my - 0.6 * u); ctx.stroke(); }
   else { const w = ex === 'grin' || ex === 'starry' ? 3.4 : 2.6; if (talk) { ctx.moveTo(-w * u, my - 0.2 * u); ctx.lineTo(w * u, my - 0.2 * u); ctx.quadraticCurveTo(0, my + 3.6 * u, -w * u, my - 0.2 * u); ctx.globalAlpha = 0.5; ctx.fill(); ctx.globalAlpha = 1; ctx.stroke(); } else { ctx.moveTo(-w * u, my); ctx.quadraticCurveTo(0, my + 2.2 * u, w * u, my); ctx.stroke(); } }
   ctx.restore(); ctx.shadowBlur = 0; }
-function rivetPush(h, live) { const m = mood(h), msg = m.pre + ' ' + h.replace(/ - | \/\/ /g, '. ') + (/[!?.]$/.test(h) ? '' : '!'); RQ.unshift({ msg, lines: wrapText(msg, 30), m, k: 0, life: Math.max(260, 120 + msg.length * 3.4), live }); RQ.length = Math.min(RQ.length, 2); } // live: a countdown shown in the card's title bar, which keeps the card up while it runs
+function rivetPush(h, live) { const m = mood(h), msg = m.pre + ' ' + h.replace(/ - | \/\/ /g, '. ') + (/[!?.]$/.test(h) ? '' : '!'); RQ.unshift({ msg, lines: null, m, k: 0, life: Math.max(260, 120 + msg.length * 3.4), live }); RQ.length = Math.min(RQ.length, 2); } // live: a countdown shown in the card's title bar, which keeps the card up while it runs
 const RCD = {}; // status warnings (overheating, lava, a shielded core) are said once when they start, then not again for a while
 function rivetLive(key, on, msg, live, t) { const c = RCD[key] || (RCD[key] = { on: false, t: -1e9 }); if (on && !c.on) rivetPush(msg, live); c.on = on; }
 function rivetWarn(key, on, msg, t, gap = 900) { const c = RCD[key] || (RCD[key] = { on: false, t: -1e9 }); if (on && !c.on && t - c.t > gap) { c.t = t; rivetPush(msg); } c.on = on; }
@@ -942,14 +947,14 @@ function drawRivet(ctx, g, t) {
   RLAST = g.hint; RLT = g.hintT; if (!RQ.length) return;
   ctx.save(); ctx.globalCompositeOperation = 'source-over'; let y = 70;
   for (let i = 0; i < RQ.length; i++) { const q = RQ[i]; q.k++; if (q.k > q.life) { RQ.length = i; break; }
-    const a = Math.min(1, q.k / 10, (q.life - q.k) / 40) * (i ? 0.55 : 1), slide = Math.max(0, 10 - q.k) * 4, x = 34 - slide, w = 330, h = Math.max(62, 26 + q.lines.length * 13), shown = Math.floor(q.k * 1.4), talking = shown < q.msg.length;
+    if (!q.lines) q.lines = wrapPx(ctx, q.msg, 252, 11); /* wrapped by width once the font is known */ const a = Math.min(1, q.k / 10, (q.life - q.k) / 40) * (i ? 0.55 : 1), slide = Math.max(0, 10 - q.k) * 4, x = 34 - slide, w = 330, h = Math.max(62, 26 + q.lines.length * 15), shown = Math.floor(q.k * 1.4), talking = shown < q.msg.length;
     ctx.globalAlpha = a; ctx.fillStyle = 'rgba(6,4,22,0.86)'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 7); ctx.fill(); ctx.strokeStyle = '#ffb070'; ctx.lineWidth = 1.5; ctx.shadowColor = '#ffb070'; ctx.shadowBlur = 8; ctx.stroke(); ctx.shadowBlur = 0;
     ctx.fillStyle = 'rgba(255,176,112,0.16)'; ctx.beginPath(); ctx.roundRect(x, y, w, 14, [7, 7, 0, 0]); ctx.fill(); // the title bar, instant message style
     ctx.fillStyle = '#3dff6a'; ctx.beginPath(); ctx.arc(x + 66, y + 7, 2.4, 0, 6.3); ctx.fill(); text(ctx, 'RIVET-9', x + 72, y + 3.5, 7, '#ffb070', { bold: true, glow: false, alpha: a }); const lv = q.live && q.live(); if (lv) { q.life = Math.max(q.life, q.k + 45); text(ctx, lv[0], x + w - 10, y + 3, 8, lv[1] || RAINBOW[(t >> 2) % 7], { align: 'right', bold: true, glow: false, alpha: a }); } else text(ctx, 'INCOMING', x + w - 10, y + 4, 6, '#7d8bd6', { align: 'right', glow: false, alpha: a });
     ctx.fillStyle = '#04081a'; ctx.beginPath(); ctx.roundRect(x + 6, y + 6, 50, 50, 5); ctx.fill(); ctx.strokeStyle = '#3a4cb8'; ctx.lineWidth = 1; ctx.stroke();
     const ex = q.m.f[(q.k / 50 | 0) % 2]; rivetFace(ctx, x + 31, y + 33, 21, ex, talking && (q.k >> 2) % 2 === 0, t, q.k % 50);
-    let left = shown; q.lines.forEach((ln, j) => { if (left <= 0) return; const part = ln.slice(0, left); left -= ln.length + 1; text(ctx, part, x + 66, y + 21 + j * 13, 8, j === 0 && part.startsWith(q.m.pre) ? '#ffe14a' : '#ffffff', { bold: true, glow: false, alpha: a }); });
-    if (talking && (q.k >> 3) % 2) { const j = Math.min(q.lines.length - 1, q.lines.findIndex((ln, jj) => q.lines.slice(0, jj + 1).join(' ').length >= shown)); ctx.fillStyle = '#2ee6ff'; ctx.fillRect(x + 66 + textWidth(q.lines[Math.max(0, j)].slice(0, Math.max(0, shown - q.lines.slice(0, Math.max(0, j)).join(' ').length - (j > 0 ? 1 : 0))), 8, true) + 3, y + 21 + Math.max(0, j) * 13, 5, 8); }
+    let left = shown; q.lines.forEach((ln, j) => { if (left <= 0) return; const part = ln.slice(0, left); left -= ln.length + 1; if (j === 0 && part.startsWith(q.m.pre)) { const pw = ptext(ctx, q.m.pre, x + 66, y + 20, 11, '#ffe14a', { alpha: a }); ptext(ctx, part.slice(q.m.pre.length), x + 66 + pw, y + 20, 11, '#ffffff', { alpha: a }); } else ptext(ctx, part, x + 66, y + 20 + j * 15, 11, '#ffffff', { alpha: a }); });
+    if (talking && (q.k >> 3) % 2) { const j = Math.min(q.lines.length - 1, q.lines.findIndex((ln, jj) => q.lines.slice(0, jj + 1).join(' ').length >= shown)); ctx.fillStyle = '#2ee6ff'; ctx.fillRect(x + 66 + pWidth(ctx, q.lines[Math.max(0, j)].slice(0, Math.max(0, shown - q.lines.slice(0, Math.max(0, j)).join(' ').length - (j > 0 ? 1 : 0))), 11) + 3, y + 20 + Math.max(0, j) * 15, 5, 11); }
     y += h + 6; }
   ctx.restore(); }
 export function drawHUD(ctx, g, o = {}) {
@@ -963,7 +968,7 @@ export function drawHUD(ctx, g, o = {}) {
     text(ctx, VIEWS[i], px0 + i * pw + pw / 2, C ? 13 : 15, C ? 7.5 : 10, on ? '#ffffff' : rec ? '#ffe14a' : '#5a66b0', { align: 'center', glow: on }); }
   { const d = (g.recView - vw + 4) % 4, need = d && g.intro <= 0 && !g.level.rules?.arena, bl = (t >> 3) % 2, goL = need && d === 3, goR = need && d !== 3; text(ctx, goL ? '<< L' : '< L', px0 - 8, goL ? 13 : 15, goL ? 13 : 9, goL ? (bl ? '#ffffff' : '#ffe14a') : '#5a66b0', { align: 'right', glow: goL }); text(ctx, goR ? 'R >>' : 'R >', px0 + pw * 4 + 8, goR ? 13 : 15, goR ? 13 : 9, goR ? (bl ? '#ffffff' : '#ffe14a') : '#5a66b0', { glow: goR }); } // the button that gets you to the view you need lights up
   if (!g.level.bonus) for (let i = 0; i < Math.min(p.lives, 6); i++) { const x = W - 26 - i * (C ? 16 : 24), y = C ? 18 : 22; ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 6, y + 7); ctx.lineTo(x, y + 3); ctx.lineTo(x - 6, y + 7); ctx.closePath(); ctx.strokeStyle = '#2ee6ff'; ctx.lineWidth = 1.5; ctx.stroke(); }
-  if (p.spare > 0 && !C) { text(ctx, 'SPARE PODS', W - 18, 488, 7, '#ffe14a', { align: 'right', glow: false }); for (let i = 0; i < 10; i++) { ctx.fillStyle = i < p.spare ? '#ffe14a' : '#30345a'; ctx.fillRect(W - 18 - (10 - i) * 9, 498, 6, 6); } } // ten spare pods make an extra ship
+  if (p.spare > 0 && !C) { text(ctx, 'SPARE PODS', W - 18, 488, 7, '#ffe14a', { align: 'right', glow: false }); for (let i = 0; i < 25; i++) { ctx.fillStyle = i < p.spare ? '#ffe14a' : '#30345a'; ctx.fillRect(W - 18 - (25 - i) * 5, 498, 3, 6); } } // 25 spare pods make an extra ship
   if (!g.level.bonus && p.lives > 6) text(ctx, '+' + (p.lives - 6), W - 26 - 6 * 24 + 8, 26, 8, '#3dffb0', { align: 'right', glow: false });
   if (g.level.bonus) text(ctx, 'BONUS STAGE', W - 18, 16, 10, '#b06bff', { bold: true, align: 'right' });
   if (g.coop) { const q = g.players[1]; text(ctx, q.out ? 'P2 OUT' : 'P2 SHIPS ' + Math.max(0, q.lives), W - 18, 98, 8, '#ffe14a', { align: 'right', glow: false }); }

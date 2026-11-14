@@ -32,7 +32,7 @@ function kit(id) {
     obs(z, { x: hx, y: (T + hy + h) / 2, hx: w, hy: (T - hy - h) / 2, ...k }); obs(z, { x: hx, y: (hy - h + Bm) / 2, hx: w, hy: (hy - h - Bm) / 2, ...k });
     obs(z, { x: hx, y: hy, hx: w, hy: h, hz: 0.5, ghost: true, kind: 'safe', osc: k.osc, org: ++gid, gcol: k.col }); if (!o.noRing && !k.osc) ring(z, { x: hx, y: hy, r: 1.5 }); };
   // cut(z0, z1): drop a stretch of a level after it is written. Everything in it goes, everything past it slides back
-  const cuts = [], cut = (a, b) => cuts.push([a, b]), gaps = [], gap = (z, len, view, msg, fn) => gaps.push({ z, len, view, msg, fn }); // gap(): open an empty stretch at z, after the level is written. Everything from z on slides forward
+  const cuts = [], cut = (a, b) => cuts.push([a, b]), gaps = [], gap = (z, len, view, msg, fn, calm) => gaps.push({ z, len, view, msg, fn, calm }); // gap(): open an empty stretch at z, after the level is written. Everything from z on slides forward
   const cmap = (z, keep) => { for (const [a, b] of cuts) if (z >= a && z < b) { if (!keep) return null; z = a; } const zs = z; return z - cuts.reduce((t, [a, b]) => t + (b <= z ? b - a : 0), 0) + gaps.reduce((t, q) => t + (zs >= q.z ? q.len : 0), 0); };
   const applyCuts = () => { if (!cuts.length && !gaps.length) return;
     for (let i = ev.length - 1; i >= 0; i--) { const e = ev[i]; if (e.src == null) continue; const nz = cmap(e.src); if (nz == null) { ev.splice(i, 1); continue; } const d = nz - e.src; e.d = d; e.z += d; if (e.lim != null) e.lim += d; if (e.oz != null) e.oz += d; }
@@ -40,12 +40,12 @@ function kit(id) {
     for (let i = checkpoints.length - 1; i >= 0; i--) { const c = cmap(checkpoints[i]); if (c == null) checkpoints.splice(i, 1); else checkpoints[i] = c; }
     for (let i = hills.length - 1; i >= 0; i--) { const h = hills[i]; h[0] = cmap(h[0], true); h[1] = cmap(h[1] - 0.01, true); if (h[1] - h[0] < 4) hills.splice(i, 1); }
     for (let i = tilts.length - 1; i >= 0; i--) { const q = tilts[i]; q.z0 = cmap(q.z0, true); q.z1 = cmap(q.z1 - 0.01, true); if (q.z1 - q.z0 < 4) tilts.splice(i, 1); } };
-  const done = extra => { const X = EXTRA[id]; if (X) { X.moods.forEach((m, i) => { if (zones[i]) zones[i].mood = m; }); if (X.s != null) { gap(X.s, 124, null, null, z0 => squadRun(api, id, z0)); gap(X.m, 96, SIDE, 'SOMETHING IS HUNTING US - SHIFT TO SIDE VIEW', (z0, z1) => predRun(api, id, z0, z1)); } }
+  const done = extra => { const X = EXTRA[id]; if (X) { X.moods.forEach((m, i) => { if (zones[i]) zones[i].mood = m; }); if (X.s != null) { gap(X.s, 124, SIDE, 'SQUADRON INBOUND - SHIFT TO SIDE VIEW', z0 => squadRun(api, id, z0), true); gap(X.m, 96, SIDE, 'SOMETHING IS HUNTING US - SHIFT TO SIDE VIEW', (z0, z1) => predRun(api, id, z0, z1)); } }
     applyCuts(); if (extra.endZ) extra.endZ = cmap(extra.endZ, true);
     const fin = gaps.map(q => { const ge = cmap(q.z), gs = ge - q.len; return { ...q, gs, ge }; }).sort((a, b) => a.gs - b.gs);
     for (const q of fin) { // the stage does not tilt through a gap; a gap with a view of its own becomes a section
       for (const T of [...tilts]) if (T.z0 < q.gs && T.z1 > q.ge) { tilts.push({ ...T, z0: q.ge + 6 }); T.z1 = q.gs - 6; }
-      if (q.view != null) { const c = zones.find(n => n.z0 < q.gs - 1 && n.z1 > q.ge + 1); if (c) { zones.push({ ...c, z0: q.ge, msg: 'BACK TO ' + VIEWN[c.view] + ' VIEW' }); c.z1 = q.gs; } zones.push({ z0: q.gs, z1: q.ge, view: q.view, msg: q.msg, mood: DANGER }); zones.sort((a, b) => a.z0 - b.z0); }
+      if (q.view != null) { const c = zones.find(n => n.z0 < q.gs - 1 && n.z1 > q.ge + 1); if (c) { zones.push({ ...c, z0: q.ge, msg: 'BACK TO ' + VIEWN[c.view] + ' VIEW' }); c.z1 = q.gs; } zones.push({ z0: q.gs, z1: q.ge, view: q.view, msg: q.msg, mood: q.calm ? c?.mood : DANGER }); zones.sort((a, b) => a.z0 - b.z0); }
       q.fn(q.gs, q.ge); }
     if (fin.length) { const un = c => { for (let i = fin.length - 1; i >= 0; i--) { const q = fin[i]; if (c >= q.ge) c -= q.len; else if (c > q.gs) c = q.gs; } return c; }, wrap = f => g => { const c = g.camZ; g.camZ = un(c); try { return f(g); } finally { g.camZ = c; } }; // stage rules were written for the stage before the gaps opened: they see the old distances
       const t0 = extra.tick; extra.tick = g => { predTick(g); if (t0) wrap(t0)(g); }; if (extra.rules) for (const k of Object.keys(extra.rules)) if (typeof extra.rules[k] === 'function') extra.rules[k] = wrap(extra.rules[k]); }
@@ -963,7 +963,7 @@ const SQUAD = {
   moon: { shape: 'gunship', col: '#c8d0e0', n: 6, say: 'SENTRIES', mv: (e, u) => [(e.k - 2.5) * 2.4, 4.8 + Math.sin(u * 0.6 + e.k) * 2.5] },
   belt: { shape: 'scarab', col: '#c8a070', n: 6, say: 'ROCK CRABS', mv: (e, u) => [Math.sin(u * 0.5 + e.k) * 5, 2 + e.k * 1.1] } };
 const squadRun = (K, id, z0) => { const Q = SQUAD[id]; K.at(z0 + 6, g => { info(g, Q.say.toLowerCase() + ' squadron. take them down in order'); g.fx.push('charge'); });
-  for (let w = 0; w < 3; w++) K.form(z0 + 16 + w * 34, Q.n, k => ({ shape: Q.shape, med: true, col: Q.col, hp: 5, r: 1.55, vz: -3.1, score: 400, k, n: Q.n, x: 0, y: 4.8, ph: w * 1.3, pod: false, move: (g, e, dt) => { e.z += e.vz * dt; const q = Q.mv(e, e.t * 0.02 + e.ph + (w === 1 ? PI : 0)), s = Math.min(1, e.t / 60); e.x = Math.max(-8.4, Math.min(8.4, q[0] * (w === 1 ? -1 : 1))) * s; e.y = Math.max(0.9, Math.min(8.9, 4.8 + (q[1] - 4.8) * s)); } }), 2.2); };
+  for (let w = 0; w < 3; w++) K.form(z0 + 16 + w * 34, Q.n, k => ({ shape: Q.shape, med: true, col: Q.col, hp: 10, minT: 180, r: 1.55, vz: -3, score: 600, k, n: Q.n, x: 0, y: 4.8, ph: w * 1.3, pod: false, move: (g, e, dt) => { e.zb = (e.zb ?? e.z) + e.vz * dt; const q = Q.mv(e, e.t * 0.02 + e.ph + (w === 1 ? PI : 0)), s = Math.min(1, e.t / 60), qx = Math.max(-8.4, Math.min(8.4, q[0] * (w === 1 ? -1 : 1))) * s; /* a 2D section: the pattern is drawn across the screen, so its sideways swing becomes forward and back */ e.z = e.zb + qx * 0.85; e.x = qx * 0.3; e.y = Math.max(0.9, Math.min(8.9, 4.8 + (q[1] - 4.8) * s)); } }), 2.6); };
 
 // --- predators: name, look, health, and two or three storms each. Storm functions get (g, e, c): c counts up through the storm
 const PRED = {
@@ -996,11 +996,12 @@ const PRED = {
     ['THREE HEADS', (g, e, c) => { if (c % 5 === 0) [[2.6, '#ff3df0', 0.06], [0, '#3dffb0', -0.045], [-2.6, '#ffe14a', 0.03]].forEach(([oy, col, w]) => { for (const s of [0, PI]) ZY(g, e, PI + c * w + s, 3.1, col, {}, -2, oy); }); }], // each head spits its own spiral, each turning its own way
     ['BLOOM', (g, e, c) => { for (let j = 0; j < 2; j++) { const k = c * 2 + j; if (k % 3 === 0) ZY(g, e, k * 2.39996, 1.7 + (k % 8) * 0.32, RBW[k % 7]); } }], // seeds in a sunflower head: the golden angle, shot by shot
     ['SPORES', (g, e, c) => { if (c % 44 === 0) for (let i = 0; i < 5; i++) ZY(g, e, PI + (i - 2) * 0.5 + Math.sin(c) * 0.2, 2.4, '#ffffff', { split: { t: 40, n: 2, spread: 0.7, gen: 3, T: 32, zy: true, cols: ['#3dffb0', '#b06bff'] } }); }] ] } }; // fat spores that divide, and divide, and divide
+const pPow = g => { const k = power(g); return k >= 2.5 ? k : k * k / 2.5; }; // predator toughness: follows your guns, and drops off faster for a weak loadout so it can still be caught
 const predRun = (K, id, gs, ge) => { const M = PRED[id]; K.checkpoints.push(gs + 3);
-  K.at(gs + 14 + SPAWN_Z, g => { const hp = Math.round(M.hp * 4 * power(g)); hint(g, 'PREDATOR // ' + M.name + ' - 30 SECONDS TO BRING IT DOWN', 240); g.fx.push('bossin', 'say:predator'); g.shake = Math.max(g.shake, 8);
-    const e = addEnemy(g, { type: 'pop', mini: true, pred: true, name: M.name, shape: M.shape, col: M.col, x: 0, y: 4.8, z: 44, vz: 0, hp, hpMax: hp, r: 3, big: true, score: 0, ph: 0, tl: 1800,
+  K.at(gs + 14 + SPAWN_Z, g => { const hp = Math.round(M.hp * 4.5 * pPow(g)); hint(g, 'PREDATOR // ' + M.name + ' - 30 SECONDS TO BRING IT DOWN', 240); g.fx.push('bossin', 'say:predator'); g.shake = Math.max(g.shake, 8);
+    const e = addEnemy(g, { type: 'pop', mini: true, pred: true, name: M.name, shape: M.shape, col: M.col, x: 0, y: 4.8, z: 44, vz: 0, hp, hpMax: hp, minT: 60 * 16, r: 3, big: true, score: 0, ph: 0, tl: 1800, /* at least 16 seconds to bring down, so all of its storms get shown */
       move: (g2, e2) => { if (e2.gone) { e2.z += 0.35; if (e2.z > 56) e2.z = -50; return; } e2.z += (24.5 - e2.z) * 0.035; e2.y = 4.8 + Math.sin(e2.t * 0.017) * 1.7; e2.x = 0; if (e2.z > 28) return; if (!g2.pred || g2.pred.e !== e2) { e2.gone = true; return; } if (!g2.pred.on) g2.pred.on = true;
-        const k = power(g2); if (e2.pk && Math.abs(k - e2.pk) > 1e-3) { e2.hp *= k / e2.pk; e2.hpMax = Math.round(e2.hpMax * k / e2.pk); e2.max = e2.hpMax; } e2.pk = k;
+        const k = pPow(g2); if (e2.pk && Math.abs(k - e2.pk) > 1e-3) { e2.hp *= k / e2.pk; e2.hpMax = Math.round(e2.hpMax * k / e2.pk); e2.max = e2.hpMax; } e2.pk = k;
         e2.pt = (e2.pt || 0) + 1; e2.tl = 1800 - e2.pt; const c = e2.pt % 330, si = (e2.pt / 330 | 0) % M.storms.length; if (c === 1) { hint(g2, M.storms[si][0] + '!', 90); g2.fx.push('charge'); } if (c >= 40 && c < 290) M.storms[si][1](g2, e2, c - 40); if (c % 30 === 0 && c >= 40 && c < 290) g2.fx.push('eshot');
         if (e2.pt >= 1800) { e2.gone = true; g2.pred.out = true; hint(g2, M.name + ' GOT AWAY', 160); g2.fx.push('deny'); } } });
     g.mini = e; g.pred = { e, end: ge - 14, name: M.name }; }); };
