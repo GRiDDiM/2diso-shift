@@ -734,6 +734,14 @@ On a test machine with no graphics card at 1080p, the same Mars stretch went fro
 - New VIDEO TEST under OPTIONS > MORE. A busy stretch of the game plays itself behind a small panel, so you can try every video setting on a live picture: graphics level, dynamic framerate, clarity, solid obstacles, screen shake, the CRT filter, and a button that fires a sample glitch. It shows the graphics level in use right now and the frame rate.
 - Pick the scene (Mars boss, Earth traffic, Jupiter descent, the Writhing Grove, the Planet X boss, an arena) and lock the view to SIDE, ISO, CHASE or TOP, or leave it on AUTO. Nothing is scored or recorded and nothing can hurt the ship. BACK or Esc returns to the title.
 
+### 82. HUD options (r88)
+
+- New HUD tab in OPTIONS.
+- COMPACT HUD shrinks the score and the view row, keeps only bombs, ships and a small speed gauge on the right, and drops the extra labels.
+- UPGRADE BAR can be set to ONLY WHEN LIT, so it only appears while a pod has lit a slot for you to buy.
+- ALTITUDE METER can be switched off.
+- Compact HUD can also be toggled from the video test.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
