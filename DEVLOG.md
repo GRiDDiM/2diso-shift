@@ -853,6 +853,10 @@ Playtest notes on the ten-stage build, and what changed.
 
 **Views.** Earth's construction zone is CHASE again. Mars's caves, the Sun's sunspot field, Saturn's laser loom and the Wormhole's gravity knot also moved from ISO to CHASE.
 
+### 95. Fewer distractions (r101)
+
+The game is busy enough already, so the jam build switches the bonus arenas off. The golden warps are gone from the levels, and the arenas are gone from the map, boss rush, the test list and the achievements list. The code is all still there behind one switch (`ARENAS_ON` in `levels.js`), so they can come back later. One lone station still drifts about the solar map with a flickering ??? under it.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.

@@ -2,7 +2,7 @@
 // mountShift(root, host) works standalone (index.html) and inside a host site that passes { hosted, onExit, submitScore, leaderboard, skins }.
 // (C) 2026 GRiDDiM / ArcadeGridz / BDC
 import { createGame, step, autopilot, snapshot, makeWing, VIEWS, BAR, GEARS, INTRO } from './game.js';
-import { LEVELS, ORDER, buildLevel } from './levels.js';
+import { LEVELS, ORDER, buildLevel, ARENAS_ON } from './levels.js';
 import { W, H, drawWorld, drawHUD, drawLogo, drawTagline, drawSplash, meshScreen, text, textWidth, SHIP_HULL, SHIP_WING, SHIP_FIN, RAINBOW, VCOL, PIV, logosReady, rivetLine, rivetFace, skinPreview } from './render.js';
 import { createAudio } from './audio.js';
 import { DEVLOG_TABS, CREDITS } from './devlog.js';
@@ -20,7 +20,7 @@ const CSS = `.ds-shell{position:relative;width:100%;height:100%;min-height:0;bac
 
 const LS = { get(k, d) { try { const v = localStorage.getItem('2dshift.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('2dshift.' + k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem('2dshift.' + k); } catch { } } };
 // best-run ghosts: the sim is deterministic, so a run is just its seed, its starting loadout and the inputs
-const VER = 'r100';
+const VER = 'r101';
 const enc = i => ((i.fire ? 1 : 0) | (i.gear ? 2 : 0) | (i.bomb ? 4 : 0) | (i.drone ? 8 : 0) | (i.shiftL ? 16 : 0) | (i.shiftR ? 32 : 0) | (i.upgrade ? 64 : 0)) * 81 + (Math.round(Math.max(-1, Math.min(1, i.mx)) * 4) + 4) * 9 + Math.round(Math.max(-1, Math.min(1, i.my)) * 4) + 4;
 const dec = c => { const b = c / 81 | 0, r = c % 81; return { fire: !!(b & 1), gear: !!(b & 2), bomb: !!(b & 4), drone: !!(b & 8), shiftL: !!(b & 16), shiftR: !!(b & 32), upgrade: !!(b & 64), mx: ((r / 9 | 0) - 4) / 4, my: (r % 9 - 4) / 4 }; };
 const MEDALS = [['CLEAR', () => true], ['NO SHIPS LOST', g => g.stats.deaths === 0], ['UNTOUCHED', g => g.stats.hits === 0], ['WARP FOUND', g => g.flags.warp], ['CHAIN 50', g => g.bestChain >= 50], ['3 PERFECT SHIFTS', g => g.stats.perfect >= 3], ['FAST CLEAR', (g, id) => PAR[id] && g.stats.ticks / 60 <= PAR[id]]];
@@ -38,19 +38,21 @@ const ACH = [['shift', 'FIRST SHIFT', 'ROLL INTO ANOTHER VIEW'], ['perfect', 'PE
   ['arena', 'CROWD CONTROL', 'CLEAR EVERY WAVE AND THE MINIBOSS IN AN ARENA'], ['arena4', 'ARENA MASTER', 'CLEAR ALL FOUR ARENAS'], ['untouched', 'UNTOUCHED', 'CLEAR A PLANET WITHOUT TAKING A HIT'], ['nodeath', 'NO SHIPS LOST', 'CLEAR A PLANET WITHOUT LOSING A SHIP'], ['fast', 'UNDER PAR', 'CLEAR A PLANET UNDER ITS PAR TIME'],
   ['ranks', 'S RANK', 'EARN RANK S OR BETTER ON A PLANET'], ['sss', 'TRIPLE S', 'EARN RANK SSS ON A PLANET'], ['arsenal', 'FULL ARSENAL', 'MAX EVERY WEAPON AT ONCE'], ['drones', 'SIX PACK', 'FLY WITH SIX DRONES'], ['god', 'GOD MODE', 'PICK UP GOD MODE'],
   ['score1', 'HIGH ROLLER', 'SCORE 250000 IN ONE RUN'], ['score2', 'MILLIONAIRE', 'SCORE 1000000 IN ONE RUN'], ['kills', 'EXTERMINATOR', 'DESTROY 1000 ENEMIES IN TOTAL'], ['coop', 'WINGMATES', 'CLEAR A PLANET IN CO-OP'], ['rush', 'GAUNTLET', 'BEAT EVERY BOSS IN BOSS RUSH']];
+if (!ARENAS_ON) for (let i = ACH.length - 1; i >= 0; i--) if (['warp', 'warp4', 'arena', 'arena4'].includes(ACH[i][0])) ACH.splice(i, 1); // their achievements are hidden too
 // boss rush: every boss and miniboss back to back. Stages start at the checkpoint before the boss, arenas skip their waves
-const RUSH = ['earth', 'arena-earth', 'moon', 'sun', 'mars', 'arena-mars', 'belt', 'jupiter', 'arena-jupiter', 'saturn', 'pluto', 'worm', 'x', 'arena-x'];
+const RUSH = ['earth', 'arena-earth', 'moon', 'sun', 'mars', 'arena-mars', 'belt', 'jupiter', 'arena-jupiter', 'saturn', 'pluto', 'worm', 'x', 'arena-x'].filter(id => ARENAS_ON || !id.startsWith('arena'));
 // BUG TEST: a checklist for the pre-release pass. Each entry starts you there with no damage taken (hits are only marked),
 // and is ticked off when you clear it. Set BUGTEST to false to hide the menu for the jam build.
 const BUGTEST = true;
 const BUGLIST = [['earth', 'EARTH'], ['arena-earth', 'EARTH ARENA'], ['moon', 'MOON'], ['sun', 'SUN'], ['mars', 'MARS'], ['arena-mars', 'MARS ARENA'], ['belt', 'ASTEROID BELT'],
   ['jupiter', 'JUPITER'], ['arena-jupiter', 'JUPITER ARENA'], ['saturn', 'SATURN'], ['pluto', 'PLUTO'], ['worm', 'WORMHOLE'], ['x', 'PLANET X'], ['arena-x', 'X ARENA'], ['rush', 'BOSS RUSH'], ['end', 'ENDING AND LOOP'],
-  ['boss-earth', 'BOSS: OVERSEER'], ['boss-moon', 'BOSS: THE SENTINEL'], ['boss-sun', 'BOSS: HELIOS'], ['boss-mars', 'BOSS: THE COLOSSUS'], ['boss-belt', 'BOSS: THE MOTHER ROCK'], ['boss-jupiter', 'BOSS: THE EYE'], ['boss-saturn', 'BOSS: THE PRISM'], ['boss-pluto', 'BOSS: FROST WARDEN'], ['boss-worm', 'BOSS: THE PARADOX'], ['boss-x', 'BOSS: THE SHIFTER']]; // each boss on its own
+  ['boss-earth', 'BOSS: OVERSEER'], ['boss-moon', 'BOSS: THE SENTINEL'], ['boss-sun', 'BOSS: HELIOS'], ['boss-mars', 'BOSS: THE COLOSSUS'], ['boss-belt', 'BOSS: THE MOTHER ROCK'], ['boss-jupiter', 'BOSS: THE EYE'], ['boss-saturn', 'BOSS: THE PRISM'], ['boss-pluto', 'BOSS: FROST WARDEN'], ['boss-worm', 'BOSS: THE PARADOX'], ['boss-x', 'BOSS: THE SHIFTER']].filter(([id]) => ARENAS_ON || !id.startsWith('arena')); // each boss on its own
 const TAU = Math.PI * 2, COPY = '(C) 2026 GRIDDIM / ARCADEGRIDZ / BDC';
 // solar map: ten stops along the route, out from Earth by way of a slingshot round the Sun. Four of them hide a warp to an arena
 const NODES = [{ id: 'earth', x: 215, r: 12, col: '#2ee6ff' }, { id: 'moon', x: 252, r: 5, col: '#c8d0e0', up: 1, lab: -1 }, { id: 'sun', x: 90, r: 30, col: '#ffe14a' }, { id: 'mars', x: 325, r: 9, col: '#ff4d6d' }, { id: 'belt', x: 405, r: 6, col: '#c8a070', lab: -1 },
   { id: 'jupiter', x: 495, r: 22, col: '#ff8a2b' }, { id: 'saturn', x: 605, r: 16, col: '#e8c98a' }, { id: 'pluto', x: 705, r: 5, col: '#9fe9ff', lab: -1 }, { id: 'worm', x: 782, r: 12, col: '#b06bff' }, { id: 'x', x: 872, r: 14, col: '#3dffb0' },
   { id: 'arena-earth', x: 215, r: 7, col: '#2ee6ff', st: 1 }, { id: 'arena-mars', x: 325, r: 7, col: '#ff4d6d', st: 1 }, { id: 'arena-jupiter', x: 495, r: 7, col: '#ff8a2b', st: 1 }, { id: 'arena-x', x: 872, r: 7, col: '#3dffb0', st: 1 }]; // st: an arena, drawn as a little space station under its planet
+if (!ARENAS_ON) for (let i = NODES.length - 1; i >= 0; i--) if (NODES[i].st) NODES.splice(i, 1); // no arena stations on the map in the jam build
 const NY = p => p.st ? 250 + 74 : p.up ? 250 - 34 : 250;
 
 export function mountShift(root, host = {}) {
@@ -182,7 +184,7 @@ export function mountShift(root, host = {}) {
     q = 0; slow = 0; audio.vol(); saveOpt(); fit(); toast('OPTIONS', 'BACK TO DEFAULTS - PILOT SKIN'); audio.sfx('blip'); }
   // VIDEO TEST: a busy stretch of the game plays itself behind a small panel, so every video setting can be tried with a live picture.
   // Nothing is scored or recorded and nothing can hurt the ship. L / R on SCENE and VIEW pick what to look at
-  const VSCENES = [['MARS BOSS', 'mars', 1124], ['EARTH TRAFFIC', 'earth', 840], ['JUPITER DESCENT', 'jupiter', 694], ['WRITHING GROVE', 'x', 112], ['PLANET X BOSS', 'x', 1134], ['ARENA', 'arena-mars', 0]];
+  const VSCENES = [['MARS BOSS', 'mars', 1124], ['EARTH TRAFFIC', 'earth', 840], ['JUPITER DESCENT', 'jupiter', 694], ['WRITHING GROVE', 'x', 112], ['PLANET X BOSS', 'x', 1134], ...(ARENAS_ON ? [['ARENA', 'arena-mars', 0]] : [])];
   let vt = null;
   function vtStart() { const [, id, z] = VSCENES[vt.s]; testRun = true; startLevel(id, { r6: 1, z: z || undefined, up: [6, 6, 6, 6, 6, 6, 0, 6, 0], shield: 6, bombs: 9, lives: 9 }); g.mut.bug = true; g.intro = 0; vt.t = 0; push(vt.m); }
   function videoTest() { const m = { title: 'VIDEO TEST', kind: 'vtest', items: [
@@ -213,7 +215,7 @@ export function mountShift(root, host = {}) {
   function setIdle(v) { opt.idle = v; saveOpt(); if (v) { assisted = true; rec = null; } }
   // RIVET-9 flies as your wingman and rolls into the right view before you do. Runs with him are tagged ASSISTED.
   function setAssist(v) { opt.assist = v; saveOpt(); rec = null; ghost = null; if (v) assisted = true; if (g && scene === 'play' && !coop) g.wing = v ? makeWing(g.view) : null; }
-  function mapMenu(after, at) { const m = push({ title: 'SOLAR MAP', kind: 'map', sel: Math.max(0, NODES.findIndex(n => n.id === (at || levelId))), after, items: after ? [{ label: 'CONTINUE', act: () => { popMenu(); after(); } }] : [...(BUGTEST ? [{ label: 'PLAY THIS LEVEL (TEST)', act: () => { const id = NODES[m.sel].id, L = LEVELS[id]; testRun = true; returnTo = null; startLevel(id, { up: L.kit || undefined }); } }, { label: 'PLAY ITS ARENA (TEST)', act: () => { let id = NODES[m.sel].id; if (LEVELS[id].isBonus) id = LEVELS[id].of; if (!LEVELS['arena-' + id]) { audio.sfx('buzz'); toast('NO ARENA HERE', 'EARTH, MARS, JUPITER AND PLANET X HAVE ONE'); return; } testRun = true; returnTo = null; startLevel('arena-' + id, { up: LEVELS['arena-' + id].kit }); } }] : []), { label: 'BACK', act: popMenu }] }); return m; } // the test jumps go with the bug test menu
+  function mapMenu(after, at) { const m = push({ title: 'SOLAR MAP', kind: 'map', sel: Math.max(0, NODES.findIndex(n => n.id === (at || levelId))), after, items: after ? [{ label: 'CONTINUE', act: () => { popMenu(); after(); } }] : [...(BUGTEST ? [{ label: 'PLAY THIS LEVEL (TEST)', act: () => { const id = NODES[m.sel].id, L = LEVELS[id]; testRun = true; returnTo = null; startLevel(id, { up: L.kit || undefined }); } }, ...(ARENAS_ON ? [{ label: 'PLAY ITS ARENA (TEST)', act: () => { let id = NODES[m.sel].id; if (LEVELS[id].isBonus) id = LEVELS[id].of; if (!LEVELS['arena-' + id]) { audio.sfx('buzz'); toast('NO ARENA HERE', 'EARTH, MARS, JUPITER AND PLANET X HAVE ONE'); return; } testRun = true; returnTo = null; startLevel('arena-' + id, { up: LEVELS['arena-' + id].kit }); } }] : [])] : []), { label: 'BACK', act: popMenu }] }); return m; } // the test jumps go with the bug test menu
   function scoresMenu() { const m = { title: 'HIGH SCORES', kind: 'scores', rows: LS.get('scores', []), items: [{ label: 'BACK', act: popMenu }] }; push(m); if (host.leaderboard) { m.rows = null; Promise.resolve(host.leaderboard()).then(r => { m.rows = Array.isArray(r) ? r : []; }).catch(() => { m.rows = LS.get('scores', []); }); } }
   // the map before every hop: the ship flies from where you are to where you are going, then hyperspace
   function travel(from, to, after) { menus.length = 0; const m = mapMenu(after, to); m.locked = true; m.travel = { from, to, t0: performance.now() }; audio.sfx('whoosh'); return m; }
@@ -488,6 +490,9 @@ export function mountShift(root, host = {}) {
     ctx.lineWidth = 1; for (const x of [215, 325, 495, 605, 705, 872]) { ctx.strokeStyle = '#26348c'; ctx.beginPath(); ctx.ellipse(90, sy, x - 90, (x - 90) * 0.42, 0, -0.9, 0.9); ctx.stroke(); }
     ctx.fillStyle = '#8d9be0'; for (let k = 0; k < 40; k++) { const a = -0.8 + k / 40 * 1.6 + Math.sin(k * 9) * 0.02, r = 315 + Math.sin(k * 7) * 10; ctx.fillRect(90 + Math.cos(a) * r, sy + Math.sin(a) * r * 0.42, 2, 2); }
     ctx.strokeStyle = '#ff3df0'; ctx.setLineDash([6, 6]); ctx.beginPath(); ORDER.forEach((id, k) => { const n = NODES.find(q => q.id === id); k ? ctx.lineTo(n.x, NY(n)) : ctx.moveTo(n.x, NY(n)); }); ctx.stroke(); ctx.setLineDash([]);
+    if (!ARENAS_ON) { const sx = 480 + Math.sin(t * 0.13) * 330 + Math.sin(t * 0.31 + 1) * 70, sy = 300 + Math.sin(t * 0.21 + 2) * 30 + Math.cos(t * 0.17) * 18; // a lone arena station drifting about the map: something for later
+      ctx.save(); ctx.globalAlpha = 0.55 + 0.25 * Math.sin(t * 1.3); ctx.strokeStyle = '#ffe14a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(sx, sy, 3, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.ellipse(sx, sy, 9, 3.6, t * 0.6, 0, TAU); ctx.stroke(); ctx.lineWidth = 1.2; for (const d of [-1, 1]) { ctx.strokeRect(sx + d * 13 - 3, sy - 2, 6, 4); ctx.beginPath(); ctx.moveTo(sx + d * 3, sy); ctx.lineTo(sx + d * 10, sy); ctx.stroke(); }
+      if ((t * 1.5 | 0) % 3) text(ctx, '???', sx, sy + 14, 7, '#ffe14a', { align: 'center', glow: false }); ctx.restore(); }
     NODES.forEach((p, k) => { const L = LEVELS[p.id], on = m.sel === k, y = NY(p), col = L.isBonus && !found(L) ? '#5a4a8a' : p.col;
       ctx.strokeStyle = col; ctx.lineWidth = on ? 3 : 1.5;
       if (p.st) { ctx.beginPath(); ctx.arc(p.x, y, 3, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.ellipse(p.x, y, 9, 3.6, t * 0.6, 0, TAU); ctx.stroke(); ctx.lineWidth = 1.2; for (const sx of [-1, 1]) { ctx.strokeRect(p.x + sx * 12 - 3, y - 4, 6, 8); ctx.beginPath(); ctx.moveTo(p.x + sx * 3, y); ctx.lineTo(p.x + sx * 9, y); ctx.stroke(); } ctx.beginPath(); ctx.moveTo(p.x, y - 3); ctx.lineTo(p.x, y - 9); ctx.stroke(); ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(p.x, y - 12); ctx.lineTo(p.x, sy + 30); ctx.stroke(); ctx.setLineDash([]); } // a space station: hub, spinning ring, two solar panels, a mast, and a tether line up to its planet
@@ -510,7 +515,7 @@ export function mountShift(root, host = {}) {
     const p = NODES[m.sel], L = LEVELS[p.id]; panel(150, 364, 660, 92, p.col, false);
     text(ctx, (L.isBonus ? 'BONUS // ' : 'LEVEL ' + L.n + ' // ') + L.name + ' - ' + L.sub, 170, 376, 13, '#ffffff'); text(ctx, L.info, 170, 400, 8, '#9fb0ff', { glow: false });
     if (L.isBonus) text(ctx, 'REACHED THROUGH A HIDDEN WARP ON ' + LEVELS[L.of].name + (found(L) ? ' - FOUND' : '') + (done(L, p.id) ? ' - CLEARED' : ''), 170, 420, 9, '#b06bff', { glow: false }); else { text(ctx, 'BOSS: ' + L.boss, 170, 420, 9, '#ff4d6d', { glow: false }); }
-    text(ctx, 'BEST SCORE ' + LS.get('best', 0), 170, 438, 9, '#3dffb0', { glow: false }); if (!L.isBonus) { const rr = RUN().md[p.id], mm = rr ? rr.m : 0; text(ctx, 'RANK ' + RANK[bits(mm)] + (rr && rr.loop ? '  LOOP ' + (rr.loop + 1) : ''), 400, 438, 9, '#ffe14a', { glow: false }); for (let k = 0; k < 7; k++) { ctx.fillStyle = mm >> k & 1 ? '#ffe14a' : '#30345a'; ctx.fillRect(470 + k * 12, 439, 8, 8); } } if (!L.isBonus && LEVELS['arena-' + p.id]) text(ctx, 'ARENA WARP: ' + (af[p.id] || ar[p.id] ? 'FOUND' : '???'), 580, 438, 9, '#ffe14a', { glow: false }); else text(ctx, '< > BROWSE', 640, 438, 7, '#5a66b0', { glow: false });
+    text(ctx, 'BEST SCORE ' + LS.get('best', 0), 170, 438, 9, '#3dffb0', { glow: false }); if (!L.isBonus) { const rr = RUN().md[p.id], mm = rr ? rr.m : 0; text(ctx, 'RANK ' + RANK[bits(mm)] + (rr && rr.loop ? '  LOOP ' + (rr.loop + 1) : ''), 400, 438, 9, '#ffe14a', { glow: false }); for (let k = 0; k < 7; k++) { ctx.fillStyle = mm >> k & 1 ? '#ffe14a' : '#30345a'; ctx.fillRect(470 + k * 12, 439, 8, 8); } } if (ARENAS_ON && !L.isBonus && LEVELS['arena-' + p.id]) text(ctx, 'ARENA WARP: ' + (af[p.id] || ar[p.id] ? 'FOUND' : '???'), 580, 438, 9, '#ffe14a', { glow: false }); else text(ctx, '< > BROWSE', 640, 438, 7, '#5a66b0', { glow: false });
   }
   const padNames = () => window.ArcadeGridzPad?.glyphs?.() === 'xbox' ? ['B', 'A', 'X', 'Y', 'LB / RB', 'VIEW', 'MENU'] : ['A', 'B', 'Y', 'X', 'L / R', 'SELECT', 'START'];
   function drawControls() { const pn = padNames(), rows = [['MOVE', 'ARROWS / WASD', 'D-PAD'], ['FIRE', 'SPACE / Z / J', pn[0]], ['CHANGE SPEED', 'V / F', pn[1]], ['BOMB', 'X / K', pn[2]], ['DRONE MODE', 'C / L', pn[3]], ['SHIFT VIEW', 'SHIFT KEYS / Q E', pn[4]], ['BUY UPGRADE', 'ENTER / R', pn[5]], ['PAUSE', 'ESC / P', pn[6]]];
