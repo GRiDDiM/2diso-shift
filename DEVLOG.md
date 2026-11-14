@@ -904,6 +904,12 @@ Getting the game ready for its jam release:
 - **HUD fix:** in a practice boss rush, the PRACTICE line no longer sits on top of the boss rush counter.
 - **ArcadeGridz:** the game is out of beta and marked LIVE, with a GAME OFF 2026 ENTRY badge.
 
+### 104. A fresh start (r110)
+
+- **Fresh start:** the release build clears progress left over from the test builds, once, for everyone: finishes, skins, achievements, grades, records, saves and ghosts. Settings and anything bought on ArcadeGridz are kept. Everything gets unlocked by playing.
+- **Skins:** each one is still the prize for finishing on its difficulty. Trying a skin in PRACTICE now only applies in practice.
+- **Solar map:** it's for browsing only now. The test jumps are gone. Each stop shows its info plus your all-time best score, best time and rank for that stage. A new game clears the map's markers, but your records stay.
+
 ## Still to do
 - Hardware testing: a controller in the ag app, phones, tablets.
 - Balance by hand. The autopilot clears everything; people are not autopilots.
